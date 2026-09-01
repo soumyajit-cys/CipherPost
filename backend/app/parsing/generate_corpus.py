@@ -571,7 +571,7 @@ def define_corpus() -> list[GenSession]:
     corpus.append(GenSession(
         name="smtp_weak_sig", protocol="SMTP", port=587, use_starttls=True,
         tls_version=0x0303, cipher="TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", cert_mode="weak-sig",
-        expected_findings=["weak-signature"],
+        expected_findings=["weak-signature", "untrusted"],
     ))
     corpus.append(GenSession(
         name="smtp_short_key", protocol="SMTP", port=587, use_starttls=True,

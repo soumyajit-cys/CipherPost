@@ -1,0 +1,29 @@
+{
+  "name": "pop3_export_cipher",
+  "protocol": "POP3",
+  "port": 110,
+  "client_ip": "192.168.1.10",
+  "server_ip": "192.168.1.20",
+  "client_port": 11605,
+  "server_port": 110,
+  "use_starttls": true,
+  "implicit_tls": false,
+  "tls_version": "SSLv3",
+  "tls_version_raw": 768,
+  "cipher": "TLS_RSA_EXPORT_WITH_RC4_40_MD5",
+  "cipher_suite_iana": "0x3",
+  "cipher_strength": 0.0,
+  "pfs": false,
+  "key_len": 40,
+  "cert_mode": "self-signed",
+  "sni": "mail.cipherpost.test",
+  "expected_findings": [
+    "export-cipher",
+    "non-pfs",
+    "self-signed",
+    "tls-sslv3",
+    "weak-cipher"
+  ],
+  "clean": false,
+  "file_hash": "cf027efd45c42dbc1bd0abf7e8f55e1c82443e290935896f255c638c597cc521"
+}

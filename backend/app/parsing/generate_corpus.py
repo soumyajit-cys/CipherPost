@@ -17,9 +17,6 @@ from typing import Optional
 
 from scapy.all import (
     Ether, IP, TCP, Raw, PcapWriter,
-    TLS, TLSClientHello, TLSServerHello, TLSChangeCipherSpec,
-    TLSFinished, TLSCertificate, TLSCertificateRequest, TLSServerKeyExchange,
-    TLSEncryptedHandshake, Padding,
 )
 
 from app.parsing.cert_utils import (

@@ -383,10 +383,11 @@ def generate_session(sess: GenSession, outdir: str):
         cert_pem = cert_to_pem(leaf)
         chain_pem = [cert_pem, cert_to_pem(other_root)]
     elif sess.cert_mode == "weak-sig":
+        der, _ = make_weak_signature_cert(cn=sess.sni)
+        leaf_pem = pem_from_der(der)
         root_cert, root_key = make_root_ca("CipherPost Root CA")
-        leaf, _ = issue_leaf(root_cert, root_key, cn=sess.sni, sig_hash="sha1")
-        cert_pem = cert_to_pem(leaf)
-        chain_pem = [cert_pem, cert_to_pem(root_cert)]
+        cert_pem = leaf_pem
+        chain_pem = [leaf_pem, cert_to_pem(root_cert)]
     elif sess.cert_mode == "short-key":
         root_cert, root_key = make_root_ca("CipherPost Root CA")
         leaf, _ = issue_leaf(root_cert, root_key, cn=sess.sni, key_size=1024)

@@ -1,0 +1,26 @@
+{
+  "name": "smtp_starttls_strip",
+  "protocol": "SMTP",
+  "port": 587,
+  "client_ip": "192.168.1.10",
+  "server_ip": "192.168.1.20",
+  "client_port": 12660,
+  "server_port": 587,
+  "use_starttls": false,
+  "implicit_tls": false,
+  "tls_version": null,
+  "cipher": null,
+  "cipher_suite_iana": null,
+  "cipher_strength": null,
+  "pfs": null,
+  "key_len": null,
+  "cert_mode": "valid",
+  "sni": "has-no-tls.example.com",
+  "starttls_stripped": true,
+  "expected_findings": [
+    "plaintext",
+    "starttls-strip"
+  ],
+  "clean": false,
+  "file_hash": "198a0b9d1b1b5035233606be3b47628aed86b39c032c84e09c768a90ec5ee94b"
+}

@@ -1,0 +1,28 @@
+{
+  "name": "imap_tls10_weak",
+  "protocol": "IMAP",
+  "port": 143,
+  "client_ip": "192.168.1.10",
+  "server_ip": "192.168.1.20",
+  "client_port": 10069,
+  "server_port": 143,
+  "use_starttls": true,
+  "implicit_tls": false,
+  "tls_version": "TLS1.0",
+  "tls_version_raw": 769,
+  "cipher": "TLS_RSA_WITH_RC4_128_SHA",
+  "cipher_suite_iana": "0x5",
+  "cipher_strength": 0.05,
+  "pfs": false,
+  "key_len": 128,
+  "cert_mode": "valid",
+  "sni": "mail.cipherpost.test",
+  "expected_findings": [
+    "non-pfs",
+    "rc4",
+    "tls-1-0",
+    "weak-cipher"
+  ],
+  "clean": false,
+  "file_hash": "dca3d7e136b4c0a24cafc986defb5f540a40febe2d12847e95e4b73cf814b3ce"
+}

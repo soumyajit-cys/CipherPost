@@ -21,6 +21,7 @@ from scapy.all import (
 
 from app.parsing.cert_utils import (
     make_root_ca, issue_leaf, make_self_signed, cert_to_pem,
+    make_weak_signature_cert, pem_from_der,
 )
 
 

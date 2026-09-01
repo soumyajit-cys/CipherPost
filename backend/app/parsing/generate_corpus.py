@@ -593,6 +593,19 @@ def define_corpus() -> list[GenSession]:
         tls_version=0x0303, cipher="TLS_RSA_WITH_3DES_EDE_CBC_SHA", cert_mode="valid",
         expected_findings=["non-pfs", "weak-cipher"],
     ))
+    # --- Adversarial: STARTTLS stripping (attacker forces plaintext fallback)
+    corpus.append(GenSession(
+        name="smtp_starttls_strip", protocol="SMTP", port=587, use_starttls=False,
+        tls_version=0x0000, cipher="TLS_AES_128_GCM_SHA256", cert_mode="valid",
+        sni="has-no-tls.example.com",
+        expected_findings=["starttls-strip", "plaintext"],
+    ))
+    corpus.append(GenSession(
+        name="imap_starttls_strip", protocol="IMAP", port=143, use_starttls=False,
+        tls_version=0x0000, cipher="TLS_AES_128_GCM_SHA256", cert_mode="valid",
+        sni="has-no-tls.example.com",
+        expected_findings=["starttls-strip", "plaintext"],
+    ))
     return corpus
 
 

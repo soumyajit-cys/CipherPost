@@ -428,6 +428,48 @@ def generate_session(sess: GenSession, outdir: str):
             stream.client_talk(b"STLS\r\n")
             stream.server_talk(b"+OK Begin TLS negotiation now\r\n")
 
+    #
+    # STARTTLS-stripping adversarial samples: server never offers STARTTLS and
+    # the session continues in plaintext. The client should have rejected this,
+    # so we flag it as a strip attempt.
+    #
+    if sess.tls_version == 0x0000:
+        # No TLS handshake at all — plaintext mail commands (attacker stripped STARTTLS)
+        stream.client_talk(make_email_body(sess.protocol))
+        stream.fin()
+
+        pcap_path = os.path.join(outdir, f"{sess.name}.pcap")
+        with PcapWriter(pcap_path, append=True, sync=True) as w:
+            for p in stream.packets:
+                w.write(p)
+
+        truth = {
+            "name": sess.name,
+            "protocol": sess.protocol,
+            "port": sess.port,
+            "client_ip": sess.client_ip,
+            "server_ip": sess.server_ip,
+            "client_port": stream.sport,
+            "server_port": sess.port,
+            "use_starttls": sess.use_starttls,
+            "implicit_tls": (sess.port in (465, 993, 995)),
+            "tls_version": None,
+            "cipher": None,
+            "cipher_suite_iana": None,
+            "cipher_strength": None,
+            "pfs": None,
+            "key_len": None,
+            "cert_mode": sess.cert_mode,
+            "sni": sess.sni,
+            "starttls_stripped": True,
+            "expected_findings": sorted(sess.expected_findings),
+            "clean": False,
+            "file_hash": hashlib.sha256(open(pcap_path, "rb").read()).hexdigest(),
+        }
+        with open(os.path.join(outdir, f"{sess.name}.json"), "w") as f:
+            json.dump(truth, f, indent=2)
+        return truth
+
     # TLS handshake (both for explicit STARTTLS and implicit 465/993/995)
     is_tls13 = sess.tls_version >= 0x0304
 

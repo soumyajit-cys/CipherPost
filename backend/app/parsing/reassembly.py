@@ -327,7 +327,7 @@ def read_pcap_streams(pcap_path: str) -> StreamAssembler:
             try:
                 eth = dpkt.ethernet.Ethernet(buf)
                 ip = eth.data
-                if isinstance(ip, dpkt.ip.IP6) or not isinstance(ip, DpktIP):
+                if not isinstance(ip, DpktIP):
                     continue
                 if ip.p != dpkt.ip.IP_PROTO_TCP:
                     continue

@@ -355,16 +355,17 @@ def rule_ssl_in_plaintext(sa: SessionAnalysis):
 
 
 def rule_starttls_strip(sa: SessionAnalysis):
-    if sa.is_starttls and not sa.started_tls and sa.expected_starttls:
+    if sa.saw_starttls_offer and not sa.started_tls and not sa.tls_bytes:
         sa.add(
             "starttls-strip-attempt",
             "Possible STARTTLS stripping",
             Severity.CRITICAL,
             "STARTTLS advertised but no handshake followed",
-            f"The {sa.protocol} server advertised STARTTLS capability but the session"
-            " proceeded without a TLS handshake. An active attacker may have suppressed"
-            " the STARTTLS response to force plaintext (STRIPTLS / STARTTLS downgrade)."
-            " Clients MUST refuse to continue when STARTTLS is not honored.",
+            f"The {sa.protocol} server advertised STARTTLS capability (or the client"
+            " requested it) but the session proceeded without a TLS handshake. An"
+            " active attacker may have suppressed/forged the STARTTLS response to force"
+            " plaintext (STRIPTLS / STARTTLS downgrade). Clients MUST refuse to continue"
+            " when STARTTLS is not honored.",
             "RFC 3207 §4.1.2; OWASP SMTP Transport Security through STARTTLS",
         )
 

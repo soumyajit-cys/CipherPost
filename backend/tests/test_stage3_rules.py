@@ -100,13 +100,8 @@ def test_client_hello_sni_and_sigalgs():
     assert ch.supported_groups  # PFS group offered
 
 
-def test_certificate_fields():
-    from app.parsing.reassembly import reconstruct_sessions
-    from app.parsing.handshake import _handshake_body, parse_certificate_message
-    s = reconstruct_sessions("tests/fixtures/imap_selfsigned.pcap")[0]
-    msgs = _handshake_body(s.tls_server_records if hasattr(s, 'tls_server_records') else [])
-    # use analysis output instead
-    a = analyze_pcap("tests/fixtures/imap_selfsigned.pcap", trust_store=str(FIXTURES / "trusted_root.pem"))[0]
+def test_certificate_fields(trust_store):
+    a = analyze_pcap("tests/fixtures/imap_selfsigned.pcap", trust_store=trust_store)[0]
     assert a.certs
     leaf = a.certs[0]
     assert leaf.subject_cn == "mail.cipherpost.test"

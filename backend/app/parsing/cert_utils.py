@@ -139,8 +139,9 @@ def make_weak_signature_cert(cn: str = "mail.cipherpost.test", key_size: int = 2
         .sign(key, hashes.SHA256())
     )
     der = cert.public_bytes(serialization.Encoding.DER)
-    if _SHA256_WITH_RSA in der:
-        der = der.replace(_SHA256_WITH_RSA, _SHA1_WITH_RSA, 1)
+    # Rewrite every SHA256-with-RSA AlgorithmIdentifier (both the TBS-level
+    # signature algorithm and the certificate-level one) to SHA1.
+    der = der.replace(_SHA256_WITH_RSA, _SHA1_WITH_RSA)
     return der, key
 
 

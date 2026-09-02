@@ -134,13 +134,14 @@ class _Stream:
             return
         if not hs.first_ts:
             hs.first_ts = ts
-            if hs.syn_seq is not None and not hs.base_seq:
-                hs.base_seq = hs.syn_seq + 1
         hs.last_ts = ts
-        end = seq + len(data)
-        if hs.base_seq is None or hs.frontier is None:
+        if hs.syn_seq is not None and hs.base_seq is None:
+            hs.base_seq = hs.syn_seq + 1
+        if hs.base_seq is None:
             hs.base_seq = seq
-            hs.frontier = seq
+        if hs.frontier is None:
+            hs.frontier = hs.base_seq
+        end = seq + len(data)
         # Fully-below-frontier: retransmit of already-emitted region
         if end <= hs.frontier:
             return

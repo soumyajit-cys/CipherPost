@@ -21,6 +21,9 @@ import socket
 from dataclasses import dataclass, field
 from enum import Enum
 
+import dpkt
+from dpkt.ip import IP as DpktIP
+
 from app.parsing.tls_records import (
     parse_tls_records, find_starttls_offset, find_tls_offset,
 )
@@ -290,7 +293,10 @@ def _assign_tls_segments(sess: Session, client_bytes: bytes, server_bytes: bytes
     server_offset = None
     if not implicit:
         off = find_starttls_offset(client_bytes, sess.protocol.value)
-        if off is not None and off < len(client_bytes):
+        # Only treat this as a real TLS transition if TLS records actually
+        # begin at that offset (defends against STARTTLS-stripped sessions
+        # where a plaintext command follows the STARTTLS offer).
+        if off is not None and off < len(client_bytes) and find_tls_offset(client_bytes[off:]) == 0:
             offset = off
             sess.is_starttls = True
     if implicit:

@@ -26,7 +26,7 @@ from dpkt.ip import IP as DpktIP
 from dpkt.ethernet import Ethernet as DpktEther
 import dpkt.arp
 
-from app.parsing.tls_records import parse_tls_records, find_starttls_offset
+from app.parsing.tls_records import parse_tls_records, find_starttls_offset, TlsParseError
 
 
 class Protocol(str, Enum):
@@ -296,7 +296,11 @@ def _assign_tls_segments(sess: Session, client_bytes: bytes, server_bytes: bytes
         sess.is_starttls = False
     if offset is None:
         # Maybe TLS anyway (unexpected server, transformed stream)
-        recs = parse_tls_records(client_bytes)
+        recs = []
+        try:
+            recs = parse_tls_records(client_bytes)
+        except (TlsParseError, Exception):
+            recs = []
         if recs:
             first = recs[0]
             header = bytes([first.content_type, first.version >> 8 & 0xFF, first.version & 0xFF])

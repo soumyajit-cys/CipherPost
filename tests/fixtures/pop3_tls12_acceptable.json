@@ -4,7 +4,7 @@
   "port": 995,
   "client_ip": "192.168.1.10",
   "server_ip": "192.168.1.20",
-  "client_port": 10101,
+  "client_port": 13120,
   "server_port": 995,
   "use_starttls": false,
   "implicit_tls": true,
@@ -19,5 +19,5 @@
   "sni": "mail.cipherpost.test",
   "expected_findings": [],
   "clean": true,
-  "file_hash": "5dba8476f3d257b69fade7a507eafaef03a3cedc102d1f1e3beec548cad84db8"
+  "file_hash": "86949747b63464ce2dca0d7fa4cc48ed17edff16d743de46aaad9362937248e0"
 }

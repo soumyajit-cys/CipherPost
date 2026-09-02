@@ -111,33 +111,48 @@ _SHA256_WITH_RSA = b"\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0b"
 _SHA1_WITH_RSA = b"\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x01\x05"
 
 
-def make_weak_signature_cert(cn: str = "mail.cipherpost.test", key_size: int = 2048):
+def make_weak_signature_cert(cn: str = "mail.cipherpost.test", issuer=None, issuer_key=None):
     """
-    Return (cert, key) for a leaf whose DER claims RSA-SHA1 as the signature
-    algorithm. Newer cryptography/OpenSSL builds refuse to *create* SHA1
-    signatures, so we build a SHA256-signed cert and rewrite the signature
-    algorithm OID in the DER to SHA1WithRSAEncryption. This produces a cert
-    whose parsed signature algorithm is sha1 (what this tool detects) while
-    the actual signature bytes remain SHA256 (so chain verification will
-    fail; callers should reflect that in ground truth).
+    Return a leaf DER whose signature AlgorithmIdentifiers claim RSA-SHA1.
 
-    Returns a tuple (rewritten_pem_cert, key) where the cert parses with a
-    weak signature algorithm.
+    Newer cryptography/OpenSSL builds refuse to *create* SHA1 signatures, so
+    we build a SHA256-signed leaf (optionally issued by `issuer`) and rewrite
+    every SHA256-with-RSA AlgorithmIdentifier in the DER to SHA1WithRSAEncryption.
+    The signature VALUE remains a SHA256 signature, so chain verification will
+    fail — a faithful stand-in for a legacy SHA1-signed cert, which this tool
+    must flag via the weak-signature-algorithm rule.
+
+    Returns (rewritten_der, key).
     """
-    key = rsa.generate_private_key(public_exponent=65537, key_size=key_size)
-    subject = issuer = _build_name(cn)
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(key.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow() - datetime.timedelta(days=1))
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=825))
-        .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
-        .add_extension(x509.SubjectAlternativeName([x509.DNSName(cn)]), critical=False)
-        .sign(key, hashes.SHA256())
-    )
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    if issuer is not None and issuer_key is not None:
+        subject = _build_name(cn)
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(subject)
+            .issuer_name(issuer.subject)
+            .public_key(key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(datetime.datetime.utcnow() - datetime.timedelta(days=1))
+            .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=825))
+            .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+            .add_extension(x509.SubjectAlternativeName([x509.DNSName(cn)]), critical=False)
+            .sign(issuer_key, hashes.SHA256())
+        )
+    else:
+        subject = issuer = _build_name(cn)
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(subject)
+            .issuer_name(issuer)
+            .public_key(key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(datetime.datetime.utcnow() - datetime.timedelta(days=1))
+            .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=825))
+            .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+            .add_extension(x509.SubjectAlternativeName([x509.DNSName(cn)]), critical=False)
+            .sign(key, hashes.SHA256())
+        )
     der = cert.public_bytes(serialization.Encoding.DER)
     # Rewrite every SHA256-with-RSA AlgorithmIdentifier (both the TBS-level
     # signature algorithm and the certificate-level one) to SHA1.

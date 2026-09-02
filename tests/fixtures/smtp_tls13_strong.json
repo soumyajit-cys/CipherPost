@@ -4,7 +4,7 @@
   "port": 587,
   "client_ip": "192.168.1.10",
   "server_ip": "192.168.1.20",
-  "client_port": 10782,
+  "client_port": 13008,
   "server_port": 587,
   "use_starttls": true,
   "implicit_tls": false,
@@ -19,5 +19,5 @@
   "sni": "mail.cipherpost.test",
   "expected_findings": [],
   "clean": true,
-  "file_hash": "4d6a391b76e213c0ec75e18b764f03053462e75ae69ec35a54a79f362a43a653"
+  "file_hash": "e7ab05c0b54ea2d5acd937fefdf91af2206125c93470cec3fd0247269e439716"
 }

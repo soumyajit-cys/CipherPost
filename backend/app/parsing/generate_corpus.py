@@ -398,7 +398,7 @@ def generate_session(sess: GenSession, outdir: str):
         cert_pem = cert_to_pem(leaf)
         chain_pem = [cert_pem, cert_to_pem(other_root)]
     elif sess.cert_mode == "weak-sig":
-        der, _ = make_weak_signature_cert(cn=sess.sni)
+        der, _ = make_weak_signature_cert(cn=sess.sni, issuer=root_cert, issuer_key=root_key)
         leaf_pem = pem_from_der(der)
         cert_pem = leaf_pem
         chain_pem = [leaf_pem, cert_to_pem(root_cert)]

@@ -338,8 +338,10 @@ def reconstruct_sessions(pcap_path: str) -> list[Session]:
             # Maybe TLS anyway (weird server w/o transition, e.g. transformed)
             recs = parse_tls_records(c_bytes)
             if recs:
-                tls_start_client = c_bytes.find(bytes(recs[0].payload)[:16]) if c_bytes else None
-                if tls_start_client is None:
+                first = recs[0]
+                header = bytes([first.content_type, first.version >> 8 & 0xFF, first.version & 0xFF])
+                tls_start_client = c_bytes.find(header)
+                if tls_start_client == -1:
                     tls_start_client = 0
                 sess.is_starttls = False
 

@@ -602,89 +602,97 @@ def generate_session(sess: GenSession, outdir: str):
 
 def define_corpus() -> list[GenSession]:
     corpus = []
-    # Basic classifications
+    # Strong configurations: no rule should fire (posture is clean)
     corpus.append(GenSession(
         name="smtp_tls13_strong", protocol="SMTP", port=587, use_starttls=True,
         tls_version=0x0304, cipher="TLS_AES_256_GCM_SHA384", cert_mode="valid",
-        expected_findings=["tls-1-3-strong"],
+        expected_findings=[],
     ))
     corpus.append(GenSession(
         name="imap_tls13_strong", protocol="IMAP", port=993, use_starttls=False,
         tls_version=0x0304, cipher="TLS_AES_128_GCM_SHA256", cert_mode="valid",
-        expected_findings=["tls-1-3-strong"],
+        expected_findings=[],
     ))
     corpus.append(GenSession(
         name="pop3_tls12_acceptable", protocol="POP3", port=995, use_starttls=False,
         tls_version=0x0303, cipher="TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", cert_mode="valid",
-        expected_findings=["tls-1-2-ecdhe-aead"],
+        expected_findings=[],
     ))
     corpus.append(GenSession(
         name="smtp_tls12_starttls", protocol="SMTP", port=587, use_starttls=True,
         tls_version=0x0303, cipher="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384", cert_mode="valid",
-        expected_findings=["tls-1-2-ecdhe-aead"],
+        expected_findings=[],
     ))
     corpus.append(GenSession(
         name="imap_tls10_weak", protocol="IMAP", port=143, use_starttls=True,
         tls_version=0x0301, cipher="TLS_RSA_WITH_RC4_128_SHA", cert_mode="valid",
-        expected_findings=["tls-1-0", "rc4", "non-pfs", "weak-cipher"],
+        expected_findings=["tls-version-tls1-0", "rc4-cipher", "non-pfs-key-exchange",
+                           "non-aead-bulk-cipher", "client-no-pfs-suites"],
     ))
     corpus.append(GenSession(
         name="pop3_export_cipher", protocol="POP3", port=110, use_starttls=True,
         tls_version=0x0300, cipher="TLS_RSA_EXPORT_WITH_RC4_40_MD5", cert_mode="self-signed",
-        expected_findings=["tls-sslv3", "export-cipher", "non-pfs", "weak-cipher", "self-signed"],
+        expected_findings=["tls-version-sslv3", "export-grade-cipher", "rc4-cipher",
+                           "non-aead-bulk-cipher", "non-pfs-key-exchange",
+                           "self-signed-certificate", "untrusted-certificate-chain",
+                           "client-no-pfs-suites"],
     ))
     corpus.append(GenSession(
         name="smtp_expired_cert", protocol="SMTP", port=465, use_starttls=False,
         tls_version=0x0303, cipher="TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", cert_mode="expired",
-        expected_findings=["expired-cert", "untrusted"],
+        expected_findings=["expired-certificate", "untrusted-certificate-chain"],
     ))
     corpus.append(GenSession(
         name="imap_selfsigned", protocol="IMAP", port=993, use_starttls=False,
         tls_version=0x0303, cipher="TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", cert_mode="self-signed",
-        expected_findings=["self-signed", "untrusted"],
+        expected_findings=["self-signed-certificate", "untrusted-certificate-chain"],
     ))
     corpus.append(GenSession(
         name="smtp_untrusted_chain", protocol="SMTP", port=587, use_starttls=True,
         tls_version=0x0303, cipher="TLS_RSA_WITH_AES_256_CBC_SHA", cert_mode="untrusted",
-        expected_findings=["untrusted", "non-pfs"],
+        expected_findings=["untrusted-certificate-chain", "non-pfs-key-exchange",
+                           "non-aead-bulk-cipher", "weak-cipher-suite", "client-no-pfs-suites"],
     ))
     corpus.append(GenSession(
         name="smtp_weak_sig", protocol="SMTP", port=587, use_starttls=True,
         tls_version=0x0303, cipher="TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", cert_mode="weak-sig",
-        expected_findings=["weak-signature", "untrusted"],
+        expected_findings=["weak-signature-algorithm", "untrusted-certificate-chain"],
     ))
     corpus.append(GenSession(
         name="smtp_short_key", protocol="SMTP", port=587, use_starttls=True,
         tls_version=0x0303, cipher="TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", cert_mode="short-key",
-        expected_findings=["short-key"],
+        expected_findings=["short-public-key"],
     ))
     corpus.append(GenSession(
         name="pop3_tls12_nonpfs", protocol="POP3", port=995, use_starttls=False,
         tls_version=0x0303, cipher="TLS_RSA_WITH_3DES_EDE_CBC_SHA", cert_mode="valid",
-        expected_findings=["non-pfs", "weak-cipher"],
+        expected_findings=["non-pfs-key-exchange", "non-aead-bulk-cipher", "3des-cipher",
+                           "weak-cipher-suite", "client-no-pfs-suites"],
     ))
     corpus.append(GenSession(
         name="smtp_tls12_rc4", protocol="SMTP", port=587, use_starttls=True,
         tls_version=0x0303, cipher="TLS_RSA_WITH_RC4_128_SHA", cert_mode="valid",
-        expected_findings=["rc4", "non-pfs", "weak-cipher"],
+        expected_findings=["rc4-cipher", "non-pfs-key-exchange", "non-aead-bulk-cipher",
+                           "client-no-pfs-suites"],
     ))
     corpus.append(GenSession(
         name="imap_tls12_3des", protocol="IMAP", port=143, use_starttls=True,
         tls_version=0x0303, cipher="TLS_RSA_WITH_3DES_EDE_CBC_SHA", cert_mode="valid",
-        expected_findings=["non-pfs", "weak-cipher"],
+        expected_findings=["non-pfs-key-exchange", "non-aead-bulk-cipher", "3des-cipher",
+                           "weak-cipher-suite", "client-no-pfs-suites"],
     ))
     # --- Adversarial: STARTTLS stripping (attacker forces plaintext fallback)
     corpus.append(GenSession(
         name="smtp_starttls_strip", protocol="SMTP", port=587, use_starttls=False,
         tls_version=0x0000, cipher="TLS_AES_128_GCM_SHA256", cert_mode="valid",
         sni="has-no-tls.example.com",
-        expected_findings=["starttls-strip", "plaintext"],
+        expected_findings=["starttls-strip-attempt", "plaintext-mail-protocol"],
     ))
     corpus.append(GenSession(
         name="imap_starttls_strip", protocol="IMAP", port=143, use_starttls=False,
         tls_version=0x0000, cipher="TLS_AES_128_GCM_SHA256", cert_mode="valid",
         sni="has-no-tls.example.com",
-        expected_findings=["starttls-strip", "plaintext"],
+        expected_findings=["starttls-strip-attempt", "plaintext-mail-protocol"],
     ))
     return corpus
 

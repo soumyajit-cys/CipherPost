@@ -5,33 +5,28 @@ Reads a PCAP (dpkt) and reconstructs bidirectional byte streams keyed by the
 TCP 5-tuple, then classifies each completed stream into a Session.
 
 Design decisions:
-- Streams are keyed by DirectionAwareKey: (src,dst,sport,dport) normalized so
-  client/server assignment follows the SYN opening direction.
-- Reassembly handles retransmissions, out-of-order (buffered by ISN-relative
-  seq gaps), and FIN/RST closure.
-- Only completed (FIN-seen or idle-forced-close) streams are emitted, keeping
-  memory bounded: streams older than N seconds are flushed.
-- Segments are consumed via a sliding "leftmost unfilled byte" pointer; we do
-  linear scan membership for overlapping segments (accepting the simplicity,
-  good enough for HVAC-style captures and bounded by MTU-sized segments).
+- Streams are keyed by a directionless 5-tuple (normalized by ip:port
+  ordering). Client/server roles within the stream are assigned by: SYN
+  sender first, else the ephemeral port, else first-talker.
+- Reassembly handles retransmissions, out-of-order (buffered by seq gaps
+  relative to the lowest unfilled offset), and FIN/RST closure.
+- Only FIN|RST-completed streams are emitted.
+- Everything is bounds-checked; malformed packets are skipped, never fatal.
 
 API: reconstruct_sessions(pcap_path) -> list[Session]
 """
 from __future__ import annotations
 
-import struct
+import socket
 from dataclasses import dataclass, field
 from enum import Enum
 
-try:
-    import dpkt
-    from dpkt.ip import IP as DpktIP
-    from dpkt.ethernet import Ethernet as DpktEther
-    HAS_DPKT = True
-except ImportError:
-    HAS_DPKT = False
+import dpkt
+from dpkt.ip import IP as DpktIP
+from dpkt.ethernet import Ethernet as DpktEther
+import dpkt.arp
 
-from app.parsing.tls_records import parse_tls_records, find_starttls_offset, TlsParseError
+from app.parsing.tls_records import parse_tls_records, find_starttls_offset
 
 
 class Protocol(str, Enum):
@@ -41,9 +36,7 @@ class Protocol(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
-# Well-known TLS ports
 IMPLICIT_TLS_PORTS = {465, 993, 995}
-STARTTLS_PORTS = {25, 110, 143, 587}
 PORT_TO_PROTO = {
     25: Protocol.SMTP,
     465: Protocol.SMTP,
@@ -53,6 +46,20 @@ PORT_TO_PROTO = {
     143: Protocol.IMAP,
     993: Protocol.IMAP,
 }
+
+
+def _ip_str(x) -> str:
+    """dpkt.pcap ips may be int, bytes, or str across versions."""
+    if isinstance(x, str):
+        return x
+    if isinstance(x, bytes):
+        try:
+            return socket.inet_ntoa(x)
+        except (ValueError, OSError):
+            return x.decode(errors="replace")
+    if isinstance(x, int):
+        return socket.inet_ntoa(x.to_bytes(4, "big"))
+    return str(x)
 
 
 @dataclass
@@ -75,9 +82,7 @@ class Session:
 
     @property
     def five_tuple_full(self) -> str:
-        return (
-            f"{self.client_ip}:{self.client_port}->{self.server_ip}:{self.server_port}"
-        )
+        return f"{self.client_ip}:{self.client_port}->{self.server_ip}:{self.server_port}"
 
     @property
     def tls_records(self):
@@ -94,139 +99,224 @@ class Session:
 
 @dataclass
 class _HalfStream:
-    syn_seq: int | None = None          # ISN as seen by sender
-    base_seq: int | None = None         # first observed SEQ (after normalization)
-    segments: dict = field(default_factory=dict)  # seq->(data, ends)
-    leftmost: int | None = None         # lowest unfilled seq position
-    leftmost_data_end: int | None = None
+    base_seq: int | None = None
+    leftmost: int | None = None
+    segments: dict = field(default_factory=dict)  # seq -> (data, end)
     buf: bytearray = field(default_factory=bytearray)
     fin_seq: int | None = None
     rst: bool = False
+    first_ts: float = 0.0
     last_ts: float = 0.0
-    fin_seen: bool = False
+    syn_seq: int | None = None
+    syn_ts: float = 0.0
+    first_non_syn_ts: float = 0.0
 
 
-class StreamAssembler:
-    """
-    Reassembles TCP payloads into ordered byte streams. Accepts (direction,
-    seq, payload, flags, ts) events from the PCAP reader. Ownership of streams:
-    keyed by (lower_syn_open_ip:port) pair normalized to a single key with a
-    direction bit.
-    """
+@dataclass
+class _Stream:
+    """Bidirectional stream keyed by directionless 5-tuple."""
+    ip_a: str
+    port_a: int
+    ip_b: str
+    port_b: int
+    ha: _HalfStream = field(default_factory=_HalfStream)   # bytes A->B
+    hb: _HalfStream = field(default_factory=_HalfStream)   # bytes B->A
+    a_is_client: bool | None = None
+    syn_by_a: bool = False
+    syn_by_b: bool = False
+    complete: bool = False
+    first_ts: float = 0.0
 
-    def __init__(self, idle_timeout: float = 600.0):
-        self._streams: dict = {}
-        self.idle_timeout = idle_timeout
+    def store(self, dir_a: bool, seq: int, data: bytes, ts: float) -> None:
+        hs = self.ha if dir_a else self.hb
+        self._store(hs, seq, data, ts)
 
     @staticmethod
-    def _norm_key(cip: str, cport: int, sip: str, sport: int) -> tuple:
-        # Normalize so that the SYN-origin is the "client" whenever possible.
-        return (cip, cport, sip, sport)
-
-    def feed(self, src: str, dst: str, sport: int, dport: int, seq: int, ack: int,
-             payload: bytes, flags: int, ts: float) -> None:
-        syn = bool(flags & 0x02)
-        fin = bool(flags & 0x01)
-        rst = bool(flags & 0x04)
-        # determine client direction: whoever sent the SYN is the client.
-        # For streams where we never see SYN we fall back to lower numeric key.
-        key = self._norm_key(src, sport, dst, dport)
-        if key not in self._streams:
-            # try reverse (maybe we saw server first?) -- session keyed by SYN sender
-            self._streams[key] = {
-                "client": {"ip": src, "port": sport, "syn": syn, "fin": False,
-                           "hs": _HalfStream(), "acked": False},
-                "server": {"ip": dst, "port": dport, "syn": bool(ack and not syn) or not syn,
-                           "fin": False, "hs": _HalfStream(), "acked": False},
-                "complete": False,
-            }
-        s = self._streams[key]
-        cs = s["client"]
-        ss = s["server"]
-        # Determine direction: compare to client source
-        if src == cs["ip"] and sport == cs["port"]:
-            d = cs
-            opp = ss
-        else:
-            d = ss
-            opp = cs
-        if not d["syn"]:
-            d["syn"] = syn
-        if syn:
-            d["hs"].syn_seq = seq
-        if fin:
-            d["hs"].fin_seq = seq + len(payload)
-        if rst:
-            d["hs"].rst = True
-
-        if payload:
-            self._store(d["hs"], seq, payload, ts)
-
-        if d["hs"].rst or (opp["hs"].rst):
-            s["complete"] = True
-        # FIN+ACK both directions
-        if cs["hs"].fin_seq is not None and ss["hs"].fin_seq is not None:
-            s["complete"] = True
-
-    def _store(self, hs: _HalfStream, seq: int, data: bytes, ts: float) -> None:
+    def _store(hs: _HalfStream, seq: int, data: bytes, ts: float) -> None:
+        if not data:
+            return
+        if not hs.first_ts:
+            hs.first_ts = ts
         hs.last_ts = ts
+        end = seq + len(data)
         if hs.base_seq is None:
             hs.base_seq = seq
             hs.leftmost = seq
-            hs.leftmost_data_end = seq
-        # Skip pure retransmit of an already-filled region
-        end = seq + len(data)
-        # If entirely below leftmost, skip
         if end <= hs.leftmost:
-            return
-        # If this data starts at/below leftmost and advances it directly
-        if seq <= hs.leftmost and end > hs.leftmost:
+            return  # pure retransmit of filled region
+        if seq <= hs.leftmost < end:
             toappend = data[hs.leftmost - seq:]
             hs.buf += toappend
             hs.leftmost = end
-            # merge any buffered segments that follow contiguously
-            self._flush_contiguous(hs)
+            _Stream._flush(hs)
             return
-        # Out-of-order: buffer by gap
-        hs.segments[seq] = (data, end, ts)
-        self._flush_contiguous(hs)
+        hs.segments[seq] = (data, end)
+        _Stream._flush(hs)
 
-    def _flush_contiguous(self, hs: _HalfStream) -> None:
+    @staticmethod
+    def _flush(hs: _HalfStream) -> None:
         while True:
-            next_seq = hs.leftmost
-            seg = hs.segments.get(next_seq)
+            seg = hs.segments.get(hs.leftmost)
             if seg is None:
                 break
-            data, end, _ = seg
+            data, end = seg
             hs.buf += data
             hs.leftmost = end
-            del hs.segments[next_seq]
-
-    def completed(self):
-        return [k for k, v in self._streams.items() if v["complete"]]
-
-    def stream_bytes(self, key, direction: str) -> bytes | None:
-        if key not in self._streams:
-            return None
-        s = self._streams[key][direction]["hs"]
-        return bytes(s.buf)
+            del hs.segments[hs.leftmost - len(data)]
 
 
-def tcp_flags(pkt) -> int:
-    try:
-        return pkt.tcp.flags
-    except Exception:
-        return getattr(pkt, "fl", 0)
+class StreamAssembler:
+    def __init__(self, idle_timeout: float = 900.0):
+        self._streams: dict[tuple, _Stream] = {}
+        self.idle_timeout = idle_timeout
+
+    @staticmethod
+    def _key(ip1, p1, ip2, p2) -> tuple:
+        if (ip1, p1) <= (ip2, p2):
+            return (ip1, p1, ip2, p2)
+        return (ip2, p2, ip1, p1)
+
+    def feed(self, src, dst, sport, dport, seq, ack, payload, flags, ts) -> None:
+        ip_a, p_a, ip_b, p_b = self._key(src, sport, dst, dport)
+        key = (ip_a, p_a, ip_b, p_b)
+        st = self._streams.get(key)
+        if st is None:
+            st = _Stream(ip_a, p_a, ip_b, p_b, first_ts=ts)
+            self._streams[key] = st
+        src_ip = _ip_str(src)
+        # is this packet in direction A->B?
+        dir_a = (src_ip, sport) == (ip_a, p_a)
+        syn = bool(flags & 0x02)
+        fin = bool(flags & 0x01)
+        rst = bool(flags & 0x04)
+        hs = st.ha if dir_a else st.hb
+        if syn:
+            if dir_a:
+                st.syn_by_a = True
+            else:
+                st.syn_by_b = True
+            hs.syn_seq = seq
+            hs.syn_ts = ts
+        if fin:
+            hs.fin_seq = seq + len(payload)
+        if rst:
+            hs.rst = True
+        if payload:
+            st.store(dir_a, seq, payload, ts)
+        # Completion: RST either direction, or FIN in both directions
+        if st.ha.rst or st.hb.rst or (st.ha.fin_seq is not None and st.hb.fin_seq is not None):
+            st.complete = True
+
+    def _resolve_client(self, st: _Stream) -> tuple[str, int] | None:
+        """SYN sender is the client; else ephemeral port; else A side."""
+        if st.syn_by_a and not st.syn_by_b:
+            return (st.ip_a, st.port_a)
+        if st.syn_by_b and not st.syn_by_a:
+            return (st.ip_b, st.port_b)
+        if st.port_a in PORT_TO_PROTO and st.port_b not in PORT_TO_PROTO:
+            return (st.ip_b, st.port_b)
+        if st.port_b in PORT_TO_PROTO and st.port_a not in PORT_TO_PROTO:
+            return (st.ip_a, st.port_a)
+        # first talker
+        ta = st.ha.first_ts
+        tb = st.hb.first_ts
+        if ta and (not tb or ta < tb):
+            return (st.ip_a, st.port_a)
+        if tb and (not ta or tb < ta):
+            return (st.ip_b, st.port_b)
+        return (st.ip_a, st.port_a)
+
+    def emit(self) -> list[Session]:
+        out = []
+        for key, st in self._streams.items():
+            if not st.complete:
+                continue
+            c = self._resolve_client(st)
+            if c == (st.ip_a, st.port_a):
+                c_ip, c_port, s_ip, s_port = st.ip_a, st.port_a, st.ip_b, st.port_b
+                client_bytes = bytes(st.ha.buf)
+                server_bytes = bytes(st.hb.buf)
+            else:
+                c_ip, c_port, s_ip, s_port = st.ip_b, st.port_b, st.ip_a, st.port_a
+                client_bytes = bytes(st.hb.buf)
+                server_bytes = bytes(st.ha.buf)
+
+            sess = Session(
+                protocol=Protocol.UNKNOWN,
+                five_tuple=f"{c_ip}:{c_port}->{s_ip}:{s_port}",
+                client_ip=c_ip, server_ip=s_ip,
+                client_port=c_port, server_port=s_port,
+                start_ts=st.first_ts,
+            )
+            sess.protocol = detect_protocol(sess, client_bytes, server_bytes)
+            if sess.protocol == Protocol.UNKNOWN:
+                continue
+            _assign_tls_segments(sess, client_bytes, server_bytes)
+            out.append(sess)
+        return out
 
 
-def read_pcap_streams(pcap_path: str, idle_timeout: float = 600.0, max_bytes_per_stream: int = 64 * 1024 * 1024):
-    """
-    Returns an Assembler keyed on normalized tuples with filled byte buffers.
-    Raises OSError on unreadable files, ValueError on malformed capture.
-    """
-    if not HAS_DPKT:
-        raise RuntimeError("dpkt not installed")
-    asm = StreamAssembler(idle_timeout=idle_timeout)
+PROTOCOL_BANNER_MARKERS = {
+    b"ESMTP": Protocol.SMTP,
+    b"Dovecot": Protocol.IMAP,
+    b"IMAP4": Protocol.IMAP,
+    b"+OK": Protocol.POP3,
+}
+
+
+def detect_protocol(session: Session, client_stream: bytes, server_stream: bytes) -> Protocol:
+    """Ordered inference: ports first, then plaintext banner/command heuristics."""
+    if session.server_port in PORT_TO_PROTO:
+        session.port_based = True
+        return PORT_TO_PROTO[session.server_port]
+    probe = (server_stream[:4096] + b"\x00" + client_stream[:4096]).upper()
+    for marker, proto in PROTOCOL_BANNER_MARKERS.items():
+        if marker in probe:
+            return proto
+    uc = client_stream[:4096].upper()
+    for cmd, proto in ((b"EHLO", Protocol.SMTP), (b"MAIL FROM", Protocol.SMTP),
+                       (b"LOGIN", Protocol.IMAP), (b"a001", Protocol.IMAP),
+                       (b"USER", Protocol.POP3), (b"PASS", Protocol.POP3)):
+        if cmd in uc:
+            return proto
+    return Protocol.UNKNOWN
+
+
+def _assign_tls_segments(sess: Session, client_bytes: bytes, server_bytes: bytes) -> None:
+    implicit = sess.server_port in IMPLICIT_TLS_PORTS
+    offset = None
+    if not implicit:
+        off = find_starttls_offset(client_bytes, sess.protocol.value)
+        if off is not None and off < len(client_bytes):
+            offset = off
+            sess.is_starttls = True
+    if implicit:
+        offset = 0
+        sess.is_starttls = False
+    if offset is None:
+        # Maybe TLS anyway (unexpected server, transformed stream)
+        recs = parse_tls_records(client_bytes)
+        if recs:
+            first = recs[0]
+            header = bytes([first.content_type, first.version >> 8 & 0xFF, first.version & 0xFF])
+            offset = client_bytes.find(header)
+            offset = offset if offset != -1 else 0
+            sess.is_starttls = False
+    if offset is not None:
+        sess.transition_offset = offset
+        sess.plaintext_segment = client_bytes[:offset]
+        sess.plaintext_server_segment = server_bytes if sess.is_starttls else b""
+        sess.tls_segment = client_bytes[offset:]
+        sess.tls_server_segment = server_bytes if sess.is_starttls else server_bytes
+    else:
+        sess.plaintext_segment = client_bytes
+        sess.plaintext_server_segment = server_bytes
+        sess.tls_segment = b""
+        sess.tls_server_segment = b""
+
+
+def read_pcap_streams(pcap_path: str) -> StreamAssembler:
+    asm = StreamAssembler()
     with open(pcap_path, "rb") as f:
         try:
             cap = dpkt.pcap.Reader(f)
@@ -235,134 +325,30 @@ def read_pcap_streams(pcap_path: str, idle_timeout: float = 600.0, max_bytes_per
         for ts, buf in cap:
             try:
                 eth = dpkt.ethernet.Ethernet(buf)
-                if not isinstance(eth.data, dpkt.ip.IP):
-                    # maybe IP directly (IPv4 pass-through or VLAN)
-                    if isinstance(eth.data, dpkt.ip.IP):
-                        ip = eth.data
-                    else:
-                        continue
-                else:
-                    ip = eth.data
+                ip = eth.data
+                if isinstance(ip, dpkt.ip.IP6) or not isinstance(ip, DpktIP):
+                    continue
                 if ip.p != dpkt.ip.IP_PROTO_TCP:
                     continue
                 tcp = ip.data
                 payload = bytes(tcp.data)
                 asm.feed(
-                    src=str(ip.src), dst=str(ip.dst),
+                    src=_ip_str(ip.src), dst=_ip_str(ip.dst),
                     sport=tcp.sport, dport=tcp.dport,
                     seq=tcp.seq, ack=tcp.ack,
                     payload=payload, flags=tcp.flags, ts=ts,
                 )
             except Exception:
-                # Malformed/unparseable packet: skip, never crash the pipeline.
                 continue
     return asm
 
 
-PROTOCOL_BANNER_SCORE = {
-    b"ESMTP": Protocol.SMTP,
-    b"SMTP": Protocol.SMTP,
-    b"Dovecot": Protocol.IMAP,
-    b"IMAP4": Protocol.IMAP,
-    b"+OK": Protocol.POP3,
-}
-
-
-def detect_protocol(session: Session, client_stream: bytes, server_stream: bytes) -> Protocol:
-    """Ordered inference: ports first, then plaintext command/banner heuristics."""
-    if session.server_port in PORT_TO_PROTO:
-        proto = PORT_TO_PROTO[session.server_port]
-        session.port_based = True
-        return proto
-    # heuristic on plaintext
-    probe = (server_stream[:4 * 1024] + b"\x00" + client_stream[:4 * 1024]).upper()
-    for marker, proto in PROTOCOL_BANNER_SCORE.items():
-        if marker in probe:
-            return proto
-    # command heuristic
-    upper_client = client_stream[:4096].upper()
-    for cmd, proto in ((b"EHLO", Protocol.SMTP), (b"MAIL FROM", Protocol.SMTP),
-                       (b"a001", Protocol.IMAP), (b"LOGIN", Protocol.IMAP),
-                       (b"USER", Protocol.POP3), (b"PASS", Protocol.POP3)):
-        if cmd in upper_client:
-            return proto
-    return Protocol.UNKNOWN
-
-
 def reconstruct_sessions(pcap_path: str) -> list[Session]:
-    """
-    Full Stage 2 pipeline: reassemble streams, classify protocol, detect
-    STARTTLS transitions, slice plaintext vs TLS segments, return Sessions.
-    """
     asm = read_pcap_streams(pcap_path)
-    sessions: list[Session] = []
-    for key in asm.completed():
-        s = asm._streams[key]
-        c = s["client"]
-        sv = s["server"]
-        c_bytes = bytes(c["hs"].buf) or b""
-        s_bytes = bytes(sv["hs"].buf) or b""
-        sess = Session(
-            protocol=Protocol.UNKNOWN,
-            five_tuple=f"{c['ip']}:{c['port']}->{sv['ip']}:{sv['port']}",
-            client_ip=c["ip"], server_ip=sv["ip"],
-            client_port=c["port"], server_port=sv["port"],
-            start_ts=0.0, end_ts=0.0,
-        )
-        proto = detect_protocol(sess, c_bytes, s_bytes)
-        sess.protocol = proto
-        if proto == Protocol.UNKNOWN:
-            continue
-
-        implicit = sess.server_port in IMPLICIT_TLS_PORTS
-
-        # Determine TLS transition offset
-        starttls_offset = None
-        if not implicit and proto in (Protocol.SMTP, Protocol.IMAP, Protocol.POP3):
-            # Look for STARTTLS/STLS on the client side
-            off = find_starttls_offset(c_bytes, proto.value)
-            if off is not None:
-                starttls_offset = off
-
-        # Decide if the session carries TLS
-        tls_start_client = None
-        # 1) implicit TLS (server seen any TLS records first) -> 0
-        # 2) STARTTLS transition offset-> 
-        if implicit:
-            tls_start_client = 0
-            sess.is_starttls = False
-        elif starttls_offset is not None and starttls_offset < len(c_bytes):
-            tls_start_client = starttls_offset
-            sess.is_starttls = True
-        else:
-            # Maybe TLS anyway (weird server w/o transition, e.g. transformed)
-            recs = parse_tls_records(c_bytes)
-            if recs:
-                first = recs[0]
-                header = bytes([first.content_type, first.version >> 8 & 0xFF, first.version & 0xFF])
-                tls_start_client = c_bytes.find(header)
-                if tls_start_client == -1:
-                    tls_start_client = 0
-                sess.is_starttls = False
-
-        if tls_start_client is not None:
-            offset = tls_start_client
-            sess.transition_offset = offset
-            sess.plaintext_segment = c_bytes[:offset]
-            sess.plaintext_server_segment = s_bytes[:offset] if sess.is_starttls else b""
-            sess.tls_segment = c_bytes[offset:]
-            sess.tls_server_segment = s_bytes[offset:] if sess.is_starttls else s_bytes
-        else:
-            sess.plaintext_segment = c_bytes
-            sess.plaintext_server_segment = s_bytes
-            sess.tls_segment = b""
-            sess.tls_server_segment = b""
-
-        sessions.append(sess)
-    return sessions
+    return asm.emit()
 
 
 def format_five_tuple(ip1, p1, ip2, p2) -> str:
-    if p1 < p2 or (p1 == p2 and ip1 <= ip2):
+    if (ip1, p1) <= (ip2, p2):
         return f"{ip1}:{p1}->{ip2}:{p2}"
     return f"{ip2}:{p2}->{ip1}:{p1}"

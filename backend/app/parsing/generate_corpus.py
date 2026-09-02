@@ -134,11 +134,10 @@ def build_client_hello(tls_version: int, cipher_suites: list[int], sni: str,
     # extensions
     ext = bytearray()
 
-    # SNI
+    # SNI (extension type 0): list_len + (name_type 0x00 + name_len + name)
     sni_b = sni.encode()
-    sni_list = (0x00 + len(sni_b)).to_bytes(2, "big") + sni_b
-    sni_len = len(sni_list).to_bytes(2, "big")
-    ext += (0).to_bytes(2, "big") + (4 + len(sni_b)).to_bytes(2, "big") + sni_list
+    sni_list = (3 + len(sni_b)).to_bytes(2, "big") + b"\x00" + len(sni_b).to_bytes(2, "big") + sni_b
+    ext += (0).to_bytes(2, "big") + len(sni_list).to_bytes(2, "big") + sni_list
 
     # supported groups (for PFS)
     if groups:

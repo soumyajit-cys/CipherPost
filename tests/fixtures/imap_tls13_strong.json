@@ -4,7 +4,7 @@
   "port": 993,
   "client_ip": "192.168.1.10",
   "server_ip": "192.168.1.20",
-  "client_port": 12780,
+  "client_port": 11727,
   "server_port": 993,
   "use_starttls": false,
   "implicit_tls": true,
@@ -19,5 +19,5 @@
   "sni": "mail.cipherpost.test",
   "expected_findings": [],
   "clean": true,
-  "file_hash": "686364d18b9119562677e56c0d8c1206a4fbb9502cba4bd552d09ad1295e4ba2"
+  "file_hash": "b4d727211afc2ea5782c905b20e6deee0a1d062b139492d9216dce59a45f01a6"
 }

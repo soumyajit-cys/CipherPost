@@ -7,7 +7,7 @@
       "port": 587,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 13008,
+      "client_port": 11655,
       "server_port": 587,
       "use_starttls": true,
       "implicit_tls": false,
@@ -22,7 +22,7 @@
       "sni": "mail.cipherpost.test",
       "expected_findings": [],
       "clean": true,
-      "file_hash": "e7ab05c0b54ea2d5acd937fefdf91af2206125c93470cec3fd0247269e439716"
+      "file_hash": "1b2aff73723d7d11ed8a2e7d0907280321173856a346d9b45b4e439759a4809b"
     },
     {
       "name": "imap_tls13_strong",
@@ -30,7 +30,7 @@
       "port": 993,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 12780,
+      "client_port": 11727,
       "server_port": 993,
       "use_starttls": false,
       "implicit_tls": true,
@@ -45,7 +45,7 @@
       "sni": "mail.cipherpost.test",
       "expected_findings": [],
       "clean": true,
-      "file_hash": "686364d18b9119562677e56c0d8c1206a4fbb9502cba4bd552d09ad1295e4ba2"
+      "file_hash": "b4d727211afc2ea5782c905b20e6deee0a1d062b139492d9216dce59a45f01a6"
     },
     {
       "name": "pop3_tls12_acceptable",
@@ -53,7 +53,7 @@
       "port": 995,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 13120,
+      "client_port": 12792,
       "server_port": 995,
       "use_starttls": false,
       "implicit_tls": true,
@@ -68,7 +68,7 @@
       "sni": "mail.cipherpost.test",
       "expected_findings": [],
       "clean": true,
-      "file_hash": "86949747b63464ce2dca0d7fa4cc48ed17edff16d743de46aaad9362937248e0"
+      "file_hash": "69d574fd5533d18a7c7611e1eb356461113c69f89aef7e5c3c28a6fe9cbb1409"
     },
     {
       "name": "smtp_tls12_starttls",
@@ -76,7 +76,7 @@
       "port": 587,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 10015,
+      "client_port": 11218,
       "server_port": 587,
       "use_starttls": true,
       "implicit_tls": false,
@@ -91,7 +91,7 @@
       "sni": "mail.cipherpost.test",
       "expected_findings": [],
       "clean": true,
-      "file_hash": "e945f81867e4eaa7b88ae5f102ff0d949469645eb808700bcf00b88c21d91926"
+      "file_hash": "b5c4a4b963ddc98ad3944a13e4daf5aaf0d1b37654f1776dbdf1b5d26baf38f9"
     },
     {
       "name": "imap_tls10_weak",
@@ -99,7 +99,7 @@
       "port": 143,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 14753,
+      "client_port": 11332,
       "server_port": 143,
       "use_starttls": true,
       "implicit_tls": false,
@@ -120,7 +120,7 @@
         "tls-version-tls1-0"
       ],
       "clean": false,
-      "file_hash": "be34ac963efc1bc3c05d9d600c126df5cec8768d837224e7421041082ec35d22"
+      "file_hash": "19ba0cb2caf177afb9b0eb19d32e2871afcb121890d286a1df5e2665bf9f5566"
     },
     {
       "name": "pop3_export_cipher",
@@ -128,7 +128,7 @@
       "port": 110,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 12196,
+      "client_port": 14092,
       "server_port": 110,
       "use_starttls": true,
       "implicit_tls": false,
@@ -152,7 +152,7 @@
         "untrusted-certificate-chain"
       ],
       "clean": false,
-      "file_hash": "2d937e7a0e5db356e27b33dcaf8f60c7a60e4eb4555db2b7cb7105dd245c34bf"
+      "file_hash": "c8dbf124bebf69fb31e432f51c7f7038e576f4041468bc244a014fa4213212a3"
     },
     {
       "name": "smtp_expired_cert",
@@ -160,7 +160,7 @@
       "port": 465,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 11829,
+      "client_port": 10457,
       "server_port": 465,
       "use_starttls": false,
       "implicit_tls": true,
@@ -178,7 +178,7 @@
         "untrusted-certificate-chain"
       ],
       "clean": false,
-      "file_hash": "6063cb3c777ef25fa271c5aeb1b3d9d3f135b16b30fa0b9eff574f4296c98aeb"
+      "file_hash": "aa4684a8b12bb3c80ad3462c52ff424c9a50fd0cd67a27d0b93f70f81a7df004"
     },
     {
       "name": "imap_selfsigned",
@@ -186,7 +186,7 @@
       "port": 993,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 14012,
+      "client_port": 11180,
       "server_port": 993,
       "use_starttls": false,
       "implicit_tls": true,
@@ -204,7 +204,7 @@
         "untrusted-certificate-chain"
       ],
       "clean": false,
-      "file_hash": "b5f9f52bdd5145d51ca0089c2de45ed39b9c20198047a1b4dfad6af03eab8e37"
+      "file_hash": "bb04813326e806534c59a8b378e0072a509ed1886e3e54dfaaf831fe46e84cb5"
     },
     {
       "name": "smtp_untrusted_chain",
@@ -212,7 +212,7 @@
       "port": 587,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 14713,
+      "client_port": 13351,
       "server_port": 587,
       "use_starttls": true,
       "implicit_tls": false,
@@ -233,7 +233,7 @@
         "weak-cipher-suite"
       ],
       "clean": false,
-      "file_hash": "a1f959dd8254a80daa15829df930bf7998c27843ed9b132dbeda82ef753311b9"
+      "file_hash": "1934e6291230d97380eb2e60c6215d45b3d5961d748ae8dd23a41cc7d8868306"
     },
     {
       "name": "smtp_weak_sig",
@@ -241,7 +241,7 @@
       "port": 587,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 12708,
+      "client_port": 10980,
       "server_port": 587,
       "use_starttls": true,
       "implicit_tls": false,
@@ -259,7 +259,7 @@
         "weak-signature-algorithm"
       ],
       "clean": false,
-      "file_hash": "adf3ad5831b717b1a8f11df9454a4e95b45704859a048a6c93f3ff70a43c79f2"
+      "file_hash": "2df52b55843a4215881e5a113872f2575b7934741cacb824f0d46f63b9a10d77"
     },
     {
       "name": "smtp_short_key",
@@ -267,7 +267,7 @@
       "port": 587,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 12846,
+      "client_port": 12122,
       "server_port": 587,
       "use_starttls": true,
       "implicit_tls": false,
@@ -284,7 +284,7 @@
         "short-public-key"
       ],
       "clean": false,
-      "file_hash": "327f7516224b21cb1edb9be51783e6f2de0ff7c8c77ace048d28d553544dcd8d"
+      "file_hash": "9fa4d1fdc3ae625506fdc1787d115b231b26b3886b7a14aaafb1bfc998334e18"
     },
     {
       "name": "pop3_tls12_nonpfs",
@@ -292,7 +292,7 @@
       "port": 995,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 14991,
+      "client_port": 10087,
       "server_port": 995,
       "use_starttls": false,
       "implicit_tls": true,
@@ -313,7 +313,7 @@
         "weak-cipher-suite"
       ],
       "clean": false,
-      "file_hash": "d21593e59cad1f6a4a309eb9a9307354a45189c9f4a6c69c19f39e7e5bb7bf81"
+      "file_hash": "0de4e09d50ff4888d5878cc67e99c77686a8ea729876e322db115d3820003a37"
     },
     {
       "name": "smtp_tls12_rc4",
@@ -321,7 +321,7 @@
       "port": 587,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 13784,
+      "client_port": 13315,
       "server_port": 587,
       "use_starttls": true,
       "implicit_tls": false,
@@ -341,7 +341,7 @@
         "rc4-cipher"
       ],
       "clean": false,
-      "file_hash": "296236d6a4cdbfe53ae7e681c5e7ca85e7a98af2e9a1f04eaccac6c544ff340c"
+      "file_hash": "97c70f41a15b4352305f038ba4476148e7093589c8ed0fcca07047ede6ef6f0f"
     },
     {
       "name": "imap_tls12_3des",
@@ -349,7 +349,7 @@
       "port": 143,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 12285,
+      "client_port": 11976,
       "server_port": 143,
       "use_starttls": true,
       "implicit_tls": false,
@@ -370,7 +370,7 @@
         "weak-cipher-suite"
       ],
       "clean": false,
-      "file_hash": "ed6928f96f8f23b8ea1078f3473da4a98b721477786c879101cce32b2c2726d6"
+      "file_hash": "beefd708763163b9424fec5b2ea4fdeea1f305a3ac0df790ec3d0434a434f096"
     },
     {
       "name": "smtp_starttls_strip",
@@ -378,7 +378,7 @@
       "port": 587,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 11961,
+      "client_port": 11771,
       "server_port": 587,
       "use_starttls": false,
       "implicit_tls": false,
@@ -396,7 +396,7 @@
         "starttls-strip-attempt"
       ],
       "clean": false,
-      "file_hash": "268780522a1d1fc563752be95bd06e6852ac938c65bdaf2ec4b0aa87ad56dffe"
+      "file_hash": "7a6639c11a3f5e78d62790fba817f5ce9e405e90df0d066c00196b68886f7494"
     },
     {
       "name": "imap_starttls_strip",
@@ -404,7 +404,7 @@
       "port": 143,
       "client_ip": "192.168.1.10",
       "server_ip": "192.168.1.20",
-      "client_port": 10925,
+      "client_port": 13998,
       "server_port": 143,
       "use_starttls": false,
       "implicit_tls": false,
@@ -422,7 +422,7 @@
         "starttls-strip-attempt"
       ],
       "clean": false,
-      "file_hash": "3c520c5b03835a1cd6a190234b92f937665e71bcbdc33526697cce4d6f6207b9"
+      "file_hash": "72e793e77821adc56bd30f2768541d444d35eb5a1e0e0395f81fcedce6f347f2"
     }
   ]
 }

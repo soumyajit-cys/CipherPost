@@ -4,7 +4,7 @@
   "port": 587,
   "client_ip": "192.168.1.10",
   "server_ip": "192.168.1.20",
-  "client_port": 12708,
+  "client_port": 10980,
   "server_port": 587,
   "use_starttls": true,
   "implicit_tls": false,
@@ -22,5 +22,5 @@
     "weak-signature-algorithm"
   ],
   "clean": false,
-  "file_hash": "adf3ad5831b717b1a8f11df9454a4e95b45704859a048a6c93f3ff70a43c79f2"
+  "file_hash": "2df52b55843a4215881e5a113872f2575b7934741cacb824f0d46f63b9a10d77"
 }

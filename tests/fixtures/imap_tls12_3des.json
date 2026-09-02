@@ -4,7 +4,7 @@
   "port": 143,
   "client_ip": "192.168.1.10",
   "server_ip": "192.168.1.20",
-  "client_port": 12285,
+  "client_port": 11976,
   "server_port": 143,
   "use_starttls": true,
   "implicit_tls": false,
@@ -25,5 +25,5 @@
     "weak-cipher-suite"
   ],
   "clean": false,
-  "file_hash": "ed6928f96f8f23b8ea1078f3473da4a98b721477786c879101cce32b2c2726d6"
+  "file_hash": "beefd708763163b9424fec5b2ea4fdeea1f305a3ac0df790ec3d0434a434f096"
 }

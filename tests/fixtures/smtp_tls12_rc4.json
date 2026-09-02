@@ -4,7 +4,7 @@
   "port": 587,
   "client_ip": "192.168.1.10",
   "server_ip": "192.168.1.20",
-  "client_port": 13784,
+  "client_port": 13315,
   "server_port": 587,
   "use_starttls": true,
   "implicit_tls": false,
@@ -24,5 +24,5 @@
     "rc4-cipher"
   ],
   "clean": false,
-  "file_hash": "296236d6a4cdbfe53ae7e681c5e7ca85e7a98af2e9a1f04eaccac6c544ff340c"
+  "file_hash": "97c70f41a15b4352305f038ba4476148e7093589c8ed0fcca07047ede6ef6f0f"
 }

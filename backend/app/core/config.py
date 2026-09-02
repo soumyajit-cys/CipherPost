@@ -32,7 +32,24 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-settings.REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-settings.BLOB_DIR.mkdir(parents=True, exist_ok=True)
-settings.MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+_local_data = Path(__file__).resolve().parents[3] / "data"
+
+
+def _ensure_dir(p: Path) -> Path:
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+        probe = p / ".write_test"
+        probe.write_text("x")
+        probe.unlink()
+        return p
+    except Exception:
+        p = _local_data / p.parts[-1]
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
+
+settings.UPLOAD_DIR = _ensure_dir(settings.UPLOAD_DIR)
+settings.REPORTS_DIR = _ensure_dir(settings.REPORTS_DIR)
+settings.BLOB_DIR = _ensure_dir(settings.BLOB_DIR)
+settings.MODELS_DIR = _ensure_dir(settings.MODELS_DIR)

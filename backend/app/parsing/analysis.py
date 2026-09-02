@@ -45,11 +45,16 @@ def analyze_session(sess: Session, trust_store: str | None = None) -> SessionAna
         run_rules(sa)
         return sa
 
-    # Parse TLS records from the client stream
+    # Parse TLS records from BOTH directions (ClientHello from the client
+    # stream; ServerHello/Certificate from the server stream).
     try:
         records = parse_tls_records(sess.tls_segment)
     except RecErr:
         records = []
+    try:
+        server_records = parse_tls_records(sess.tls_server_segment)
+    except RecErr:
+        server_records = []
 
     if records:
         msgs = _handshake_body(records)
@@ -58,6 +63,8 @@ def analyze_session(sess: Session, trust_store: str | None = None) -> SessionAna
                 sa.client_hello = parse_client_hello(msgs[1])
             except TlsParseError:
                 sa.client_hello = None
+    if server_records:
+        msgs = _handshake_body(server_records)
         if 2 in msgs:  # ServerHello
             try:
                 sa.server_hello = parse_server_hello(msgs[2])

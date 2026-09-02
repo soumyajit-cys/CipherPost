@@ -193,16 +193,14 @@ class StreamAssembler:
 
     def _flush_contiguous(self, hs: _HalfStream) -> None:
         while True:
-            nxt = hs.segments.get(hs.leftmost)
-            if nxt is None:
+            next_seq = hs.leftmost
+            seg = hs.segments.get(next_seq)
+            if seg is None:
                 break
-            data, end, _ = nxt
+            data, end, _ = seg
             hs.buf += data
             hs.leftmost = end
-            del hs.segments[hs.leftmost - len(data)]
-            # delete via key=old leftmost:
-            # recompute
-            hs.segments.pop(hs.leftmost - len(data), None)
+            del hs.segments[next_seq]
 
     def completed(self):
         return [k for k, v in self._streams.items() if v["complete"]]

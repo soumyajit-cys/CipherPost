@@ -99,10 +99,10 @@ class Session:
 
 @dataclass
 class _HalfStream:
-    base_seq: int | None = None
-    leftmost: int | None = None
-    segments: dict = field(default_factory=dict)  # seq -> (data, end)
-    buf: bytearray = field(default_factory=bytearray)
+    base_seq: int | None = None           # SYN ISN (if observed), or first data seq
+    frontier: int | None = None           # next seq position expected for output
+    pending: dict = field(default_factory=dict)   # seq -> data (at/after frontier)
+    buf: bytearray = field(default_factory=bytearray)  # emitted ordered bytes
     fin_seq: int | None = None
     rst: bool = False
     first_ts: float = 0.0
@@ -127,43 +127,45 @@ class _Stream:
     complete: bool = False
     first_ts: float = 0.0
 
-    def store(self, dir_a: bool, seq: int, data: bytes, ts: float) -> None:
-        hs = self.ha if dir_a else self.hb
-        self._store(hs, seq, data, ts)
-
-    @staticmethod
-    def _store(hs: _HalfStream, seq: int, data: bytes, ts: float) -> None:
+    @classmethod
+    def _store(cls, hs: _HalfStream, seq: int, data: bytes, ts: float) -> None:
+        """Online TCP reassembly anchored at SYN ISN (base_seq = ISN+1)."""
         if not data:
             return
         if not hs.first_ts:
             hs.first_ts = ts
+            if hs.syn_seq is not None and not hs.base_seq:
+                hs.base_seq = hs.syn_seq + 1
         hs.last_ts = ts
         end = seq + len(data)
-        if hs.base_seq is None:
+        if hs.base_seq is None or hs.frontier is None:
             hs.base_seq = seq
-            hs.leftmost = seq
-        if end <= hs.leftmost:
-            return  # pure retransmit of filled region
-        if seq <= hs.leftmost < end:
-            toappend = data[hs.leftmost - seq:]
-            hs.buf += toappend
-            hs.leftmost = end
-            _Stream._flush(hs)
+            hs.frontier = seq
+        # Fully-below-frontier: retransmit of already-emitted region
+        if end <= hs.frontier:
             return
-        hs.segments[seq] = (data, end)
-        _Stream._flush(hs)
+        # Partial overlap of the emitted region: keep only the tail
+        if seq < hs.frontier:
+            skip = hs.frontier - seq
+            data = data[skip:]
+            seq = hs.frontier
+        # Now seq >= frontier: buffer and merge contiguous runs
+        hs.pending[seq] = data
+        cls._flush(hs)
 
     @staticmethod
     def _flush(hs: _HalfStream) -> None:
         while True:
-            ls = hs.leftmost
-            seg = hs.segments.get(ls)
+            seg = hs.pending.get(hs.frontier)
             if seg is None:
                 break
-            data, end = seg
-            hs.buf += data
-            hs.leftmost = end
-            del hs.segments[ls]
+            hs.buf += seg
+            hs.frontier += len(seg)
+            del hs.pending[hs.frontier - len(seg)]
+
+    def store(self, dir_a: bool, seq: int, data: bytes, ts: float) -> None:
+        hs = self.ha if dir_a else self.hb
+        self._store(hs, seq, data, ts)
 
 
 class StreamAssembler:

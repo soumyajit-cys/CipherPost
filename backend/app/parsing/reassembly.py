@@ -318,16 +318,15 @@ def _assign_tls_segments(sess: Session, client_bytes: bytes, server_bytes: bytes
         sess.plaintext_segment = client_bytes[:offset]
         sess.plaintext_server_segment = server_bytes if sess.is_starttls else b""
         sess.tls_segment = client_bytes[offset:]
-        # For STARTTLS, also find where server-side TLS begins (after its
-        # "ready to start TLS" plaintext response).
-        if sess.is_starttls:
-            so = find_tls_offset(server_bytes)
-            if so is not None:
-                server_offset = so
-                sess.tls_server_segment = server_bytes[so:]
+        # For any session, find where server-side TLS begins (after any
+        # plaintext response / banner), keeping the parser robust.
+        so = find_tls_offset(server_bytes)
+        if so is not None and so < len(server_bytes):
+            sess.tls_server_segment = server_bytes[so:]
+            if not (sess.is_starttls or implicit):
                 sess.plaintext_server_segment = server_bytes[:so]
             else:
-                sess.tls_server_segment = server_bytes
+                sess.plaintext_server_segment = server_bytes[:so]
         else:
             sess.tls_server_segment = server_bytes
     else:

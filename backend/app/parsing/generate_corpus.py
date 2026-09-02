@@ -403,13 +403,16 @@ def generate_session(sess: GenSession, outdir: str):
     stream = StreamBuilder(sess.protocol, sport=10000 + hash(sess.name) % 5000, dport=sess.port,
                            frag_size=None)
     stream.client_talk(b"")
-    # Protocol banner
-    banners = {
-        "SMTP": b"220 mail.cipherpost.test ESMTP Postfix\r\n",
-        "IMAP": b"* OK [CAPABILITY IMAP4rev1 STARTTLS] Dovecot ready.\r\n",
-        "POP3": b"+OK Dovecot ready.\r\n",
-    }
-    stream.server_talk(banners[sess.protocol])
+    implicit_port = sess.port in (465, 993, 995)
+    # Protocol banner: for implicit TLS ports the connection is TLS from the
+    # first byte and NO plaintext banner is sent (matching real Mail*s).
+    if not implicit_port:
+        banners = {
+            "SMTP": b"220 mail.cipherpost.test ESMTP Postfix\r\n",
+            "IMAP": b"* OK [CAPABILITY IMAP4rev1 STARTTLS] Dovecot ready.\r\n",
+            "POP3": b"+OK Dovecot ready.\r\n",
+        }
+        stream.server_talk(banners[sess.protocol])
 
     x509_cert_field = b"" if sess.cert_mode == "untrusted" else b""
 

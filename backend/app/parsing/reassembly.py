@@ -291,6 +291,7 @@ def detect_protocol(session: Session, client_stream: bytes, server_stream: bytes
 def _assign_tls_segments(sess: Session, client_bytes: bytes, server_bytes: bytes) -> None:
     implicit = sess.server_port in IMPLICIT_TLS_PORTS
     offset = None
+    server_offset = None
     if not implicit:
         off = find_starttls_offset(client_bytes, sess.protocol.value)
         if off is not None and off < len(client_bytes):
@@ -304,7 +305,7 @@ def _assign_tls_segments(sess: Session, client_bytes: bytes, server_bytes: bytes
         recs = []
         try:
             recs = parse_tls_records(client_bytes)
-        except (TlsParseError, Exception):
+        except Exception:
             recs = []
         if recs:
             first = recs[0]
@@ -317,7 +318,18 @@ def _assign_tls_segments(sess: Session, client_bytes: bytes, server_bytes: bytes
         sess.plaintext_segment = client_bytes[:offset]
         sess.plaintext_server_segment = server_bytes if sess.is_starttls else b""
         sess.tls_segment = client_bytes[offset:]
-        sess.tls_server_segment = server_bytes if sess.is_starttls else server_bytes
+        # For STARTTLS, also find where server-side TLS begins (after its
+        # "ready to start TLS" plaintext response).
+        if sess.is_starttls:
+            so = find_tls_offset(server_bytes)
+            if so is not None:
+                server_offset = so
+                sess.tls_server_segment = server_bytes[so:]
+                sess.plaintext_server_segment = server_bytes[:so]
+            else:
+                sess.tls_server_segment = server_bytes
+        else:
+            sess.tls_server_segment = server_bytes
     else:
         sess.plaintext_segment = client_bytes
         sess.plaintext_server_segment = server_bytes

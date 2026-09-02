@@ -451,12 +451,28 @@ def generate_session(sess: GenSession, outdir: str):
             stream.server_talk(b"+OK Begin TLS negotiation now\r\n")
 
     #
-    # STARTTLS-stripping adversarial samples: server never offers STARTTLS and
-    # the session continues in plaintext. The client should have rejected this,
-    # so we flag it as a strip attempt.
+    # STARTTLS-stripping adversarial samples: the server advertises STARTTLS,
+    # the client issues STARTTLS (or STLS) and the server ACKs it, but NO TLS
+    # handshake follows — the session continues in cleartext, exactly as a
+    # man-in-the-middle stripping attack would leave it.
     #
     if sess.tls_version == 0x0000:
-        # No TLS handshake at all — plaintext mail commands (attacker stripped STARTTLS)
+        # 1) server advertises STARTTLS in its capabilities
+        if sess.protocol == "SMTP":
+            stream.client_talk(b"EHLO client.example.com\r\n")
+            stream.server_talk(b"250-mail.cipherpost.test\r\n250-STARTTLS\r\n250 8BITMIME\r\n")
+            stream.client_talk(b"STARTTLS\r\n")
+            stream.server_talk(b"220 2.0.0 Ready to start TLS\r\n")
+        elif sess.protocol == "IMAP":
+            stream.client_talk(b"a001 CAPABILITY\r\n")
+            stream.server_talk(b"* CAPABILITY IMAP4rev1 STARTTLS\r\n")
+            stream.client_talk(b"a002 STARTTLS\r\n")
+            stream.server_talk(b"a002 OK Begin TLS negotiation now\r\n")
+        else:  # POP3
+            stream.client_talk(b"STLS\r\n")
+            stream.server_talk(b"+OK Begin TLS negotiation now\r\n")
+        # 2) but then the connection proceeds in PLAINTEXT (attacker dropped
+        #    the TLS handshake; client naively continues)
         stream.client_talk(make_email_body(sess.protocol))
         stream.fin()
 

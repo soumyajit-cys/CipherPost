@@ -357,14 +357,29 @@ def tls_version_label(ver: float) -> str:
     }.get(ver, f"UNKNOWN-{ver}")
 
 
+# Module-level shared root CA for all sessions that chain to the CipherPost
+# root (valid / expired / weak-sig / short-key). Its PEM is emitted to
+# <outdir>/trusted_root.pem at corpus generation time and used as the trust
+# anchor for chain validation in tests.
+_SHARED_ROOT_CERT = None
+_SHARED_ROOT_KEY = None
+
+
+def shared_root():
+    global _SHARED_ROOT_CERT, _SHARED_ROOT_KEY
+    if _SHARED_ROOT_CERT is None:
+        _SHARED_ROOT_CERT, _SHARED_ROOT_KEY = make_root_ca("CipherPost Root CA")
+    return _SHARED_ROOT_CERT, _SHARED_ROOT_KEY
+
+
 def generate_session(sess: GenSession, outdir: str):
     """Generate a pcap + json ground truth pair for a single session scenario."""
     # Create certs for this session
     root_cert = None
     root_key = None
     cert_pem = None
+    root_cert, root_key = shared_root()
     if sess.cert_mode == "valid":
-        root_cert, root_key = make_root_ca("CipherPost Root CA")
         leaf, _ = issue_leaf(root_cert, root_key, cn=sess.sni)
         cert_pem = cert_to_pem(leaf)
         chain_pem = [cert_pem, cert_to_pem(root_cert)]
@@ -373,7 +388,6 @@ def generate_session(sess: GenSession, outdir: str):
         cert_pem = cert_to_pem(leaf)
         chain_pem = [cert_pem]
     elif sess.cert_mode == "expired":
-        root_cert, root_key = make_root_ca("CipherPost Root CA")
         leaf, _ = issue_leaf(root_cert, root_key, cn=sess.sni, days_valid=-30, not_before_offset_days=900)
         cert_pem = cert_to_pem(leaf)
         chain_pem = [cert_pem, cert_to_pem(root_cert)]
@@ -386,11 +400,9 @@ def generate_session(sess: GenSession, outdir: str):
     elif sess.cert_mode == "weak-sig":
         der, _ = make_weak_signature_cert(cn=sess.sni)
         leaf_pem = pem_from_der(der)
-        root_cert, root_key = make_root_ca("CipherPost Root CA")
         cert_pem = leaf_pem
         chain_pem = [leaf_pem, cert_to_pem(root_cert)]
     elif sess.cert_mode == "short-key":
-        root_cert, root_key = make_root_ca("CipherPost Root CA")
         leaf, _ = issue_leaf(root_cert, root_key, cn=sess.sni, key_size=1024)
         cert_pem = cert_to_pem(leaf)
         chain_pem = [cert_pem, cert_to_pem(root_cert)]
@@ -398,6 +410,12 @@ def generate_session(sess: GenSession, outdir: str):
         leaf, _ = make_self_signed(cn=sess.sni)
         cert_pem = cert_to_pem(leaf)
         chain_pem = [cert_pem]
+
+    # Emit shared trust root alongside the corpus
+    trust_path = os.path.join(outdir, "trusted_root.pem")
+    if not os.path.exists(trust_path):
+        with open(trust_path, "wb") as tf:
+            tf.write(cert_to_pem(root_cert))
 
     # Build stream
     stream = StreamBuilder(sess.protocol, sport=10000 + hash(sess.name) % 5000, dport=sess.port,

@@ -4,7 +4,7 @@
   "port": 465,
   "client_ip": "192.168.1.10",
   "server_ip": "192.168.1.20",
-  "client_port": 13816,
+  "client_port": 11873,
   "server_port": 465,
   "use_starttls": false,
   "implicit_tls": true,
@@ -22,5 +22,5 @@
     "untrusted"
   ],
   "clean": false,
-  "file_hash": "14ff8d398192e696de089162e933babcfdd3dd9a395d4d09d708f35291b4c914"
+  "file_hash": "8e94660f9acca41cf92bc325437c3778134e9609e366ba93fe020c48a6038212"
 }

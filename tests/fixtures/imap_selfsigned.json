@@ -4,7 +4,7 @@
   "port": 993,
   "client_ip": "192.168.1.10",
   "server_ip": "192.168.1.20",
-  "client_port": 11944,
+  "client_port": 11463,
   "server_port": 993,
   "use_starttls": false,
   "implicit_tls": true,
@@ -22,5 +22,5 @@
     "untrusted"
   ],
   "clean": false,
-  "file_hash": "6052923fb1828a0f0ec14e4e5e4f8ada07bfe358a6743f96241ed73d19c07b9f"
+  "file_hash": "2c801cf93279eccbf930088ce9bd3d23de675340da8ff13c4709a19063481545"
 }

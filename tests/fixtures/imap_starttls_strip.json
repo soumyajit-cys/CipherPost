@@ -4,7 +4,7 @@
   "port": 143,
   "client_ip": "192.168.1.10",
   "server_ip": "192.168.1.20",
-  "client_port": 11134,
+  "client_port": 10186,
   "server_port": 143,
   "use_starttls": false,
   "implicit_tls": false,
@@ -22,5 +22,5 @@
     "starttls-strip"
   ],
   "clean": false,
-  "file_hash": "bba5e7d6b47102dbcb33de88e1c8a714891c186c248ae252fe5d9be4971a5eed"
+  "file_hash": "e51737a87f066de06950224a69c00ed90749776b96c5db3b67f417d315042598"
 }

@@ -350,7 +350,7 @@ def rule_ssl_in_plaintext(sa: SessionAnalysis):
             " protocol-stripping / MITM indicator; credentials and message bodies were"
             " transmitted in cleartext and are recoverable from the capture.",
             "RFC 3207 §4 (SMTP); NIST SP 800-52r2 §3.3",
-            plaintext_bytes=len(sa.plaintext_bytes),
+            plaintext_bytes=getattr(sa, "plaintext_bytes", 0),
         )
 
 

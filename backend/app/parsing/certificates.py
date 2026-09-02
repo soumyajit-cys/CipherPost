@@ -62,8 +62,9 @@ class CertAnalysis:
 
     @property
     def weak_signature(self) -> bool:
-        sig = (self.signature_alg or "").split("_")[0].lower()
-        return sig in WEAK_SIGNATURE_ALGS
+        sig = (self.signature_alg or "").lower()
+        # e.g. sha1WithRSAEncryption / md5WithRSA / SHA1 encoded as OID suffix
+        return sig.startswith(("sha1", "md5")) or sig.endswith((".1.1.5", ".1.1.4"))
 
     @property
     def short_key(self) -> bool:

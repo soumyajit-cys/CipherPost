@@ -21,14 +21,10 @@ import socket
 from dataclasses import dataclass, field
 from enum import Enum
 
-import dpkt
-from dpkt.ip import IP as DpktIP
-from dpkt.ethernet import Ethernet as DpktEther
-import dpkt.arp
-
 from app.parsing.tls_records import (
-    parse_tls_records, find_starttls_offset, find_tls_offset, TlsParseError,
+    parse_tls_records, find_starttls_offset, find_tls_offset,
 )
+from app.parsing.tls_records import TlsParseError  # noqa: F401 (re-exported for callers)
 
 
 class Protocol(str, Enum):

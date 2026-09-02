@@ -1,0 +1,23 @@
+{
+  "name": "pop3_tls12_acceptable",
+  "protocol": "POP3",
+  "port": 995,
+  "client_ip": "192.168.1.10",
+  "server_ip": "192.168.1.20",
+  "client_port": 10101,
+  "server_port": 995,
+  "use_starttls": false,
+  "implicit_tls": true,
+  "tls_version": "TLS1.2",
+  "tls_version_raw": 771,
+  "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+  "cipher_suite_iana": "0xc02f",
+  "cipher_strength": 0.85,
+  "pfs": true,
+  "key_len": 128,
+  "cert_mode": "valid",
+  "sni": "mail.cipherpost.test",
+  "expected_findings": [],
+  "clean": true,
+  "file_hash": "5dba8476f3d257b69fade7a507eafaef03a3cedc102d1f1e3beec548cad84db8"
+}

@@ -1,0 +1,26 @@
+{
+  "name": "imap_selfsigned",
+  "protocol": "IMAP",
+  "port": 993,
+  "client_ip": "192.168.1.10",
+  "server_ip": "192.168.1.20",
+  "client_port": 14414,
+  "server_port": 993,
+  "use_starttls": false,
+  "implicit_tls": true,
+  "tls_version": "TLS1.2",
+  "tls_version_raw": 771,
+  "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+  "cipher_suite_iana": "0xc02f",
+  "cipher_strength": 0.85,
+  "pfs": true,
+  "key_len": 128,
+  "cert_mode": "self-signed",
+  "sni": "mail.cipherpost.test",
+  "expected_findings": [
+    "self-signed-certificate",
+    "untrusted-certificate-chain"
+  ],
+  "clean": false,
+  "file_hash": "0344b825c321d1f308047b34ed614c1899a1af1c75c4b64c42835bd813616076"
+}

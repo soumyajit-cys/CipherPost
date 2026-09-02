@@ -1,0 +1,23 @@
+{
+  "name": "smtp_tls13_strong",
+  "protocol": "SMTP",
+  "port": 587,
+  "client_ip": "192.168.1.10",
+  "server_ip": "192.168.1.20",
+  "client_port": 10782,
+  "server_port": 587,
+  "use_starttls": true,
+  "implicit_tls": false,
+  "tls_version": "TLS1.3",
+  "tls_version_raw": 772,
+  "cipher": "TLS_AES_256_GCM_SHA384",
+  "cipher_suite_iana": "0x1302",
+  "cipher_strength": 1.0,
+  "pfs": true,
+  "key_len": 256,
+  "cert_mode": "valid",
+  "sni": "mail.cipherpost.test",
+  "expected_findings": [],
+  "clean": true,
+  "file_hash": "4d6a391b76e213c0ec75e18b764f03053462e75ae69ec35a54a79f362a43a653"
+}

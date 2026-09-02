@@ -1,0 +1,23 @@
+{
+  "name": "imap_tls13_strong",
+  "protocol": "IMAP",
+  "port": 993,
+  "client_ip": "192.168.1.10",
+  "server_ip": "192.168.1.20",
+  "client_port": 11375,
+  "server_port": 993,
+  "use_starttls": false,
+  "implicit_tls": true,
+  "tls_version": "TLS1.3",
+  "tls_version_raw": 772,
+  "cipher": "TLS_AES_128_GCM_SHA256",
+  "cipher_suite_iana": "0x1301",
+  "cipher_strength": 0.95,
+  "pfs": true,
+  "key_len": 128,
+  "cert_mode": "valid",
+  "sni": "mail.cipherpost.test",
+  "expected_findings": [],
+  "clean": true,
+  "file_hash": "fea15fe5b624703983a2ea744403aec4d29233e604159944b1c0abc16af40ff1"
+}

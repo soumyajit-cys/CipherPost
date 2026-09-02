@@ -156,13 +156,14 @@ class _Stream:
     @staticmethod
     def _flush(hs: _HalfStream) -> None:
         while True:
-            seg = hs.segments.get(hs.leftmost)
+            ls = hs.leftmost
+            seg = hs.segments.get(ls)
             if seg is None:
                 break
             data, end = seg
             hs.buf += data
             hs.leftmost = end
-            del hs.segments[hs.leftmost - len(data)]
+            del hs.segments[ls]
 
 
 class StreamAssembler:

@@ -1,0 +1,29 @@
+{
+  "name": "pop3_tls12_nonpfs",
+  "protocol": "POP3",
+  "port": 995,
+  "client_ip": "192.168.1.10",
+  "server_ip": "192.168.1.20",
+  "client_port": 14991,
+  "server_port": 995,
+  "use_starttls": false,
+  "implicit_tls": true,
+  "tls_version": "TLS1.2",
+  "tls_version_raw": 771,
+  "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+  "cipher_suite_iana": "0xa",
+  "cipher_strength": 0.25,
+  "pfs": false,
+  "key_len": 112,
+  "cert_mode": "valid",
+  "sni": "mail.cipherpost.test",
+  "expected_findings": [
+    "3des-cipher",
+    "client-no-pfs-suites",
+    "non-aead-bulk-cipher",
+    "non-pfs-key-exchange",
+    "weak-cipher-suite"
+  ],
+  "clean": false,
+  "file_hash": "d21593e59cad1f6a4a309eb9a9307354a45189c9f4a6c69c19f39e7e5bb7bf81"
+}

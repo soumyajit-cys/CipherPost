@@ -1,0 +1,25 @@
+{
+  "name": "smtp_short_key",
+  "protocol": "SMTP",
+  "port": 587,
+  "client_ip": "192.168.1.10",
+  "server_ip": "192.168.1.20",
+  "client_port": 12846,
+  "server_port": 587,
+  "use_starttls": true,
+  "implicit_tls": false,
+  "tls_version": "TLS1.2",
+  "tls_version_raw": 771,
+  "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+  "cipher_suite_iana": "0xc02f",
+  "cipher_strength": 0.85,
+  "pfs": true,
+  "key_len": 128,
+  "cert_mode": "short-key",
+  "sni": "mail.cipherpost.test",
+  "expected_findings": [
+    "short-public-key"
+  ],
+  "clean": false,
+  "file_hash": "327f7516224b21cb1edb9be51783e6f2de0ff7c8c77ace048d28d553544dcd8d"
+}

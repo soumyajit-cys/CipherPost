@@ -4,7 +4,7 @@
   "port": 995,
   "client_ip": "192.168.1.10",
   "server_ip": "192.168.1.20",
-  "client_port": 14786,
+  "client_port": 13406,
   "server_port": 995,
   "use_starttls": false,
   "implicit_tls": true,
@@ -21,5 +21,5 @@
     "tls-1-2-ecdhe-aead"
   ],
   "clean": false,
-  "file_hash": "a06453d8dac22f265c1fe68f276a3b177cb38b9f2e4a65bae74f6c649b4e1d78"
+  "file_hash": "8b8453e737ed79403d32b6cc97a8ab6347d12cc7a50fb7471cf69b7b419efc1c"
 }

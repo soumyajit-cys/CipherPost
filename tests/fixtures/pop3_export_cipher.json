@@ -4,7 +4,7 @@
   "port": 110,
   "client_ip": "192.168.1.10",
   "server_ip": "192.168.1.20",
-  "client_port": 13773,
+  "client_port": 11488,
   "server_port": 110,
   "use_starttls": true,
   "implicit_tls": false,
@@ -25,5 +25,5 @@
     "weak-cipher"
   ],
   "clean": false,
-  "file_hash": "87f1448109f9ed124bcc958489a244cdcb90e99188c53ce21c7a6bed401306c5"
+  "file_hash": "6814203d1a95751298258e0d47ceecc6bfe953b0723c53690c9a144f49f5bce1"
 }

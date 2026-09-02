@@ -161,7 +161,8 @@ def build_client_hello(tls_version: int, cipher_suites: list[int], sni: str,
     h = bytearray()
     hs_len = len(body)
     hdr = bytes([1]) + hs_len.to_bytes(3, "big")
-    return bytes(h) + hdr + bytes(body)
+    hs = bytes(h) + hdr + bytes(body)
+    return tls_record(hs, version=tls_version if tls_version > 0x0300 else 0x0301)
 
 
 def build_server_hello(tls_version: int, cipher_suite: int) -> bytes:

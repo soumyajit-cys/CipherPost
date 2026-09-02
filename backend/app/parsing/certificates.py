@@ -165,10 +165,11 @@ def _load_trust_bundle(path: str | None) -> list["ossl.X509"] | None:
     try:
         with open(bundle, "rb") as f:
             data = f.read()
-        from cryptography.hazmat.primitives.serialization import Encoding, load_pem_x509_certificates
+        from cryptography.x509 import load_pem_x509_certificates
+        from cryptography.hazmat.primitives.serialization import Encoding
         for c in load_pem_x509_certificates(data):
             certs.append(ossl.load_certificate(ossl.FILETYPE_ASN1, c.public_bytes(Encoding.DER)))
-    except Exception:
+    except Exception as e:
         return None
     return certs
 

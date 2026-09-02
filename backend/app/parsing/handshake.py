@@ -189,6 +189,9 @@ def parse_server_hello(data: bytes) -> ServerHelloInfo:
         raise TlsParseError("server hello truncated cipher")
     info.cipher_suite = int.from_bytes(buf[pos:pos+2], "big")
     pos += 2
+    # Negotiated version fallback: TLS <=1.2 uses legacy_version; TLS 1.3 is
+    # carried in the supported_versions extension.
+    info.negotiated_version = info.legacy_version
     if pos + 1 > len(buf):
         return info
     comp = buf[pos]
@@ -205,8 +208,6 @@ def parse_server_hello(data: bytes) -> ServerHelloInfo:
             info.supported_versions_ext = int.from_bytes(edata[0:2], "big")
     if info.supported_versions_ext is not None:
         info.negotiated_version = info.supported_versions_ext
-    else:
-        info.negotiated_version = info.legacy_version
     return info
 
 

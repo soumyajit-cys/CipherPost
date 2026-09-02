@@ -27,7 +27,12 @@ def analyze_session(sess: Session, trust_store: str | None = None) -> SessionAna
     )
     sa.is_implicit_tls_port = sess.server_port in IMPLICIT_TLS_PORTS
     sa.port = sess.server_port
-    sa.expected_starttls = (not sess.is_starttls) and (sess.server_port in (25, 110, 143, 587))
+    sa.saw_starttls_offer = (
+        b"STARTTLS" in sess.plaintext_segment
+        or b"STARTTLS" in sess.plaintext_server_segment
+        or b"STLS" in sess.plaintext_segment
+    )
+    sa.expected_starttls = sa.saw_starttls_offer
     sa.started_tls = len(sess.tls_segment) > 0
     sa.tls_bytes = len(sess.tls_segment)
     sa.plaintext_bytes = len(sess.plaintext_segment)

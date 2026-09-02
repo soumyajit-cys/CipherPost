@@ -26,7 +26,9 @@ from dpkt.ip import IP as DpktIP
 from dpkt.ethernet import Ethernet as DpktEther
 import dpkt.arp
 
-from app.parsing.tls_records import parse_tls_records, find_starttls_offset, TlsParseError
+from app.parsing.tls_records import (
+    parse_tls_records, find_starttls_offset, find_tls_offset, TlsParseError,
+)
 
 
 class Protocol(str, Enum):

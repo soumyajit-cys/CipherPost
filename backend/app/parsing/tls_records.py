@@ -65,6 +65,42 @@ STARTTLS_COMMANDS = {
 }
 
 
+def _valid_record_at(data: bytes, pos: int) -> tuple[int, int] | None:
+    """If a valid TLS record header exists at pos, return (content_type, length)."""
+    if pos + 5 > len(data):
+        return None
+    ct = data[pos]
+    if ct not in (20, 21, 22, 23):
+        return None
+    version = (data[pos + 1] << 8) | data[pos + 2]
+    if version not in (0x0300, 0x0301, 0x0302, 0x0303, 0x0304):
+        return None
+    length = (data[pos + 3] << 8) | data[pos + 4]
+    if length > 65535 + 2048 or length < 0:
+        return None
+    if pos + 5 + length > len(data):
+        return None
+    return ct, length
+
+
+def find_tls_offset(data: bytes, max_scan: int = 8192) -> int | None:
+    """
+    Find the byte offset where a run of valid TLS records begins, by scanning
+    forward until the whole tail parses cleanly. Used to split the server side
+    of STARTTLS sessions (plaintext responses followed by TLS records).
+    """
+    if not data:
+        return None
+    limit = min(len(data) - 5, max_scan)
+    pos = 0
+    while pos <= limit:
+        hit = _valid_record_at(data, pos)
+        if hit is not None:
+            return pos
+        pos += 1
+    return None
+
+
 def find_starttls_offset(plaintext_segment: bytes, protocol: str) -> int | None:
     """
     Locate the byte offset in the reassembled client->server stream where the

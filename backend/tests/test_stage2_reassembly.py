@@ -80,12 +80,16 @@ def test_reassembly_out_of_order_and_retransmit():
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, isn, 0, b"", 0x02, 0.5)   # SYN
     seq = isn + 1
     chunks = {0: b"HELLO WORLD ", 1: b"THIS IS ", 2: b"A MESSAGE"}
-    # chunk0=[1000,1011) chunk1=[1011,1019) chunk2=[1019,1028)
+    # chunk0=[1000,1012) chunk1=[1012,1020) chunk2=[1020,1029)
     # send segment 2 first, then segment 0, retransmit 0, then 1
-    _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 19, 7000, chunks[2], 0x18, 1.0)
+    _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 20, 7000, chunks[2], 0x18, 1.0)
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq, 7000, chunks[0], 0x18, 1.01)
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq, 7000, chunks[0], 0x18, 1.02)  # retx
-    _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 11, 7000, chunks[1], 0x18, 1.03)
+    _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 12, 7000, chunks[1], 0x18, 1.03)
+    # server SYN-ACK + FIN to complete
+    _shot(asm, "2.2.2.2", "1.1.1.1", 143, 5555, 6999, seq + 29, b"", 0x12, 1.5)
+    _shot(asm, "2.2.2.2", "1.1.1.1", 143, 5555, 7000, seq + 29, b"", 0x11, 2.0)
+    _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 29, 7001, b"", 0x11, 2.01)
     # server SYN-ACK + FIN to complete
     _shot(asm, "2.2.2.2", "1.1.1.1", 143, 5555, 6999, seq + 28, b"", 0x12, 1.5)
     _shot(asm, "2.2.2.2", "1.1.1.1", 143, 5555, 7000, seq + 28, b"", 0x11, 2.0)

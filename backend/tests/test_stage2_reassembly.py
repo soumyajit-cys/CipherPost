@@ -76,17 +76,18 @@ def _shot(asm, src, dst, sport, dport, seq, ack, payload, flags, ts):
 
 def test_reassembly_out_of_order_and_retransmit():
     asm = StreamAssembler()
-    # client sends three data segments, out of order with a retransmit
-    seq = 1000
+    isn = 999
+    _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, isn, 0, b"", 0x02, 0.5)   # SYN
+    seq = isn + 1
     chunks = {0: b"HELLO WORLD ", 1: b"THIS IS ", 2: b"A MESSAGE"}
     # send segment 2 first, then segment 0, retransmit 0, then 1
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 14, 7000, chunks[2], 0x18, 1.0)
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq, 7000, chunks[0], 0x18, 1.01)
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq, 7000, chunks[0], 0x18, 1.02)  # retx
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 11, 7000, chunks[1], 0x18, 1.03)
-    # server FIN to complete
+    # server SYN-ACK + FIN to complete
+    _shot(asm, "2.2.2.2", "1.1.1.1", 143, 5555, 6999, seq + 25, b"", 0x12, 1.5)
     _shot(asm, "2.2.2.2", "1.1.1.1", 143, 5555, 7000, seq + 25, b"", 0x11, 2.0)
-    # client FIN-ACK
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 25, 7001, b"", 0x11, 2.01)
     streams = asm.emit()
     assert len(streams) == 1
@@ -96,12 +97,15 @@ def test_reassembly_out_of_order_and_retransmit():
 
 def test_reassembly_gap_keeps_ordering():
     asm = StreamAssembler()
-    seq = 1000
+    isn = 999
+    _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, isn, 0, b"", 0x02, 0.5)
+    seq = isn + 1
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 11, 7000, b"cf", 0x18, 1.0)
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq, 7000, b"ab", 0x18, 1.01)
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 2, 7000, b"cd", 0x18, 1.02)
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 4, 7000, b"e", 0x18, 1.03)
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 13, 7000, b"g", 0x18, 1.04)
+    _shot(asm, "2.2.2.2", "1.1.1.1", 143, 5555, 6999, seq + 14, b"", 0x12, 1.5)
     _shot(asm, "2.2.2.2", "1.1.1.1", 143, 5555, 7000, seq + 14, b"", 0x11, 2.0)
     _shot(asm, "1.1.1.1", "2.2.2.2", 5555, 143, seq + 14, 7001, b"", 0x11, 2.01)
     streams = asm.emit()

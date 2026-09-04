@@ -1,0 +1,86 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cipherpost
+      POSTGRES_USER: cipherpost
+      POSTGRES_PASSWORD: cipherpost
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cipherpost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_REDIS_URL: redis://redis:6379/0
+      CIPHERPOST_CELERY_BROKER_URL: redis://redis:6379/0
+      CIPHERPOST_CELERY_RESULT_BACKEND: redis://redis:6379/0
+      CIPHERPOST_TRUSTED_CA_BUNDLE_PATH: /app/tests/fixtures/trusted_root.pem
+      CIPHERPOST_LOG_LEVEL: INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - upload_data:/data/uploads
+      - report_data:/data/reports
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    environment:
+      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_REDIS_URL: redis://redis:6379/0
+      CIPHERPOST_CELERY_BROKER_URL: redis://redis:6379/0
+      CIPHERPOST_CELERY_RESULT_BACKEND: redis://redis:6379/0
+      CIPHERPOST_TRUSTED_CA_BUNDLE_PATH: /app/tests/fixtures/trusted_root.pem
+      CIPHERPOST_LOG_LEVEL: INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - upload_data:/data/uploads
+      - report_data:/data/reports
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  upload_data:
+  report_data:

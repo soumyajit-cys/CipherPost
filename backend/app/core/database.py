@@ -1,6 +1,19 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import JSON, TypeDecorator
+from sqlalchemy.dialects.postgresql import JSONB as PGJSONB
 from app.core.config import settings
+
+
+class JSONBType(TypeDecorator):
+    """JSONB that works on both PostgreSQL and SQLite (for tests)."""
+    impl = JSON
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PGJSONB())
+        return dialect.type_descriptor(JSON())
 
 
 class Base(DeclarativeBase):

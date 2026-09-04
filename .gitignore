@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Runtime data
+data/uploads/
+data/reports/
+data/blobs/
+data/models/
+backend/data/
+
+# Env & secrets
+.env.local
+.env.prod
+
+# OS
+.DS_Store
+
+# Test artifacts
+tests/generated/

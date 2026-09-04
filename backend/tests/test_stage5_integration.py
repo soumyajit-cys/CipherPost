@@ -113,14 +113,19 @@ def test_task_processing_direct(trust, corpus_index):
         db.add(job)
         db.commit()
 
-        # Run analysis on a session known to have findings (weak config)
-        ent = next((e for e in corpus_index if "export_cipher" in e["name"]), corpus_index[1])
-        analyses = analyze_pcap(f"{FIXTURES}/{ent['name']}.pcap", trust_store=trust)
-        assert len(analyses) > 0
-        assert any(sa.findings for sa in analyses), f"{ent['name']} produced no findings"
+        # Run analysis on several sessions (need enough for ML training) incl. at-risk
+        target = next((e for e in corpus_index if "export_cipher" in e["name"]), corpus_index[1])
+        analyses_all = []
+        for ent in corpus_index[:8]:
+            ap = analyze_pcap(f"{FIXTURES}/{ent['name']}.pcap", trust_store=trust)
+            analyses_all.extend(ap)
+        assert any(sa.findings for sa in analyses_all), "no findings in selected corpus"
+        # target session (with findings) among analyses_all
+        analyses = [sa for sa in analyses_all if sa.findings]
+        assert analyses, "no at-risk session"
 
         scorer = SessionScorer(trust_store=trust)
-        scorer.train(analyses)
+        scorer.train(analyses_all)
         scores = scorer.score_batch(analyses)
 
         # Persist

@@ -114,7 +114,7 @@ def test_task_processing_direct(trust, corpus_index):
         db.commit()
 
         # Run analysis on a session known to have findings (weak config)
-        ent = next((e for e in corpus_index if "tls13_strong" not in e["name"]), corpus_index[0])
+        ent = next((e for e in corpus_index if "export_cipher" in e["name"]), corpus_index[1])
         analyses = analyze_pcap(f"{FIXTURES}/{ent['name']}.pcap", trust_store=trust)
         assert len(analyses) > 0
         assert any(sa.findings for sa in analyses), f"{ent['name']} produced no findings"

@@ -56,6 +56,31 @@ async def health():
     return {"status": "ok", "version": settings.APP_VERSION}
 
 
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint."""
+    try:
+        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    except ImportError:
+        return Response("prometheus-client not installed", media_type="text/plain")
+
+
+@app.get("/api/v1/stats")
+async def stats(db: AsyncSession = Depends(get_db)):
+    """Aggregate stats across all jobs (for monitoring)."""
+    jobs_res = await db.execute(select(AnalysisJob.id, AnalysisJob.status))
+    rows = jobs_res.all()
+    status_counts = {}
+    for _, status in rows:
+        status_counts[status.value] = status_counts.get(status.value, 0) + 1
+    return {
+        "total_jobs": len(rows),
+        "status_counts": status_counts,
+        "version": settings.APP_VERSION,
+    }
+
+
 @app.post("/api/v1/upload", response_model=dict)
 async def upload_pcap(
     file: UploadFile = File(...),

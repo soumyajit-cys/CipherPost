@@ -113,10 +113,11 @@ def test_task_processing_direct(trust, corpus_index):
         db.add(job)
         db.commit()
 
-        # Run analysis on one PCAP
-        ent = corpus_index[0]
+        # Run analysis on a session known to have findings (weak config)
+        ent = next((e for e in corpus_index if "tls13_strong" not in e["name"]), corpus_index[0])
         analyses = analyze_pcap(f"{FIXTURES}/{ent['name']}.pcap", trust_store=trust)
         assert len(analyses) > 0
+        assert any(sa.findings for sa in analyses), f"{ent['name']} produced no findings"
 
         scorer = SessionScorer(trust_store=trust)
         scorer.train(analyses)

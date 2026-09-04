@@ -111,12 +111,6 @@ def build_report_data(analyses: list[SessionAnalysis],
         s = scores[i] if scores and i < len(scores) else None
         posture = s.risk.posture_score if s else 0
         session_rows.append({
-            "five_tuple": a.five_tuple, "protocol": a.protocol,
-            "tls_version": version_name(a.tls_version), "cipher": a.cipher,
-            "chain_result": a.chain_result, "posture": posture,
-            "anomaly": s.anomaly.is_anomaly if s else False,
-            "max_severity": max_severity(a.findings) or "none",
-        })
         if s and s.shap_contributions:
             shap_details.append({
                 "name": a.five_tuple, "score": posture,

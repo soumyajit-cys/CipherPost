@@ -1,0 +1,18 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev libffi-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+COPY backend/ /app/
+COPY tests/fixtures /app/tests/fixtures
+
+ENV PYTHONPATH=/app
+ENV CIPHERPOST_TRUSTED_CA_BUNDLE_PATH=/app/tests/fixtures/trusted_root.pem
+
+CMD ["celery", "-A", "app.services.tasks", "worker", "--loglevel=info", "--concurrency=2"]

@@ -232,7 +232,7 @@ async def get_report(job_id: str, fmt: str, db: AsyncSession = Depends(get_db)):
             )
 
     # Generate on-the-fly if missing
-    analyses, scores = _load_analysis_from_db(job_id, db)
+    analyses, scores = await _load_analysis_from_db(job_id, db)
     from app.reporting.generator import generate_json, generate_html, generate_pdf
     if fmt == "json":
         content = generate_json(analyses, scores, job.filename)
@@ -250,17 +250,17 @@ async def get_report(job_id: str, fmt: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(500, "PDF generation failed (WeasyPrint unavailable)")
 
 
-def _load_analysis_from_db(job_id: str, db):
+async def _load_analysis_from_db(job_id: str, db):
     """Load SessionAnalysis objects from DB for report generation."""
-    from app.parsing.rules import SessionAnalysis, Finding as RuleFinding, Severity as RuleSeverity
+    from app.parsing.rules import SessionAnalysis, Finding as RuleFinding
     from app.ml.ml_engine import ScoringResult, RiskScore, AnomalyResult
 
     sessions_q = select(Session).where(Session.job_id == job_id)
-    sessions = (await_sync(db.execute(sessions_q))).scalars().all()
+    sessions = (await db.execute(sessions_q)).scalars().all()
     analyses, scores = [], []
     for s in sessions:
         findings_q = select(Finding).where(Finding.session_id == s.id)
-        findings = (await_sync(db.execute(findings_q))).scalars().all()
+        findings = (await db.execute(findings_q)).scalars().all()
         sa = SessionAnalysis(
             session_id=s.id, protocol=s.protocol, five_tuple=s.five_tuple,
             is_starttls=s.is_starttls,
@@ -290,11 +290,3 @@ def _version_hex(ver_str: str | None) -> int | None:
         return None
     mapping = {"SSLv3": 0x0300, "TLS 1.0": 0x0301, "TLS 1.1": 0x0302, "TLS 1.2": 0x0303, "TLS 1.3": 0x0304}
     return mapping.get(ver_str)
-
-
-async def await_sync(coro):
-    """If already awaited result, return; otherwise await."""
-    import inspect
-    if inspect.isawaitable(coro):
-        return await coro
-    return coro

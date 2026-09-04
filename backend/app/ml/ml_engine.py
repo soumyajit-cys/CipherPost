@@ -26,7 +26,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, roc_auc_score
 
 from app.ml.features import extract_features, FEATURE_NAMES, session_features_matrix
-from app.parsing.rules import SessionAnalysis, SEVERITY_SCORE, max_severity
+from app.parsing.rules import SessionAnalysis, max_severity
+from app.ml.features import SEVERITY_SCORE
 from app.core.config import settings
 
 

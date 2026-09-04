@@ -65,7 +65,7 @@ class Session(Base):
     risk_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     overall_finding_count: Mapped[int] = mapped_column(Integer, default=0)
     max_severity: Mapped[str | None] = mapped_column(String(16), nullable=True)
-    details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    details: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
 
     job: Mapped[AnalysisJob] = relationship(back_populates="sessions")
     findings: Mapped[list["Finding"]] = relationship(back_populates="session", cascade="all, delete-orphan")
@@ -87,7 +87,7 @@ class Finding(Base):
     reference: Mapped[str] = mapped_column(String(512))
     kind: Mapped[str] = mapped_column(String(32), default="rule")  # rule | ml | anomaly
     source: Mapped[str] = mapped_column(String(32), default="rules-engine")
-    evidence: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    evidence: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
 
     session: Mapped[Session] = relationship(back_populates="findings")
 

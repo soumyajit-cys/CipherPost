@@ -96,22 +96,20 @@ def extract_features(sa: SessionAnalysis) -> dict[str, float]:
     return feats
 
 
-FEATURE_NAMES = sorted(extract_features.__annotations__.keys()) if False else list(
-    {k for _ in [1] for k in sorted(
-        ["tls_version_rank", "cipher_strength", "key_length", "pfs",
-         "cipher_category_aead", "cipher_category_cbc", "cipher_category_stream",
-         "is_export", "is_null", "is_rc4", "chain_valid", "cert_count",
-         "cert_min_days_remaining", "cert_max_key_bits",
-         "any_weak_signature", "any_short_key", "any_self_signed", "any_expired",
-         "is_starttls", "has_starttls_offer", "started_tls", "tls_bytes",
-         "plaintext_bytes", "finding_count", "max_severity",
-         "rule_tls-version", "rule_rc4", "rule_export", "rule_non-pfs",
-         "rule_non-aead", "rule_self-signed", "rule_untrusted", "rule_expired",
-         "rule_weak-signature", "rule_short-key", "rule_starttls-strip",
-         "rule_plaintext-mail", "rule_weak-cipher", "rule_3des",
-         "rule_no-tls-on-implicit", "rule_unknown-cipher", "rule_no-pfs-suites"]
-    )}
-)
+FEATURE_NAMES = sorted([
+    "tls_version_rank", "cipher_strength", "key_length", "pfs",
+    "cipher_category_aead", "cipher_category_cbc", "cipher_category_stream",
+    "is_export", "is_null", "is_rc4", "chain_valid", "cert_count",
+    "cert_min_days_remaining", "cert_max_key_bits",
+    "any_weak_signature", "any_short_key", "any_self_signed", "any_expired",
+    "is_starttls", "has_starttls_offer", "started_tls", "tls_bytes",
+    "plaintext_bytes", "finding_count", "max_severity",
+    "rule_tls-version", "rule_rc4", "rule_export", "rule_non-pfs",
+    "rule_non-aead", "rule_self-signed", "rule_untrusted", "rule_expired",
+    "rule_weak-signature", "rule_short-key", "rule_starttls-strip",
+    "rule_plaintext-mail", "rule_weak-cipher", "rule_3des",
+    "rule_no-tls-on-implicit", "rule_unknown-cipher", "rule_no-pfs-suites",
+])
 
 
 def session_features_matrix(analyses: list[SessionAnalysis]):

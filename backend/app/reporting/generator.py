@@ -14,7 +14,8 @@ from typing import Any
 
 from jinja2 import Template
 
-from app.parsing.rules import SessionAnalysis, Finding, max_severity, SEVERITY_SCORE
+from app.parsing.rules import SessionAnalysis, Finding, max_severity
+from app.ml.features import SEVERITY_SCORE
 from app.parsing.handshake import version_name
 from app.ml.ml_engine import ScoringResult, FeatureContribution
 

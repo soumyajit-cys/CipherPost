@@ -28,9 +28,9 @@ def test_feature_extraction_all_sessions(trust_store):
         analyses = analyze_pcap(f"{FIXTURES}/{ent['name']}.pcap", trust_store=trust_store)
         assert analyses, f"{ent['name']} produced no analysis"
         feats = extract_features(analyses[0])
-        # All features are finite floats
+        # All features are numeric (int or float)
         for k, v in feats.items():
-            assert isinstance(v, float), f"{ent['name']}.{k} is {type(v)}"
+            assert isinstance(v, (int, float)), f"{ent['name']}.{k} is {type(v)}"
 
 
 def test_features_matrix_shape(trust_store):

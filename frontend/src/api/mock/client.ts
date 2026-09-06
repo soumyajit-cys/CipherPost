@@ -11,9 +11,9 @@ import type {
   ApiClient,
   FleetDrillData,
   SessionDetail,
-} from './types'
-import { SEVERITY_ORDER } from './types'
-import slice from './mock/data.json'
+} from '../types'
+import { SEVERITY_ORDER } from '../types'
+import slice from './data.json'
 
 const ANON = slice as AnalysisSlice
 const BY_ID = new Map(ANON.analyses.map((a) => [a.id, a]))

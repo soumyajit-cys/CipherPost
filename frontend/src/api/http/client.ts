@@ -13,8 +13,8 @@ import type {
   ApiClient,
   FleetDrillData,
   SessionDetail,
-} from './types'
-import { SEVERITY_ORDER } from './types'
+} from '../types'
+import { SEVERITY_ORDER } from '../types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 

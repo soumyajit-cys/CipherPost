@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useSessionDetail } from '@/hooks/useApi'
-import { ErrorState, LoadingState, Panel, KeyValue as KV } from '@/components/ui/State'
-import { SeverityBadge, ScoreGauge, CodeBlock } from '@/components/ui/primitives'
+import { ErrorState, LoadingState, Panel } from '@/components/ui/State'
+import { SeverityBadge, ScoreGauge, CodeBlock, KeyValue } from '@/components/ui/primitives'
 import { SessionTimeline } from '@/components/ui/SessionTimeline'
 import { ExplanationPanel } from '@/components/ui/ExplanationPanel'
 import { CertChainViewer } from '@/components/ui/CertChainViewer'
-import { formatDateTime } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-import { KeyValue } from '@/components/ui/primitives'
+import type { SessionDetail } from '@/api'
 
 type Tab = 'overview' | 'timeline' | 'certificates' | 'shap'
 
@@ -89,7 +88,7 @@ export default function SessionDrilldownPage() {
   )
 }
 
-function HandshakeTab({ detail }: { detail: NonNullable<Awaited<ReturnType<typeof useSessionDetail>['data']>> }) {
+function HandshakeTab({ detail }: { detail: SessionDetail }) {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Panel title="Negotiated parameters">

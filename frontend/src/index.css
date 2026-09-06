@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; }
+  body {
+    @apply bg-base-50 text-base-800 dark:bg-base-950 dark:text-base-200 font-sans;
+  }
+  ::selection { @apply bg-accent/30; }
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-base-500/40 rounded-full;
+  }
+}
+
+/* Data table density, Wireshark/Grafana register */
+.cell-numeric { font-variant-numeric: tabular-nums; }

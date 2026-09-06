@@ -154,6 +154,3 @@ export default function FleetOverviewPage() {
     </div>
   )
 }
-
-// keep a reference so scoreColorHex usage stays consistent with primitives
-export { scoreColorHex }

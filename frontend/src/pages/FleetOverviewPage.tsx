@@ -25,7 +25,6 @@ export default function FleetOverviewPage() {
     .map(([k, v]) => ({ name: k, value: v as number }))
     .filter((d) => d.value > 0)
     .sort((a, b) => SEVERITY_ORDER[b.name as SeverityLabel] - SEVERITY_ORDER[a.name as SeverityLabel])
-  const maxSev = Math.max(...sevData.map((d) => d.value), 1)
 
   const top = data.topFindingTypes.slice(0, 12)
   const maxTop = Math.max(...top.map((t) => t.count), 1)

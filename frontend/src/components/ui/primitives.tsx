@@ -55,7 +55,7 @@ export function ScoreGauge({
   showLabel?: boolean
 }) {
   const s = score ?? 0
-  const { text, bg } = scoreColor(score)
+  const { text } = scoreColor(score)
   const dim = size === 'lg' ? 'h-28 w-28 text-3xl' : size === 'sm' ? 'h-12 w-12 text-base' : 'h-20 w-20 text-xl'
   const ring = size === 'lg' ? '[&>span]:ring-4' : '[&>span]:ring-2'
   return (

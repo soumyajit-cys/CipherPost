@@ -151,7 +151,7 @@ export const httpClient: ApiClient = {
       certChain: [],
       timeline: [],
       shap: shap.filter((x) => x.session_id === s.id).map((x) => ({ feature: x.feature, value: x.value, impact: x.impact, method: x.method })),
-      ruleMlAgreement: 'agrees',
+      ruleMlAgreement: 'agrees' as const,
     }))
 
     const findingsOut = findings.map((f) => {

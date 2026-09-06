@@ -1,0 +1,4732 @@
+{
+ "analyses": [
+  {
+   "id": "smtp_tls13_strong",
+   "filename": "smtp_tls13_strong.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 4366,
+   "createdAt": "2026-09-01T10:00:00",
+   "completedAt": "2026-09-01T10:00:09",
+   "postureScore": 25,
+   "findingsCount": 0,
+   "sessionsCount": 1,
+   "maxSeverity": "none",
+   "gotoLabel": "smtp_tls13_strong",
+   "summaries": [
+    {
+     "id": "smtp_tls13_strong-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:11655->192.168.1.20:587",
+     "isStarttls": true,
+     "tlsVersion": "TLS1.3",
+     "cipher": "TLS_AES_256_GCM_SHA384",
+     "cipherStrength": 1.0,
+     "pfsSupported": true,
+     "certChainValid": true,
+     "riskScore": 25,
+     "isAnomaly": false,
+     "maxSeverity": "none",
+     "findingCount": 0
+    }
+   ],
+   "sessions": [
+    {
+     "id": "smtp_tls13_strong-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:11655->192.168.1.20:587",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 11655,
+     "dstPort": 587,
+     "isStarttls": true,
+     "transitionOffset": 35,
+     "tlsVersion": "TLS1.3",
+     "cipher": "TLS_AES_256_GCM_SHA384",
+     "cipherIana": "0x1302",
+     "cipherStrength": 1.0,
+     "cipherKind": "aead",
+     "pfsSupported": true,
+     "certChainValid": true,
+     "chainResult": "ok",
+     "chainError": "verified against trust store",
+     "riskScore": 25,
+     "isAnomaly": false,
+     "maxSeverity": "none",
+     "findingCount": 0,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [
+       "smtp",
+       "imap",
+       "pop3"
+      ],
+      "offeredVersions": [
+       "TLS1.3"
+      ],
+      "cipherSuites": [
+       "0x1302"
+      ],
+      "supportedGroups": [
+       29,
+       23
+      ]
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2026-09-02T02:18:02",
+       "notAfter": "2028-12-05T02:18:02",
+       "daysValid": 825,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": false,
+       "isCa": false,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "4ae0e17174d409dd0bd76a84920839c9a72f2240",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "ok"
+      },
+      {
+       "subject": "CipherPost Root CA",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2025-09-02T02:18:02",
+       "notAfter": "2036-08-30T02:18:02",
+       "daysValid": 4015,
+       "daysRemaining": 3645,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 4096,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "3b9516fd53462651315cbc5c271f1d7e972e3341",
+       "sans": [],
+       "chainResult": "ok"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "client-command",
+       "summary": "EHLO client.example.com",
+       "raw": "EHLO client.example.com"
+      },
+      {
+       "offset": 25,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "STARTTLS",
+       "raw": "STARTTLS"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 mail.cipherpost.test ESMTP Postfix",
+       "raw": "220 mail.cipherpost.test ESMTP Postfix"
+      },
+      {
+       "offset": 40,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-mail.cipherpost.test",
+       "raw": "250-mail.cipherpost.test"
+      },
+      {
+       "offset": 66,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-STARTTLS",
+       "raw": "250-STARTTLS"
+      },
+      {
+       "offset": 80,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "250 8BITMIME",
+       "raw": "250 8BITMIME"
+      },
+      {
+       "offset": 94,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 2.0.0 Ready to start TLS",
+       "raw": "220 2.0.0 Ready to start TLS"
+      },
+      {
+       "offset": 35,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=35"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0304 len=121"
+      },
+      {
+       "offset": 126,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0304 len=1"
+      },
+      {
+       "offset": 132,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0304 len=40"
+      },
+      {
+       "offset": 177,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0304 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0304 len=51"
+      },
+      {
+       "offset": 56,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=2493"
+      },
+      {
+       "offset": 2554,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0304 len=1"
+      },
+      {
+       "offset": 2560,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0304 len=40"
+      },
+      {
+       "offset": 2605,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0304 len=40"
+      },
+      {
+       "offset": 2650,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0304 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 1.0,
+       "impact": -12.871488500658888,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 25,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "none": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:11655->192.168.1.20:587",
+      "protocol": "SMTP",
+      "riskScore": 25,
+      "isAnomaly": false,
+      "maxSeverity": "none",
+      "tlsVersion": "TLS1.3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "imap_tls13_strong",
+   "filename": "imap_tls13_strong.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 3857,
+   "createdAt": "2026-09-01T10:11:17",
+   "completedAt": "2026-09-01T10:11:26",
+   "postureScore": 25,
+   "findingsCount": 0,
+   "sessionsCount": 1,
+   "maxSeverity": "none",
+   "gotoLabel": "imap_tls13_strong",
+   "summaries": [
+    {
+     "id": "imap_tls13_strong-s0",
+     "protocol": "IMAP",
+     "fiveTuple": "192.168.1.10:11727->192.168.1.20:993",
+     "isStarttls": false,
+     "tlsVersion": "TLS1.3",
+     "cipher": "TLS_AES_128_GCM_SHA256",
+     "cipherStrength": 0.95,
+     "pfsSupported": true,
+     "certChainValid": true,
+     "riskScore": 25,
+     "isAnomaly": false,
+     "maxSeverity": "none",
+     "findingCount": 0
+    }
+   ],
+   "sessions": [
+    {
+     "id": "imap_tls13_strong-s0",
+     "protocol": "IMAP",
+     "fiveTuple": "192.168.1.10:11727->192.168.1.20:993",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 11727,
+     "dstPort": 993,
+     "isStarttls": false,
+     "transitionOffset": 0,
+     "tlsVersion": "TLS1.3",
+     "cipher": "TLS_AES_128_GCM_SHA256",
+     "cipherIana": "0x1301",
+     "cipherStrength": 0.95,
+     "cipherKind": "aead",
+     "pfsSupported": true,
+     "certChainValid": true,
+     "chainResult": "ok",
+     "chainError": "verified against trust store",
+     "riskScore": 25,
+     "isAnomaly": false,
+     "maxSeverity": "none",
+     "findingCount": 0,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [
+       "smtp",
+       "imap",
+       "pop3"
+      ],
+      "offeredVersions": [
+       "TLS1.3"
+      ],
+      "cipherSuites": [
+       "0x1301"
+      ],
+      "supportedGroups": [
+       29,
+       23
+      ]
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2026-09-02T02:18:02",
+       "notAfter": "2028-12-05T02:18:02",
+       "daysValid": 825,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": false,
+       "isCa": false,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "6f63c073428f03ad5e13b45c4dc31ae2b77d119a",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "ok"
+      },
+      {
+       "subject": "CipherPost Root CA",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2025-09-02T02:18:02",
+       "notAfter": "2036-08-30T02:18:02",
+       "daysValid": 4015,
+       "daysRemaining": 3645,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 4096,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "3b9516fd53462651315cbc5c271f1d7e972e3341",
+       "sans": [],
+       "chainResult": "ok"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=0"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0304 len=121"
+      },
+      {
+       "offset": 126,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0304 len=1"
+      },
+      {
+       "offset": 132,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0304 len=40"
+      },
+      {
+       "offset": 177,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0304 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0304 len=51"
+      },
+      {
+       "offset": 56,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=2493"
+      },
+      {
+       "offset": 2554,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0304 len=1"
+      },
+      {
+       "offset": 2560,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0304 len=40"
+      },
+      {
+       "offset": 2605,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0304 len=40"
+      },
+      {
+       "offset": 2650,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0304 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.949999988079071,
+       "impact": -12.871488500658888,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 25,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "none": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:11727->192.168.1.20:993",
+      "protocol": "IMAP",
+      "riskScore": 25,
+      "isAnomaly": false,
+      "maxSeverity": "none",
+      "tlsVersion": "TLS1.3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "pop3_tls12_acceptable",
+   "filename": "pop3_tls12_acceptable.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 3867,
+   "createdAt": "2026-09-01T10:22:34",
+   "completedAt": "2026-09-01T10:22:43",
+   "postureScore": 92,
+   "findingsCount": 0,
+   "sessionsCount": 1,
+   "maxSeverity": "none",
+   "gotoLabel": "pop3_tls12_acceptable",
+   "summaries": [
+    {
+     "id": "pop3_tls12_acceptable-s0",
+     "protocol": "POP3",
+     "fiveTuple": "192.168.1.10:12792->192.168.1.20:995",
+     "isStarttls": false,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+     "cipherStrength": 0.85,
+     "pfsSupported": true,
+     "certChainValid": true,
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "none",
+     "findingCount": 0
+    }
+   ],
+   "sessions": [
+    {
+     "id": "pop3_tls12_acceptable-s0",
+     "protocol": "POP3",
+     "fiveTuple": "192.168.1.10:12792->192.168.1.20:995",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 12792,
+     "dstPort": 995,
+     "isStarttls": false,
+     "transitionOffset": 0,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+     "cipherIana": "0xc02f",
+     "cipherStrength": 0.85,
+     "cipherKind": "aead",
+     "pfsSupported": true,
+     "certChainValid": true,
+     "chainResult": "ok",
+     "chainError": "verified against trust store",
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "none",
+     "findingCount": 0,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [],
+      "offeredVersions": [
+       "TLS1.2"
+      ],
+      "cipherSuites": [
+       "0xc02f"
+      ],
+      "supportedGroups": [
+       29,
+       23
+      ]
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2026-09-02T02:18:03",
+       "notAfter": "2028-12-05T02:18:03",
+       "daysValid": 825,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": false,
+       "isCa": false,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "7a9fa9983973c721d7b2d1975462eec45dc1ff6b",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "ok"
+      },
+      {
+       "subject": "CipherPost Root CA",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2025-09-02T02:18:02",
+       "notAfter": "2036-08-30T02:18:02",
+       "daysValid": 4015,
+       "daysRemaining": 3645,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 4096,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "3b9516fd53462651315cbc5c271f1d7e972e3341",
+       "sans": [],
+       "chainResult": "ok"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=0"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0303 len=100"
+      },
+      {
+       "offset": 105,
+       "direction": "client",
+       "type": "tls",
+       "summary": "Handshake(16)",
+       "raw": "content_type=Handshake version=0x0303 len=6"
+      },
+      {
+       "offset": 116,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 122,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 167,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0303 len=42"
+      },
+      {
+       "offset": 47,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=2488"
+      },
+      {
+       "offset": 2540,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHelloDone",
+       "raw": "content_type=Handshake version=0x0303 len=4"
+      },
+      {
+       "offset": 2549,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 2555,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 2600,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.8500000238418579,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "disagrees-ml-more-severe"
+    }
+   ],
+   "findings": [],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "none": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:12792->192.168.1.20:995",
+      "protocol": "POP3",
+      "riskScore": 92,
+      "isAnomaly": false,
+      "maxSeverity": "none",
+      "tlsVersion": "TLS1.2"
+     }
+    ]
+   }
+  },
+  {
+   "id": "smtp_tls12_starttls",
+   "filename": "smtp_tls12_starttls.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 4446,
+   "createdAt": "2026-09-01T10:33:51",
+   "completedAt": "2026-09-01T10:34:00",
+   "postureScore": 25,
+   "findingsCount": 0,
+   "sessionsCount": 1,
+   "maxSeverity": "none",
+   "gotoLabel": "smtp_tls12_starttls",
+   "summaries": [
+    {
+     "id": "smtp_tls12_starttls-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:11218->192.168.1.20:587",
+     "isStarttls": true,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+     "cipherStrength": 0.9,
+     "pfsSupported": true,
+     "certChainValid": true,
+     "riskScore": 25,
+     "isAnomaly": false,
+     "maxSeverity": "none",
+     "findingCount": 0
+    }
+   ],
+   "sessions": [
+    {
+     "id": "smtp_tls12_starttls-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:11218->192.168.1.20:587",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 11218,
+     "dstPort": 587,
+     "isStarttls": true,
+     "transitionOffset": 35,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+     "cipherIana": "0xc030",
+     "cipherStrength": 0.9,
+     "cipherKind": "aead",
+     "pfsSupported": true,
+     "certChainValid": true,
+     "chainResult": "ok",
+     "chainError": "verified against trust store",
+     "riskScore": 25,
+     "isAnomaly": false,
+     "maxSeverity": "none",
+     "findingCount": 0,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [],
+      "offeredVersions": [
+       "TLS1.2"
+      ],
+      "cipherSuites": [
+       "0xc030"
+      ],
+      "supportedGroups": [
+       29,
+       23
+      ]
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2026-09-02T02:18:03",
+       "notAfter": "2028-12-05T02:18:03",
+       "daysValid": 825,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": false,
+       "isCa": false,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "2bb8a13d72fb5754cef302e5dac5c9d9f68c7aef",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "ok"
+      },
+      {
+       "subject": "CipherPost Root CA",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2025-09-02T02:18:02",
+       "notAfter": "2036-08-30T02:18:02",
+       "daysValid": 4015,
+       "daysRemaining": 3645,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 4096,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "3b9516fd53462651315cbc5c271f1d7e972e3341",
+       "sans": [],
+       "chainResult": "ok"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "client-command",
+       "summary": "EHLO client.example.com",
+       "raw": "EHLO client.example.com"
+      },
+      {
+       "offset": 25,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "STARTTLS",
+       "raw": "STARTTLS"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 mail.cipherpost.test ESMTP Postfix",
+       "raw": "220 mail.cipherpost.test ESMTP Postfix"
+      },
+      {
+       "offset": 40,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-mail.cipherpost.test",
+       "raw": "250-mail.cipherpost.test"
+      },
+      {
+       "offset": 66,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-STARTTLS",
+       "raw": "250-STARTTLS"
+      },
+      {
+       "offset": 80,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "250 8BITMIME",
+       "raw": "250 8BITMIME"
+      },
+      {
+       "offset": 94,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 2.0.0 Ready to start TLS",
+       "raw": "220 2.0.0 Ready to start TLS"
+      },
+      {
+       "offset": 35,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=35"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0303 len=100"
+      },
+      {
+       "offset": 105,
+       "direction": "client",
+       "type": "tls",
+       "summary": "Handshake(16)",
+       "raw": "content_type=Handshake version=0x0303 len=6"
+      },
+      {
+       "offset": 116,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 122,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 167,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0303 len=42"
+      },
+      {
+       "offset": 47,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=2488"
+      },
+      {
+       "offset": 2540,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHelloDone",
+       "raw": "content_type=Handshake version=0x0303 len=4"
+      },
+      {
+       "offset": 2549,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 2555,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 2600,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.8999999761581421,
+       "impact": -12.871488500658888,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 25,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "none": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:11218->192.168.1.20:587",
+      "protocol": "SMTP",
+      "riskScore": 25,
+      "isAnomaly": false,
+      "maxSeverity": "none",
+      "tlsVersion": "TLS1.2"
+     }
+    ]
+   }
+  },
+  {
+   "id": "imap_tls10_weak",
+   "filename": "imap_tls10_weak.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 4360,
+   "createdAt": "2026-09-01T10:45:08",
+   "completedAt": "2026-09-01T10:45:17",
+   "postureScore": 92,
+   "findingsCount": 5,
+   "sessionsCount": 1,
+   "maxSeverity": "high",
+   "gotoLabel": "imap_tls10_weak",
+   "summaries": [
+    {
+     "id": "imap_tls10_weak-s0",
+     "protocol": "IMAP",
+     "fiveTuple": "192.168.1.10:11332->192.168.1.20:143",
+     "isStarttls": true,
+     "tlsVersion": "TLS1.0",
+     "cipher": "TLS_RSA_WITH_RC4_128_SHA",
+     "cipherStrength": 0.05,
+     "pfsSupported": false,
+     "certChainValid": true,
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 5
+    }
+   ],
+   "sessions": [
+    {
+     "id": "imap_tls10_weak-s0",
+     "protocol": "IMAP",
+     "fiveTuple": "192.168.1.10:11332->192.168.1.20:143",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 11332,
+     "dstPort": 143,
+     "isStarttls": true,
+     "transitionOffset": 32,
+     "tlsVersion": "TLS1.0",
+     "cipher": "TLS_RSA_WITH_RC4_128_SHA",
+     "cipherIana": "0x0005",
+     "cipherStrength": 0.05,
+     "cipherKind": "stream",
+     "pfsSupported": false,
+     "certChainValid": true,
+     "chainResult": "ok",
+     "chainError": "verified against trust store",
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 5,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [],
+      "offeredVersions": [
+       "TLS1.0"
+      ],
+      "cipherSuites": [
+       "0x0005"
+      ],
+      "supportedGroups": []
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2026-09-02T02:18:03",
+       "notAfter": "2028-12-05T02:18:03",
+       "daysValid": 825,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": false,
+       "isCa": false,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "517b8aa5c018698e145e3ec8e097750f3fea3c51",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "ok"
+      },
+      {
+       "subject": "CipherPost Root CA",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2025-09-02T02:18:02",
+       "notAfter": "2036-08-30T02:18:02",
+       "daysValid": 4015,
+       "daysRemaining": 3645,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 4096,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "3b9516fd53462651315cbc5c271f1d7e972e3341",
+       "sans": [],
+       "chainResult": "ok"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "a001 CAPABILITY",
+       "raw": "a001 CAPABILITY"
+      },
+      {
+       "offset": 17,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "a002 STARTTLS",
+       "raw": "a002 STARTTLS"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "* OK [CAPABILITY IMAP4rev1 STARTTLS] Dovecot ready.",
+       "raw": "* OK [CAPABILITY IMAP4rev1 STARTTLS] Dovecot ready."
+      },
+      {
+       "offset": 53,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "* CAPABILITY IMAP4rev1 STARTTLS",
+       "raw": "* CAPABILITY IMAP4rev1 STARTTLS"
+      },
+      {
+       "offset": 86,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "a002 OK Begin TLS negotiation now",
+       "raw": "a002 OK Begin TLS negotiation now"
+      },
+      {
+       "offset": 32,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=32"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0301 len=90"
+      },
+      {
+       "offset": 95,
+       "direction": "client",
+       "type": "tls",
+       "summary": "Handshake(16)",
+       "raw": "content_type=Handshake version=0x0301 len=6"
+      },
+      {
+       "offset": 106,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0301 len=1"
+      },
+      {
+       "offset": 112,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0301 len=40"
+      },
+      {
+       "offset": 157,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0301 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0301 len=42"
+      },
+      {
+       "offset": 47,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=2488"
+      },
+      {
+       "offset": 2540,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHelloDone",
+       "raw": "content_type=Handshake version=0x0303 len=4"
+      },
+      {
+       "offset": 2549,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0301 len=1"
+      },
+      {
+       "offset": 2555,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0301 len=40"
+      },
+      {
+       "offset": 2600,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0301 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.05000000074505806,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [
+    {
+     "id": 0,
+     "sessionId": "imap_tls10_weak-s0",
+     "ruleId": "tls-version-tls1-0",
+     "ruleName": "Deprecated TLS version: TLS1.0",
+     "severity": "high",
+     "title": "TLS1.0 negotiated",
+     "description": "This session negotiated TLS1.0. TLS 1.0 is deprecated (NIST SP 800-52r2 disallows below 1.2; RFC 8996). NIST SP 800-52r2 and RFC 8996 require TLS 1.2 or TLS 1.3 for email transport.",
+     "reference": "NIST SP 800-52r2 \u00a73.1; RFC 8996; OWASP TLS Cheat Sheet \u00a7'understand TLS 1.2'",
+     "kind": "rule",
+     "evidence": {
+      "negotiated_version": "TLS1.0",
+      "raw": "0x301"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11332->192.168.1.20:143",
+      "protocol": "IMAP"
+     }
+    },
+    {
+     "id": 3,
+     "sessionId": "imap_tls10_weak-s0",
+     "ruleId": "rc4-cipher",
+     "ruleName": "RC4 cipher suite",
+     "severity": "high",
+     "title": "RC4 negotiated",
+     "description": "TLS_RSA_WITH_RC4_128_SHA uses the RC4 stream cipher. RC4 biases allow practical plaintext recovery (Bar-Mitzvah/BEAST variants) and it is prohibited in RFC 7465 for TLS.",
+     "reference": "RFC 7465; NIST SP 800-52r2 App A",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_RC4_128_SHA"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11332->192.168.1.20:143",
+      "protocol": "IMAP"
+     }
+    },
+    {
+     "id": 1,
+     "sessionId": "imap_tls10_weak-s0",
+     "ruleId": "non-aead-bulk-cipher",
+     "ruleName": "Non-AEAD bulk cipher",
+     "severity": "medium",
+     "title": "TLS_RSA_WITH_RC4_128_SHA uses legacy bulk encryption",
+     "description": "The negotiated cipher TLS_RSA_WITH_RC4_128_SHA does not use an authenticated AEAD mode (AES-GCM/CCM or ChaCha20-Poly1305). CBC-mode ciphers are subject to padding-oracle attacks (e.g. Lucky13) and lack integrity protection the same way. Prefer AEAD ciphers (NIST SP 800-52r2 preference).",
+     "reference": "NIST SP 800-52r2 \u00a73.3.1; OWASP TLS Cheat Sheet",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_RC4_128_SHA",
+      "kind": "stream"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11332->192.168.1.20:143",
+      "protocol": "IMAP"
+     }
+    },
+    {
+     "id": 2,
+     "sessionId": "imap_tls10_weak-s0",
+     "ruleId": "non-pfs-key-exchange",
+     "ruleName": "No forward secrecy (PFS)",
+     "severity": "medium",
+     "title": "TLS_RSA_WITH_RC4_128_SHA uses static key exchange",
+     "description": "The negotiated cipher TLS_RSA_WITH_RC4_128_SHA does not use ephemeral (EC)DHE key exchange. If the server private key is compromised, all past sessions can be decrypted (no forward secrecy). Prefer ECDHE suites.",
+     "reference": "NIST SP 800-52r2 \u00a73.3.1; OWASP TLS Cheat Sheet \u00a7'use forward secrecy'",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_RC4_128_SHA",
+      "kex": "rsa"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11332->192.168.1.20:143",
+      "protocol": "IMAP"
+     }
+    },
+    {
+     "id": 4,
+     "sessionId": "imap_tls10_weak-s0",
+     "ruleId": "client-no-pfs-suites",
+     "ruleName": "Client offers no forward-secrecy suites",
+     "severity": "low",
+     "title": "ClientHello advertises no ECDHE/DHE cipher suites",
+     "description": "The client's offered cipher list contains no ephemeral-DH suites, so a PFS-capable server will fall back to a static key exchange if this client is relicensed maintenance.",
+     "reference": "OWASP TLS Cheat Sheet \u00a7'use forward secrecy'",
+     "kind": "rule",
+     "evidence": {
+      "offered": [
+       "0x5"
+      ]
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11332->192.168.1.20:143",
+      "protocol": "IMAP"
+     }
+    }
+   ],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "high": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:11332->192.168.1.20:143",
+      "protocol": "IMAP",
+      "riskScore": 92,
+      "isAnomaly": false,
+      "maxSeverity": "high",
+      "tlsVersion": "TLS1.0"
+     }
+    ]
+   }
+  },
+  {
+   "id": "pop3_export_cipher",
+   "filename": "pop3_export_cipher.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 2494,
+   "createdAt": "2026-09-01T10:56:25",
+   "completedAt": "2026-09-01T10:56:34",
+   "postureScore": 92,
+   "findingsCount": 8,
+   "sessionsCount": 1,
+   "maxSeverity": "critical",
+   "gotoLabel": "pop3_export_cipher",
+   "summaries": [
+    {
+     "id": "pop3_export_cipher-s0",
+     "protocol": "POP3",
+     "fiveTuple": "192.168.1.10:14092->192.168.1.20:110",
+     "isStarttls": true,
+     "tlsVersion": "SSLv3.0",
+     "cipher": "TLS_RSA_EXPORT_WITH_RC4_40_MD5",
+     "cipherStrength": 0.0,
+     "pfsSupported": false,
+     "certChainValid": false,
+     "riskScore": 92,
+     "isAnomaly": true,
+     "maxSeverity": "critical",
+     "findingCount": 8
+    }
+   ],
+   "sessions": [
+    {
+     "id": "pop3_export_cipher-s0",
+     "protocol": "POP3",
+     "fiveTuple": "192.168.1.10:14092->192.168.1.20:110",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 14092,
+     "dstPort": 110,
+     "isStarttls": true,
+     "transitionOffset": 6,
+     "tlsVersion": "SSLv3.0",
+     "cipher": "TLS_RSA_EXPORT_WITH_RC4_40_MD5",
+     "cipherIana": "0x0003",
+     "cipherStrength": 0.0,
+     "cipherKind": "stream",
+     "pfsSupported": false,
+     "certChainValid": false,
+     "chainResult": "untrusted",
+     "chainError": "self-signed certificate (err code self-signed certificate)",
+     "riskScore": 92,
+     "isAnomaly": true,
+     "maxSeverity": "critical",
+     "findingCount": 8,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [],
+      "offeredVersions": [
+       "SSLv3.0"
+      ],
+      "cipherSuites": [
+       "0x0003"
+      ],
+      "supportedGroups": []
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "mail.cipherpost.test",
+       "notBefore": "2026-09-01T02:18:03",
+       "notAfter": "2028-12-05T02:18:03",
+       "daysValid": 826,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "626d6e3f8d11617a40f563865a9f3345ea8ff0b",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "untrusted"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "STLS",
+       "raw": "STLS"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "+OK Dovecot ready.",
+       "raw": "+OK Dovecot ready."
+      },
+      {
+       "offset": 20,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "+OK Begin TLS negotiation now",
+       "raw": "+OK Begin TLS negotiation now"
+      },
+      {
+       "offset": 6,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=6"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0301 len=90"
+      },
+      {
+       "offset": 95,
+       "direction": "client",
+       "type": "tls",
+       "summary": "Handshake(16)",
+       "raw": "content_type=Handshake version=0x0300 len=6"
+      },
+      {
+       "offset": 106,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0300 len=1"
+      },
+      {
+       "offset": 112,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0300 len=40"
+      },
+      {
+       "offset": 157,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0300 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0301 len=42"
+      },
+      {
+       "offset": 47,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=858"
+      },
+      {
+       "offset": 910,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHelloDone",
+       "raw": "content_type=Handshake version=0x0303 len=4"
+      },
+      {
+       "offset": 919,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0300 len=1"
+      },
+      {
+       "offset": 925,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0300 len=40"
+      },
+      {
+       "offset": 970,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0300 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.0,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [
+    {
+     "id": 0,
+     "sessionId": "pop3_export_cipher-s0",
+     "ruleId": "tls-version-sslv3",
+     "ruleName": "Deprecated TLS version: SSLV3",
+     "severity": "critical",
+     "title": "SSLV3 negotiated",
+     "description": "This session negotiated SSLV3. SSLv3 is broken (POODLE, CVE-2014-3566) and MUST NOT be used. NIST SP 800-52r2 and RFC 8996 require TLS 1.2 or TLS 1.3 for email transport.",
+     "reference": "NIST SP 800-52r2 \u00a73.1; RFC 8996; OWASP TLS Cheat Sheet \u00a7'understand TLS 1.2'",
+     "kind": "rule",
+     "evidence": {
+      "negotiated_version": "SSLv3.0",
+      "raw": "0x300"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:14092->192.168.1.20:110",
+      "protocol": "POP3"
+     }
+    },
+    {
+     "id": 2,
+     "sessionId": "pop3_export_cipher-s0",
+     "ruleId": "export-grade-cipher",
+     "ruleName": "Export-grade cipher suite",
+     "severity": "critical",
+     "title": "Export cipher suite negotiated",
+     "description": "TLS_RSA_EXPORT_WITH_RC4_40_MD5 is an EXPORT-grade cipher with a 40-bit key. Export ciphers (40/56-bit) are trivially brute-forcable and are the basis of the FREAK attack (CVE-2015-0204).",
+     "reference": "NIST SP 800-52r2 App A; CVE-2015-0204",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_EXPORT_WITH_RC4_40_MD5",
+      "iana": "0x3"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:14092->192.168.1.20:110",
+      "protocol": "POP3"
+     }
+    },
+    {
+     "id": 4,
+     "sessionId": "pop3_export_cipher-s0",
+     "ruleId": "rc4-cipher",
+     "ruleName": "RC4 cipher suite",
+     "severity": "high",
+     "title": "RC4 negotiated",
+     "description": "TLS_RSA_EXPORT_WITH_RC4_40_MD5 uses the RC4 stream cipher. RC4 biases allow practical plaintext recovery (Bar-Mitzvah/BEAST variants) and it is prohibited in RFC 7465 for TLS.",
+     "reference": "RFC 7465; NIST SP 800-52r2 App A",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_EXPORT_WITH_RC4_40_MD5"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:14092->192.168.1.20:110",
+      "protocol": "POP3"
+     }
+    },
+    {
+     "id": 6,
+     "sessionId": "pop3_export_cipher-s0",
+     "ruleId": "untrusted-certificate-chain",
+     "ruleName": "Untrusted certificate chain",
+     "severity": "high",
+     "title": "Chain validation failed: untrusted",
+     "description": "The server's certificate chain does not chain to a trusted root in the configured trust store. Email clients will reject the TLS session or fall back to insecure plaintext, enabling downgrade/MITM.",
+     "reference": "RFC 5280 \u00a76; NIST SP 800-52r2 \u00a73.3.3",
+     "kind": "rule",
+     "evidence": {
+      "result": "untrusted",
+      "detail": "self-signed certificate (err code self-signed certificate)"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:14092->192.168.1.20:110",
+      "protocol": "POP3"
+     }
+    },
+    {
+     "id": 1,
+     "sessionId": "pop3_export_cipher-s0",
+     "ruleId": "non-aead-bulk-cipher",
+     "ruleName": "Non-AEAD bulk cipher",
+     "severity": "medium",
+     "title": "TLS_RSA_EXPORT_WITH_RC4_40_MD5 uses legacy bulk encryption",
+     "description": "The negotiated cipher TLS_RSA_EXPORT_WITH_RC4_40_MD5 does not use an authenticated AEAD mode (AES-GCM/CCM or ChaCha20-Poly1305). CBC-mode ciphers are subject to padding-oracle attacks (e.g. Lucky13) and lack integrity protection the same way. Prefer AEAD ciphers (NIST SP 800-52r2 preference).",
+     "reference": "NIST SP 800-52r2 \u00a73.3.1; OWASP TLS Cheat Sheet",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_EXPORT_WITH_RC4_40_MD5",
+      "kind": "stream"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:14092->192.168.1.20:110",
+      "protocol": "POP3"
+     }
+    },
+    {
+     "id": 3,
+     "sessionId": "pop3_export_cipher-s0",
+     "ruleId": "non-pfs-key-exchange",
+     "ruleName": "No forward secrecy (PFS)",
+     "severity": "medium",
+     "title": "TLS_RSA_EXPORT_WITH_RC4_40_MD5 uses static key exchange",
+     "description": "The negotiated cipher TLS_RSA_EXPORT_WITH_RC4_40_MD5 does not use ephemeral (EC)DHE key exchange. If the server private key is compromised, all past sessions can be decrypted (no forward secrecy). Prefer ECDHE suites.",
+     "reference": "NIST SP 800-52r2 \u00a73.3.1; OWASP TLS Cheat Sheet \u00a7'use forward secrecy'",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_EXPORT_WITH_RC4_40_MD5",
+      "kex": "rsa"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:14092->192.168.1.20:110",
+      "protocol": "POP3"
+     }
+    },
+    {
+     "id": 5,
+     "sessionId": "pop3_export_cipher-s0",
+     "ruleId": "self-signed-certificate",
+     "ruleName": "Self-signed certificate",
+     "severity": "medium",
+     "title": "Leaf certificate is self-signed",
+     "description": "The presented certificate 'mail.cipherpost.test' is self-signed. Clients that strictly validate will reject it; opportunistic/trust-on-first-use mail clients may accept it silently, which is a MITM risk.",
+     "reference": "RFC 5280 \u00a76.1; NIST SP 800-52r2 \u00a73.3.3",
+     "kind": "rule",
+     "evidence": {
+      "subject": "mail.cipherpost.test"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:14092->192.168.1.20:110",
+      "protocol": "POP3"
+     }
+    },
+    {
+     "id": 7,
+     "sessionId": "pop3_export_cipher-s0",
+     "ruleId": "client-no-pfs-suites",
+     "ruleName": "Client offers no forward-secrecy suites",
+     "severity": "low",
+     "title": "ClientHello advertises no ECDHE/DHE cipher suites",
+     "description": "The client's offered cipher list contains no ephemeral-DH suites, so a PFS-capable server will fall back to a static key exchange if this client is relicensed maintenance.",
+     "reference": "OWASP TLS Cheat Sheet \u00a7'use forward secrecy'",
+     "kind": "rule",
+     "evidence": {
+      "offered": [
+       "0x3"
+      ]
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:14092->192.168.1.20:110",
+      "protocol": "POP3"
+     }
+    }
+   ],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 1,
+    "severityDistribution": {
+     "critical": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:14092->192.168.1.20:110",
+      "protocol": "POP3",
+      "riskScore": 92,
+      "isAnomaly": true,
+      "maxSeverity": "critical",
+      "tlsVersion": "SSLv3.0"
+     }
+    ]
+   }
+  },
+  {
+   "id": "smtp_expired_cert",
+   "filename": "smtp_expired_cert.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 3937,
+   "createdAt": "2026-09-01T11:07:42",
+   "completedAt": "2026-09-01T11:07:51",
+   "postureScore": 92,
+   "findingsCount": 2,
+   "sessionsCount": 1,
+   "maxSeverity": "high",
+   "gotoLabel": "smtp_expired_cert",
+   "summaries": [
+    {
+     "id": "smtp_expired_cert-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:10457->192.168.1.20:465",
+     "isStarttls": false,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+     "cipherStrength": 0.85,
+     "pfsSupported": true,
+     "certChainValid": false,
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 2
+    }
+   ],
+   "sessions": [
+    {
+     "id": "smtp_expired_cert-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:10457->192.168.1.20:465",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 10457,
+     "dstPort": 465,
+     "isStarttls": false,
+     "transitionOffset": 0,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+     "cipherIana": "0xc02f",
+     "cipherStrength": 0.85,
+     "cipherKind": "aead",
+     "pfsSupported": true,
+     "certChainValid": false,
+     "chainResult": "expired",
+     "chainError": "certificate has expired",
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 2,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [],
+      "offeredVersions": [
+       "TLS1.2"
+      ],
+      "cipherSuites": [
+       "0xc02f"
+      ],
+      "supportedGroups": [
+       29,
+       23
+      ]
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2024-03-16T02:18:03",
+       "notAfter": "2026-08-03T02:18:03",
+       "daysValid": 870,
+       "daysRemaining": -35,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": false,
+       "isCa": false,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": true,
+       "notYetValid": false,
+       "serial": "4bed36262d649be8733418b8ade1d521665aa9c1",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "expired"
+      },
+      {
+       "subject": "CipherPost Root CA",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2025-09-02T02:18:02",
+       "notAfter": "2036-08-30T02:18:02",
+       "daysValid": 4015,
+       "daysRemaining": 3645,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 4096,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "3b9516fd53462651315cbc5c271f1d7e972e3341",
+       "sans": [],
+       "chainResult": "expired"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=0"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0303 len=100"
+      },
+      {
+       "offset": 105,
+       "direction": "client",
+       "type": "tls",
+       "summary": "Handshake(16)",
+       "raw": "content_type=Handshake version=0x0303 len=6"
+      },
+      {
+       "offset": 116,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 122,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 167,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0303 len=42"
+      },
+      {
+       "offset": 47,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=2488"
+      },
+      {
+       "offset": 2540,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHelloDone",
+       "raw": "content_type=Handshake version=0x0303 len=4"
+      },
+      {
+       "offset": 2549,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 2555,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 2600,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.8500000238418579,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [
+    {
+     "id": 0,
+     "sessionId": "smtp_expired_cert-s0",
+     "ruleId": "expired-certificate",
+     "ruleName": "Expired certificate",
+     "severity": "high",
+     "title": "Certificate in chain is expired",
+     "description": "The certificate 'mail.cipherpost.test' (issued 2024-03-16 02:18:03, expires 2026-08-03 02:18:03, -35 days ago) has EXPIRED. TLS clients will reject the handshake; mail delivery is likely failing or being downgraded.",
+     "reference": "RFC 5280 \u00a74.1.2.5; NIST SP 800-52r2 \u00a73.3.3",
+     "kind": "rule",
+     "evidence": {
+      "subject": "mail.cipherpost.test",
+      "index": 0,
+      "not_after": "2026-08-03 02:18:03"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:10457->192.168.1.20:465",
+      "protocol": "SMTP"
+     }
+    },
+    {
+     "id": 1,
+     "sessionId": "smtp_expired_cert-s0",
+     "ruleId": "untrusted-certificate-chain",
+     "ruleName": "Untrusted certificate chain",
+     "severity": "high",
+     "title": "Chain validation failed: expired",
+     "description": "The server's certificate chain certificate has expired. Email clients will reject the TLS session or fall back to insecure plaintext, enabling downgrade/MITM.",
+     "reference": "RFC 5280 \u00a76; NIST SP 800-52r2 \u00a73.3.3",
+     "kind": "rule",
+     "evidence": {
+      "result": "expired",
+      "detail": "certificate has expired"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:10457->192.168.1.20:465",
+      "protocol": "SMTP"
+     }
+    }
+   ],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "high": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:10457->192.168.1.20:465",
+      "protocol": "SMTP",
+      "riskScore": 92,
+      "isAnomaly": false,
+      "maxSeverity": "high",
+      "tlsVersion": "TLS1.2"
+     }
+    ]
+   }
+  },
+  {
+   "id": "imap_selfsigned",
+   "filename": "imap_selfsigned.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 2237,
+   "createdAt": "2026-09-01T11:18:59",
+   "completedAt": "2026-09-01T11:19:08",
+   "postureScore": 92,
+   "findingsCount": 2,
+   "sessionsCount": 1,
+   "maxSeverity": "high",
+   "gotoLabel": "imap_selfsigned",
+   "summaries": [
+    {
+     "id": "imap_selfsigned-s0",
+     "protocol": "IMAP",
+     "fiveTuple": "192.168.1.10:11180->192.168.1.20:993",
+     "isStarttls": false,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+     "cipherStrength": 0.85,
+     "pfsSupported": true,
+     "certChainValid": false,
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 2
+    }
+   ],
+   "sessions": [
+    {
+     "id": "imap_selfsigned-s0",
+     "protocol": "IMAP",
+     "fiveTuple": "192.168.1.10:11180->192.168.1.20:993",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 11180,
+     "dstPort": 993,
+     "isStarttls": false,
+     "transitionOffset": 0,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+     "cipherIana": "0xc02f",
+     "cipherStrength": 0.85,
+     "cipherKind": "aead",
+     "pfsSupported": true,
+     "certChainValid": false,
+     "chainResult": "untrusted",
+     "chainError": "self-signed certificate (err code self-signed certificate)",
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 2,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [],
+      "offeredVersions": [
+       "TLS1.2"
+      ],
+      "cipherSuites": [
+       "0xc02f"
+      ],
+      "supportedGroups": [
+       29,
+       23
+      ]
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "mail.cipherpost.test",
+       "notBefore": "2026-09-01T02:18:03",
+       "notAfter": "2028-12-05T02:18:03",
+       "daysValid": 826,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "1e42eebf67cbeb9f0bfc52057d7ba834eac7acd6",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "untrusted"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=0"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0303 len=100"
+      },
+      {
+       "offset": 105,
+       "direction": "client",
+       "type": "tls",
+       "summary": "Handshake(16)",
+       "raw": "content_type=Handshake version=0x0303 len=6"
+      },
+      {
+       "offset": 116,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 122,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 167,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0303 len=42"
+      },
+      {
+       "offset": 47,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=858"
+      },
+      {
+       "offset": 910,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHelloDone",
+       "raw": "content_type=Handshake version=0x0303 len=4"
+      },
+      {
+       "offset": 919,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 925,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 970,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.8500000238418579,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [
+    {
+     "id": 1,
+     "sessionId": "imap_selfsigned-s0",
+     "ruleId": "untrusted-certificate-chain",
+     "ruleName": "Untrusted certificate chain",
+     "severity": "high",
+     "title": "Chain validation failed: untrusted",
+     "description": "The server's certificate chain does not chain to a trusted root in the configured trust store. Email clients will reject the TLS session or fall back to insecure plaintext, enabling downgrade/MITM.",
+     "reference": "RFC 5280 \u00a76; NIST SP 800-52r2 \u00a73.3.3",
+     "kind": "rule",
+     "evidence": {
+      "result": "untrusted",
+      "detail": "self-signed certificate (err code self-signed certificate)"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11180->192.168.1.20:993",
+      "protocol": "IMAP"
+     }
+    },
+    {
+     "id": 0,
+     "sessionId": "imap_selfsigned-s0",
+     "ruleId": "self-signed-certificate",
+     "ruleName": "Self-signed certificate",
+     "severity": "medium",
+     "title": "Leaf certificate is self-signed",
+     "description": "The presented certificate 'mail.cipherpost.test' is self-signed. Clients that strictly validate will reject it; opportunistic/trust-on-first-use mail clients may accept it silently, which is a MITM risk.",
+     "reference": "RFC 5280 \u00a76.1; NIST SP 800-52r2 \u00a73.3.3",
+     "kind": "rule",
+     "evidence": {
+      "subject": "mail.cipherpost.test"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11180->192.168.1.20:993",
+      "protocol": "IMAP"
+     }
+    }
+   ],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "high": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:11180->192.168.1.20:993",
+      "protocol": "IMAP",
+      "riskScore": 92,
+      "isAnomaly": false,
+      "maxSeverity": "high",
+      "tlsVersion": "TLS1.2"
+     }
+    ]
+   }
+  },
+  {
+   "id": "smtp_untrusted_chain",
+   "filename": "smtp_untrusted_chain.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 4428,
+   "createdAt": "2026-09-01T11:30:16",
+   "completedAt": "2026-09-01T11:30:25",
+   "postureScore": 92,
+   "findingsCount": 5,
+   "sessionsCount": 1,
+   "maxSeverity": "high",
+   "gotoLabel": "smtp_untrusted_chain",
+   "summaries": [
+    {
+     "id": "smtp_untrusted_chain-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:13351->192.168.1.20:587",
+     "isStarttls": true,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_RSA_WITH_AES_256_CBC_SHA",
+     "cipherStrength": 0.4,
+     "pfsSupported": false,
+     "certChainValid": false,
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 5
+    }
+   ],
+   "sessions": [
+    {
+     "id": "smtp_untrusted_chain-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:13351->192.168.1.20:587",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 13351,
+     "dstPort": 587,
+     "isStarttls": true,
+     "transitionOffset": 35,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_RSA_WITH_AES_256_CBC_SHA",
+     "cipherIana": "0x0035",
+     "cipherStrength": 0.4,
+     "cipherKind": "cbc",
+     "pfsSupported": false,
+     "certChainValid": false,
+     "chainResult": "untrusted",
+     "chainError": "self-signed certificate in certificate chain (err code self-signed certificate in certificate chain)",
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 5,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [],
+      "offeredVersions": [
+       "TLS1.2"
+      ],
+      "cipherSuites": [
+       "0x0035"
+      ],
+      "supportedGroups": [
+       29,
+       23
+      ]
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "Evil Corp CA",
+       "notBefore": "2026-09-02T02:18:03",
+       "notAfter": "2028-12-05T02:18:03",
+       "daysValid": 825,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": false,
+       "isCa": false,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "150fc6fea822ad8da7c6b1f9fcacf0ec8ed54e36",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "untrusted"
+      },
+      {
+       "subject": "Evil Corp CA",
+       "issuer": "Evil Corp CA",
+       "notBefore": "2025-09-02T02:18:03",
+       "notAfter": "2036-08-30T02:18:03",
+       "daysValid": 4015,
+       "daysRemaining": 3645,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 4096,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "40c930f3bb06a7b1c11e2646f610bab6fcec310e",
+       "sans": [],
+       "chainResult": "untrusted"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "client-command",
+       "summary": "EHLO client.example.com",
+       "raw": "EHLO client.example.com"
+      },
+      {
+       "offset": 25,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "STARTTLS",
+       "raw": "STARTTLS"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 mail.cipherpost.test ESMTP Postfix",
+       "raw": "220 mail.cipherpost.test ESMTP Postfix"
+      },
+      {
+       "offset": 40,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-mail.cipherpost.test",
+       "raw": "250-mail.cipherpost.test"
+      },
+      {
+       "offset": 66,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-STARTTLS",
+       "raw": "250-STARTTLS"
+      },
+      {
+       "offset": 80,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "250 8BITMIME",
+       "raw": "250 8BITMIME"
+      },
+      {
+       "offset": 94,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 2.0.0 Ready to start TLS",
+       "raw": "220 2.0.0 Ready to start TLS"
+      },
+      {
+       "offset": 35,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=35"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0303 len=100"
+      },
+      {
+       "offset": 105,
+       "direction": "client",
+       "type": "tls",
+       "summary": "Handshake(16)",
+       "raw": "content_type=Handshake version=0x0303 len=6"
+      },
+      {
+       "offset": 116,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 122,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 167,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0303 len=42"
+      },
+      {
+       "offset": 47,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=2470"
+      },
+      {
+       "offset": 2522,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHelloDone",
+       "raw": "content_type=Handshake version=0x0303 len=4"
+      },
+      {
+       "offset": 2531,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 2537,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 2582,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.4000000059604645,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [
+    {
+     "id": 3,
+     "sessionId": "smtp_untrusted_chain-s0",
+     "ruleId": "untrusted-certificate-chain",
+     "ruleName": "Untrusted certificate chain",
+     "severity": "high",
+     "title": "Chain validation failed: untrusted",
+     "description": "The server's certificate chain does not chain to a trusted root in the configured trust store. Email clients will reject the TLS session or fall back to insecure plaintext, enabling downgrade/MITM.",
+     "reference": "RFC 5280 \u00a76; NIST SP 800-52r2 \u00a73.3.3",
+     "kind": "rule",
+     "evidence": {
+      "result": "untrusted",
+      "detail": "self-signed certificate in certificate chain (err code self-signed certificate in certificate chain)"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:13351->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    },
+    {
+     "id": 2,
+     "sessionId": "smtp_untrusted_chain-s0",
+     "ruleId": "non-pfs-key-exchange",
+     "ruleName": "No forward secrecy (PFS)",
+     "severity": "medium",
+     "title": "TLS_RSA_WITH_AES_256_CBC_SHA uses static key exchange",
+     "description": "The negotiated cipher TLS_RSA_WITH_AES_256_CBC_SHA does not use ephemeral (EC)DHE key exchange. If the server private key is compromised, all past sessions can be decrypted (no forward secrecy). Prefer ECDHE suites.",
+     "reference": "NIST SP 800-52r2 \u00a73.3.1; OWASP TLS Cheat Sheet \u00a7'use forward secrecy'",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_AES_256_CBC_SHA",
+      "kex": "rsa"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:13351->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    },
+    {
+     "id": 0,
+     "sessionId": "smtp_untrusted_chain-s0",
+     "ruleId": "non-aead-bulk-cipher",
+     "ruleName": "Non-AEAD bulk cipher",
+     "severity": "low",
+     "title": "TLS_RSA_WITH_AES_256_CBC_SHA uses legacy bulk encryption",
+     "description": "The negotiated cipher TLS_RSA_WITH_AES_256_CBC_SHA does not use an authenticated AEAD mode (AES-GCM/CCM or ChaCha20-Poly1305). CBC-mode ciphers are subject to padding-oracle attacks (e.g. Lucky13) and lack integrity protection the same way. Prefer AEAD ciphers (NIST SP 800-52r2 preference).",
+     "reference": "NIST SP 800-52r2 \u00a73.3.1; OWASP TLS Cheat Sheet",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_AES_256_CBC_SHA",
+      "kind": "cbc"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:13351->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    },
+    {
+     "id": 1,
+     "sessionId": "smtp_untrusted_chain-s0",
+     "ruleId": "weak-cipher-suite",
+     "ruleName": "Weak cipher suite",
+     "severity": "low",
+     "title": "TLS_RSA_WITH_AES_256_CBC_SHA classified CBC-mode cipher",
+     "description": "The negotiated cipher TLS_RSA_WITH_AES_256_CBC_SHA (effective key 256-bit) is classified as a CBC-mode cipher. NIST SP 800-52r2 disallows short/weak ciphers for government TLS traffic and recommends blocking them at the server.",
+     "reference": "NIST SP 800-52r2 App A; OWASP TLS Cheat Sheet",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_AES_256_CBC_SHA",
+      "iana": "0x35",
+      "strength": 0.4,
+      "key_len": 256
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:13351->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    },
+    {
+     "id": 4,
+     "sessionId": "smtp_untrusted_chain-s0",
+     "ruleId": "client-no-pfs-suites",
+     "ruleName": "Client offers no forward-secrecy suites",
+     "severity": "low",
+     "title": "ClientHello advertises no ECDHE/DHE cipher suites",
+     "description": "The client's offered cipher list contains no ephemeral-DH suites, so a PFS-capable server will fall back to a static key exchange if this client is relicensed maintenance.",
+     "reference": "OWASP TLS Cheat Sheet \u00a7'use forward secrecy'",
+     "kind": "rule",
+     "evidence": {
+      "offered": [
+       "0x35"
+      ]
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:13351->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    }
+   ],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "high": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:13351->192.168.1.20:587",
+      "protocol": "SMTP",
+      "riskScore": 92,
+      "isAnomaly": false,
+      "maxSeverity": "high",
+      "tlsVersion": "TLS1.2"
+     }
+    ]
+   }
+  },
+  {
+   "id": "smtp_weak_sig",
+   "filename": "smtp_weak_sig.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 4409,
+   "createdAt": "2026-09-01T11:41:33",
+   "completedAt": "2026-09-01T11:41:42",
+   "postureScore": 92,
+   "findingsCount": 2,
+   "sessionsCount": 1,
+   "maxSeverity": "high",
+   "gotoLabel": "smtp_weak_sig",
+   "summaries": [
+    {
+     "id": "smtp_weak_sig-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:10980->192.168.1.20:587",
+     "isStarttls": true,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+     "cipherStrength": 0.85,
+     "pfsSupported": true,
+     "certChainValid": false,
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 2
+    }
+   ],
+   "sessions": [
+    {
+     "id": "smtp_weak_sig-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:10980->192.168.1.20:587",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 10980,
+     "dstPort": 587,
+     "isStarttls": true,
+     "transitionOffset": 35,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+     "cipherIana": "0xc02f",
+     "cipherStrength": 0.85,
+     "cipherKind": "aead",
+     "pfsSupported": true,
+     "certChainValid": false,
+     "chainResult": "invalid-sig",
+     "chainError": "certificate signature failure",
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 2,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [],
+      "offeredVersions": [
+       "TLS1.2"
+      ],
+      "cipherSuites": [
+       "0xc02f"
+      ],
+      "supportedGroups": [
+       29,
+       23
+      ]
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2026-09-01T02:18:03",
+       "notAfter": "2028-12-05T02:18:03",
+       "daysValid": 826,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha1WithRSAEncryption",
+       "selfSigned": false,
+       "isCa": false,
+       "weakSignature": true,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "458b677b33363dc1135222931fb2b860e5b15d4d",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "invalid-sig"
+      },
+      {
+       "subject": "CipherPost Root CA",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2025-09-02T02:18:02",
+       "notAfter": "2036-08-30T02:18:02",
+       "daysValid": 4015,
+       "daysRemaining": 3645,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 4096,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "3b9516fd53462651315cbc5c271f1d7e972e3341",
+       "sans": [],
+       "chainResult": "invalid-sig"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "client-command",
+       "summary": "EHLO client.example.com",
+       "raw": "EHLO client.example.com"
+      },
+      {
+       "offset": 25,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "STARTTLS",
+       "raw": "STARTTLS"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 mail.cipherpost.test ESMTP Postfix",
+       "raw": "220 mail.cipherpost.test ESMTP Postfix"
+      },
+      {
+       "offset": 40,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-mail.cipherpost.test",
+       "raw": "250-mail.cipherpost.test"
+      },
+      {
+       "offset": 66,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-STARTTLS",
+       "raw": "250-STARTTLS"
+      },
+      {
+       "offset": 80,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "250 8BITMIME",
+       "raw": "250 8BITMIME"
+      },
+      {
+       "offset": 94,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 2.0.0 Ready to start TLS",
+       "raw": "220 2.0.0 Ready to start TLS"
+      },
+      {
+       "offset": 35,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=35"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0303 len=100"
+      },
+      {
+       "offset": 105,
+       "direction": "client",
+       "type": "tls",
+       "summary": "Handshake(16)",
+       "raw": "content_type=Handshake version=0x0303 len=6"
+      },
+      {
+       "offset": 116,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 122,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 167,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0303 len=42"
+      },
+      {
+       "offset": 47,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=2451"
+      },
+      {
+       "offset": 2503,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHelloDone",
+       "raw": "content_type=Handshake version=0x0303 len=4"
+      },
+      {
+       "offset": 2512,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 2518,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 2563,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.8500000238418579,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [
+    {
+     "id": 0,
+     "sessionId": "smtp_weak_sig-s0",
+     "ruleId": "untrusted-certificate-chain",
+     "ruleName": "Untrusted certificate chain",
+     "severity": "high",
+     "title": "Chain validation failed: invalid-sig",
+     "description": "The server's certificate chain failed signature validation against its issuer. Email clients will reject the TLS session or fall back to insecure plaintext, enabling downgrade/MITM.",
+     "reference": "RFC 5280 \u00a76; NIST SP 800-52r2 \u00a73.3.3",
+     "kind": "rule",
+     "evidence": {
+      "result": "invalid-sig",
+      "detail": "certificate signature failure"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:10980->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    },
+    {
+     "id": 1,
+     "sessionId": "smtp_weak_sig-s0",
+     "ruleId": "weak-signature-algorithm",
+     "ruleName": "Weak signature algorithm on certificate",
+     "severity": "high",
+     "title": "Certificate signed with sha1WithRSAEncryption",
+     "description": "The certificate 'mail.cipherpost.test' uses signature algorithm sha1WithRSAEncryption. SHA-1/MD5 signature algorithms are cryptographically broken (collision attacks) and MUST NOT be used for certificates.",
+     "reference": "NIST SP 800-52r2 \u00a73.3.3; RFC 8446 App B.1.1",
+     "kind": "rule",
+     "evidence": {
+      "subject": "mail.cipherpost.test",
+      "algorithm": "sha1WithRSAEncryption",
+      "index": 0
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:10980->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    }
+   ],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "high": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:10980->192.168.1.20:587",
+      "protocol": "SMTP",
+      "riskScore": 92,
+      "isAnomaly": false,
+      "maxSeverity": "high",
+      "tlsVersion": "TLS1.2"
+     }
+    ]
+   }
+  },
+  {
+   "id": "smtp_short_key",
+   "filename": "smtp_short_key.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 4314,
+   "createdAt": "2026-09-01T11:52:50",
+   "completedAt": "2026-09-01T11:52:59",
+   "postureScore": 92,
+   "findingsCount": 1,
+   "sessionsCount": 1,
+   "maxSeverity": "high",
+   "gotoLabel": "smtp_short_key",
+   "summaries": [
+    {
+     "id": "smtp_short_key-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:12122->192.168.1.20:587",
+     "isStarttls": true,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+     "cipherStrength": 0.85,
+     "pfsSupported": true,
+     "certChainValid": true,
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 1
+    }
+   ],
+   "sessions": [
+    {
+     "id": "smtp_short_key-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:12122->192.168.1.20:587",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 12122,
+     "dstPort": 587,
+     "isStarttls": true,
+     "transitionOffset": 35,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+     "cipherIana": "0xc02f",
+     "cipherStrength": 0.85,
+     "cipherKind": "aead",
+     "pfsSupported": true,
+     "certChainValid": true,
+     "chainResult": "ok",
+     "chainError": "verified against trust store",
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 1,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [],
+      "offeredVersions": [
+       "TLS1.2"
+      ],
+      "cipherSuites": [
+       "0xc02f"
+      ],
+      "supportedGroups": [
+       29,
+       23
+      ]
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2026-09-02T02:18:03",
+       "notAfter": "2028-12-05T02:18:03",
+       "daysValid": 825,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 1024,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": false,
+       "isCa": false,
+       "weakSignature": false,
+       "shortKey": true,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "7666a09c06adf6bb5c09380b77d5df620e53fe64",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "ok"
+      },
+      {
+       "subject": "CipherPost Root CA",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2025-09-02T02:18:02",
+       "notAfter": "2036-08-30T02:18:02",
+       "daysValid": 4015,
+       "daysRemaining": 3645,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 4096,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "3b9516fd53462651315cbc5c271f1d7e972e3341",
+       "sans": [],
+       "chainResult": "ok"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "client-command",
+       "summary": "EHLO client.example.com",
+       "raw": "EHLO client.example.com"
+      },
+      {
+       "offset": 25,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "STARTTLS",
+       "raw": "STARTTLS"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 mail.cipherpost.test ESMTP Postfix",
+       "raw": "220 mail.cipherpost.test ESMTP Postfix"
+      },
+      {
+       "offset": 40,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-mail.cipherpost.test",
+       "raw": "250-mail.cipherpost.test"
+      },
+      {
+       "offset": 66,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-STARTTLS",
+       "raw": "250-STARTTLS"
+      },
+      {
+       "offset": 80,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "250 8BITMIME",
+       "raw": "250 8BITMIME"
+      },
+      {
+       "offset": 94,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 2.0.0 Ready to start TLS",
+       "raw": "220 2.0.0 Ready to start TLS"
+      },
+      {
+       "offset": 35,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=35"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0303 len=100"
+      },
+      {
+       "offset": 105,
+       "direction": "client",
+       "type": "tls",
+       "summary": "Handshake(16)",
+       "raw": "content_type=Handshake version=0x0303 len=6"
+      },
+      {
+       "offset": 116,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 122,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 167,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0303 len=42"
+      },
+      {
+       "offset": 47,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=2356"
+      },
+      {
+       "offset": 2408,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHelloDone",
+       "raw": "content_type=Handshake version=0x0303 len=4"
+      },
+      {
+       "offset": 2417,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 2423,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 2468,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.8500000238418579,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [
+    {
+     "id": 0,
+     "sessionId": "smtp_short_key-s0",
+     "ruleId": "short-public-key",
+     "ruleName": "Short public key size",
+     "severity": "high",
+     "title": "Certificate public key only 1024 bits",
+     "description": "Certificate 'mail.cipherpost.test' uses a RSA public key of 1024 bits. NIST SP 800-52r2 requires RSA >= 2048, ECDSA >= 224 bits (256-bit curve recommended).",
+     "reference": "NIST SP 800-52r2 \u00a73.3.3.1; NIST SP 800-57 Part 1",
+     "kind": "rule",
+     "evidence": {
+      "subject": "mail.cipherpost.test",
+      "algorithm": "RSA",
+      "bits": 1024
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:12122->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    }
+   ],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "high": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:12122->192.168.1.20:587",
+      "protocol": "SMTP",
+      "riskScore": 92,
+      "isAnomaly": false,
+      "maxSeverity": "high",
+      "tlsVersion": "TLS1.2"
+     }
+    ]
+   }
+  },
+  {
+   "id": "pop3_tls12_nonpfs",
+   "filename": "pop3_tls12_nonpfs.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 3867,
+   "createdAt": "2026-09-01T12:04:07",
+   "completedAt": "2026-09-01T12:04:16",
+   "postureScore": 92,
+   "findingsCount": 5,
+   "sessionsCount": 1,
+   "maxSeverity": "medium",
+   "gotoLabel": "pop3_tls12_nonpfs",
+   "summaries": [
+    {
+     "id": "pop3_tls12_nonpfs-s0",
+     "protocol": "POP3",
+     "fiveTuple": "192.168.1.10:10087->192.168.1.20:995",
+     "isStarttls": false,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+     "cipherStrength": 0.25,
+     "pfsSupported": false,
+     "certChainValid": true,
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "medium",
+     "findingCount": 5
+    }
+   ],
+   "sessions": [
+    {
+     "id": "pop3_tls12_nonpfs-s0",
+     "protocol": "POP3",
+     "fiveTuple": "192.168.1.10:10087->192.168.1.20:995",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 10087,
+     "dstPort": 995,
+     "isStarttls": false,
+     "transitionOffset": 0,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+     "cipherIana": "0x000a",
+     "cipherStrength": 0.25,
+     "cipherKind": "cbc",
+     "pfsSupported": false,
+     "certChainValid": true,
+     "chainResult": "ok",
+     "chainError": "verified against trust store",
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "medium",
+     "findingCount": 5,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [],
+      "offeredVersions": [
+       "TLS1.2"
+      ],
+      "cipherSuites": [
+       "0x000a"
+      ],
+      "supportedGroups": [
+       29,
+       23
+      ]
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2026-09-02T02:18:03",
+       "notAfter": "2028-12-05T02:18:03",
+       "daysValid": 825,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": false,
+       "isCa": false,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "176e31923b435a781802c96ae7eff32dfd5784f",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "ok"
+      },
+      {
+       "subject": "CipherPost Root CA",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2025-09-02T02:18:02",
+       "notAfter": "2036-08-30T02:18:02",
+       "daysValid": 4015,
+       "daysRemaining": 3645,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 4096,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "3b9516fd53462651315cbc5c271f1d7e972e3341",
+       "sans": [],
+       "chainResult": "ok"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=0"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0303 len=100"
+      },
+      {
+       "offset": 105,
+       "direction": "client",
+       "type": "tls",
+       "summary": "Handshake(16)",
+       "raw": "content_type=Handshake version=0x0303 len=6"
+      },
+      {
+       "offset": 116,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 122,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 167,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0303 len=42"
+      },
+      {
+       "offset": 47,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=2488"
+      },
+      {
+       "offset": 2540,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHelloDone",
+       "raw": "content_type=Handshake version=0x0303 len=4"
+      },
+      {
+       "offset": 2549,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 2555,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 2600,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.25,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [
+    {
+     "id": 1,
+     "sessionId": "pop3_tls12_nonpfs-s0",
+     "ruleId": "weak-cipher-suite",
+     "ruleName": "Weak cipher suite",
+     "severity": "medium",
+     "title": "TLS_RSA_WITH_3DES_EDE_CBC_SHA classified CBC-mode cipher",
+     "description": "The negotiated cipher TLS_RSA_WITH_3DES_EDE_CBC_SHA (effective key 112-bit) is classified as a CBC-mode cipher. NIST SP 800-52r2 disallows short/weak ciphers for government TLS traffic and recommends blocking them at the server.",
+     "reference": "NIST SP 800-52r2 App A; OWASP TLS Cheat Sheet",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+      "iana": "0xa",
+      "strength": 0.25,
+      "key_len": 112
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:10087->192.168.1.20:995",
+      "protocol": "POP3"
+     }
+    },
+    {
+     "id": 2,
+     "sessionId": "pop3_tls12_nonpfs-s0",
+     "ruleId": "non-pfs-key-exchange",
+     "ruleName": "No forward secrecy (PFS)",
+     "severity": "medium",
+     "title": "TLS_RSA_WITH_3DES_EDE_CBC_SHA uses static key exchange",
+     "description": "The negotiated cipher TLS_RSA_WITH_3DES_EDE_CBC_SHA does not use ephemeral (EC)DHE key exchange. If the server private key is compromised, all past sessions can be decrypted (no forward secrecy). Prefer ECDHE suites.",
+     "reference": "NIST SP 800-52r2 \u00a73.3.1; OWASP TLS Cheat Sheet \u00a7'use forward secrecy'",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+      "kex": "rsa"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:10087->192.168.1.20:995",
+      "protocol": "POP3"
+     }
+    },
+    {
+     "id": 3,
+     "sessionId": "pop3_tls12_nonpfs-s0",
+     "ruleId": "3des-cipher",
+     "ruleName": "3DES cipher suite",
+     "severity": "medium",
+     "title": "3DES negotiated",
+     "description": "TLS_RSA_WITH_3DES_EDE_CBC_SHA uses 3DES. 3DES/EDE has only ~112 bits of security and is subject to Sweet32 online birthday attacks; prohibited after 2023.",
+     "reference": "NIST 800-131A Rev 2; RFC 8429",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:10087->192.168.1.20:995",
+      "protocol": "POP3"
+     }
+    },
+    {
+     "id": 0,
+     "sessionId": "pop3_tls12_nonpfs-s0",
+     "ruleId": "non-aead-bulk-cipher",
+     "ruleName": "Non-AEAD bulk cipher",
+     "severity": "low",
+     "title": "TLS_RSA_WITH_3DES_EDE_CBC_SHA uses legacy bulk encryption",
+     "description": "The negotiated cipher TLS_RSA_WITH_3DES_EDE_CBC_SHA does not use an authenticated AEAD mode (AES-GCM/CCM or ChaCha20-Poly1305). CBC-mode ciphers are subject to padding-oracle attacks (e.g. Lucky13) and lack integrity protection the same way. Prefer AEAD ciphers (NIST SP 800-52r2 preference).",
+     "reference": "NIST SP 800-52r2 \u00a73.3.1; OWASP TLS Cheat Sheet",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+      "kind": "cbc"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:10087->192.168.1.20:995",
+      "protocol": "POP3"
+     }
+    },
+    {
+     "id": 4,
+     "sessionId": "pop3_tls12_nonpfs-s0",
+     "ruleId": "client-no-pfs-suites",
+     "ruleName": "Client offers no forward-secrecy suites",
+     "severity": "low",
+     "title": "ClientHello advertises no ECDHE/DHE cipher suites",
+     "description": "The client's offered cipher list contains no ephemeral-DH suites, so a PFS-capable server will fall back to a static key exchange if this client is relicensed maintenance.",
+     "reference": "OWASP TLS Cheat Sheet \u00a7'use forward secrecy'",
+     "kind": "rule",
+     "evidence": {
+      "offered": [
+       "0xa"
+      ]
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:10087->192.168.1.20:995",
+      "protocol": "POP3"
+     }
+    }
+   ],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "medium": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:10087->192.168.1.20:995",
+      "protocol": "POP3",
+      "riskScore": 92,
+      "isAnomaly": false,
+      "maxSeverity": "medium",
+      "tlsVersion": "TLS1.2"
+     }
+    ]
+   }
+  },
+  {
+   "id": "smtp_tls12_rc4",
+   "filename": "smtp_tls12_rc4.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 4446,
+   "createdAt": "2026-09-01T12:15:24",
+   "completedAt": "2026-09-01T12:15:33",
+   "postureScore": 92,
+   "findingsCount": 4,
+   "sessionsCount": 1,
+   "maxSeverity": "high",
+   "gotoLabel": "smtp_tls12_rc4",
+   "summaries": [
+    {
+     "id": "smtp_tls12_rc4-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:13315->192.168.1.20:587",
+     "isStarttls": true,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_RSA_WITH_RC4_128_SHA",
+     "cipherStrength": 0.05,
+     "pfsSupported": false,
+     "certChainValid": true,
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 4
+    }
+   ],
+   "sessions": [
+    {
+     "id": "smtp_tls12_rc4-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:13315->192.168.1.20:587",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 13315,
+     "dstPort": 587,
+     "isStarttls": true,
+     "transitionOffset": 35,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_RSA_WITH_RC4_128_SHA",
+     "cipherIana": "0x0005",
+     "cipherStrength": 0.05,
+     "cipherKind": "stream",
+     "pfsSupported": false,
+     "certChainValid": true,
+     "chainResult": "ok",
+     "chainError": "verified against trust store",
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "high",
+     "findingCount": 4,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [],
+      "offeredVersions": [
+       "TLS1.2"
+      ],
+      "cipherSuites": [
+       "0x0005"
+      ],
+      "supportedGroups": [
+       29,
+       23
+      ]
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2026-09-02T02:18:04",
+       "notAfter": "2028-12-05T02:18:04",
+       "daysValid": 825,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": false,
+       "isCa": false,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "34440fd345d746b26f335b3de6929a10e0c4d831",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "ok"
+      },
+      {
+       "subject": "CipherPost Root CA",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2025-09-02T02:18:02",
+       "notAfter": "2036-08-30T02:18:02",
+       "daysValid": 4015,
+       "daysRemaining": 3645,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 4096,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "3b9516fd53462651315cbc5c271f1d7e972e3341",
+       "sans": [],
+       "chainResult": "ok"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "client-command",
+       "summary": "EHLO client.example.com",
+       "raw": "EHLO client.example.com"
+      },
+      {
+       "offset": 25,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "STARTTLS",
+       "raw": "STARTTLS"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 mail.cipherpost.test ESMTP Postfix",
+       "raw": "220 mail.cipherpost.test ESMTP Postfix"
+      },
+      {
+       "offset": 40,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-mail.cipherpost.test",
+       "raw": "250-mail.cipherpost.test"
+      },
+      {
+       "offset": 66,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-STARTTLS",
+       "raw": "250-STARTTLS"
+      },
+      {
+       "offset": 80,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "250 8BITMIME",
+       "raw": "250 8BITMIME"
+      },
+      {
+       "offset": 94,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 2.0.0 Ready to start TLS",
+       "raw": "220 2.0.0 Ready to start TLS"
+      },
+      {
+       "offset": 35,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=35"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0303 len=100"
+      },
+      {
+       "offset": 105,
+       "direction": "client",
+       "type": "tls",
+       "summary": "Handshake(16)",
+       "raw": "content_type=Handshake version=0x0303 len=6"
+      },
+      {
+       "offset": 116,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 122,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 167,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0303 len=42"
+      },
+      {
+       "offset": 47,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=2488"
+      },
+      {
+       "offset": 2540,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHelloDone",
+       "raw": "content_type=Handshake version=0x0303 len=4"
+      },
+      {
+       "offset": 2549,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 2555,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 2600,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.05000000074505806,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [
+    {
+     "id": 2,
+     "sessionId": "smtp_tls12_rc4-s0",
+     "ruleId": "rc4-cipher",
+     "ruleName": "RC4 cipher suite",
+     "severity": "high",
+     "title": "RC4 negotiated",
+     "description": "TLS_RSA_WITH_RC4_128_SHA uses the RC4 stream cipher. RC4 biases allow practical plaintext recovery (Bar-Mitzvah/BEAST variants) and it is prohibited in RFC 7465 for TLS.",
+     "reference": "RFC 7465; NIST SP 800-52r2 App A",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_RC4_128_SHA"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:13315->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    },
+    {
+     "id": 0,
+     "sessionId": "smtp_tls12_rc4-s0",
+     "ruleId": "non-aead-bulk-cipher",
+     "ruleName": "Non-AEAD bulk cipher",
+     "severity": "medium",
+     "title": "TLS_RSA_WITH_RC4_128_SHA uses legacy bulk encryption",
+     "description": "The negotiated cipher TLS_RSA_WITH_RC4_128_SHA does not use an authenticated AEAD mode (AES-GCM/CCM or ChaCha20-Poly1305). CBC-mode ciphers are subject to padding-oracle attacks (e.g. Lucky13) and lack integrity protection the same way. Prefer AEAD ciphers (NIST SP 800-52r2 preference).",
+     "reference": "NIST SP 800-52r2 \u00a73.3.1; OWASP TLS Cheat Sheet",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_RC4_128_SHA",
+      "kind": "stream"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:13315->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    },
+    {
+     "id": 1,
+     "sessionId": "smtp_tls12_rc4-s0",
+     "ruleId": "non-pfs-key-exchange",
+     "ruleName": "No forward secrecy (PFS)",
+     "severity": "medium",
+     "title": "TLS_RSA_WITH_RC4_128_SHA uses static key exchange",
+     "description": "The negotiated cipher TLS_RSA_WITH_RC4_128_SHA does not use ephemeral (EC)DHE key exchange. If the server private key is compromised, all past sessions can be decrypted (no forward secrecy). Prefer ECDHE suites.",
+     "reference": "NIST SP 800-52r2 \u00a73.3.1; OWASP TLS Cheat Sheet \u00a7'use forward secrecy'",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_RC4_128_SHA",
+      "kex": "rsa"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:13315->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    },
+    {
+     "id": 3,
+     "sessionId": "smtp_tls12_rc4-s0",
+     "ruleId": "client-no-pfs-suites",
+     "ruleName": "Client offers no forward-secrecy suites",
+     "severity": "low",
+     "title": "ClientHello advertises no ECDHE/DHE cipher suites",
+     "description": "The client's offered cipher list contains no ephemeral-DH suites, so a PFS-capable server will fall back to a static key exchange if this client is relicensed maintenance.",
+     "reference": "OWASP TLS Cheat Sheet \u00a7'use forward secrecy'",
+     "kind": "rule",
+     "evidence": {
+      "offered": [
+       "0x5"
+      ]
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:13315->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    }
+   ],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "high": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:13315->192.168.1.20:587",
+      "protocol": "SMTP",
+      "riskScore": 92,
+      "isAnomaly": false,
+      "maxSeverity": "high",
+      "tlsVersion": "TLS1.2"
+     }
+    ]
+   }
+  },
+  {
+   "id": "imap_tls12_3des",
+   "filename": "imap_tls12_3des.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 4370,
+   "createdAt": "2026-09-01T12:26:41",
+   "completedAt": "2026-09-01T12:26:50",
+   "postureScore": 92,
+   "findingsCount": 5,
+   "sessionsCount": 1,
+   "maxSeverity": "medium",
+   "gotoLabel": "imap_tls12_3des",
+   "summaries": [
+    {
+     "id": "imap_tls12_3des-s0",
+     "protocol": "IMAP",
+     "fiveTuple": "192.168.1.10:11976->192.168.1.20:143",
+     "isStarttls": true,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+     "cipherStrength": 0.25,
+     "pfsSupported": false,
+     "certChainValid": true,
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "medium",
+     "findingCount": 5
+    }
+   ],
+   "sessions": [
+    {
+     "id": "imap_tls12_3des-s0",
+     "protocol": "IMAP",
+     "fiveTuple": "192.168.1.10:11976->192.168.1.20:143",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 11976,
+     "dstPort": 143,
+     "isStarttls": true,
+     "transitionOffset": 32,
+     "tlsVersion": "TLS1.2",
+     "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+     "cipherIana": "0x000a",
+     "cipherStrength": 0.25,
+     "cipherKind": "cbc",
+     "pfsSupported": false,
+     "certChainValid": true,
+     "chainResult": "ok",
+     "chainError": "verified against trust store",
+     "riskScore": 92,
+     "isAnomaly": false,
+     "maxSeverity": "medium",
+     "findingCount": 5,
+     "clientHello": {
+      "sni": "mail.cipherpost.test",
+      "alpn": [],
+      "offeredVersions": [
+       "TLS1.2"
+      ],
+      "cipherSuites": [
+       "0x000a"
+      ],
+      "supportedGroups": [
+       29,
+       23
+      ]
+     },
+     "certChain": [
+      {
+       "subject": "mail.cipherpost.test",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2026-09-02T02:18:04",
+       "notAfter": "2028-12-05T02:18:04",
+       "daysValid": 825,
+       "daysRemaining": 820,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 2048,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": false,
+       "isCa": false,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "426653abd42467e67ce993f511bb0fb91dd11180",
+       "sans": [
+        "mail.cipherpost.test"
+       ],
+       "chainResult": "ok"
+      },
+      {
+       "subject": "CipherPost Root CA",
+       "issuer": "CipherPost Root CA",
+       "notBefore": "2025-09-02T02:18:02",
+       "notAfter": "2036-08-30T02:18:02",
+       "daysValid": 4015,
+       "daysRemaining": 3645,
+       "pubkeyAlg": "RSA",
+       "pubkeyBits": 4096,
+       "signatureAlg": "sha256WithRSAEncryption",
+       "selfSigned": true,
+       "isCa": true,
+       "weakSignature": false,
+       "shortKey": false,
+       "expired": false,
+       "notYetValid": false,
+       "serial": "3b9516fd53462651315cbc5c271f1d7e972e3341",
+       "sans": [],
+       "chainResult": "ok"
+      }
+     ],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "a001 CAPABILITY",
+       "raw": "a001 CAPABILITY"
+      },
+      {
+       "offset": 17,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "a002 STARTTLS",
+       "raw": "a002 STARTTLS"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "* OK [CAPABILITY IMAP4rev1 STARTTLS] Dovecot ready.",
+       "raw": "* OK [CAPABILITY IMAP4rev1 STARTTLS] Dovecot ready."
+      },
+      {
+       "offset": 53,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "* CAPABILITY IMAP4rev1 STARTTLS",
+       "raw": "* CAPABILITY IMAP4rev1 STARTTLS"
+      },
+      {
+       "offset": 86,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "a002 OK Begin TLS negotiation now",
+       "raw": "a002 OK Begin TLS negotiation now"
+      },
+      {
+       "offset": 32,
+       "direction": "client",
+       "type": "starttls",
+       "summary": "STARTTLS transition \u2192 TLS handshake begins here",
+       "raw": "offset=32"
+      },
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ClientHello",
+       "raw": "content_type=Handshake version=0x0303 len=100"
+      },
+      {
+       "offset": 105,
+       "direction": "client",
+       "type": "tls",
+       "summary": "Handshake(16)",
+       "raw": "content_type=Handshake version=0x0303 len=6"
+      },
+      {
+       "offset": 116,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 122,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 167,
+       "direction": "client",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHello",
+       "raw": "content_type=Handshake version=0x0303 len=42"
+      },
+      {
+       "offset": 47,
+       "direction": "server",
+       "type": "tls",
+       "summary": "Certificate",
+       "raw": "content_type=Handshake version=0x0303 len=2488"
+      },
+      {
+       "offset": 2540,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ServerHelloDone",
+       "raw": "content_type=Handshake version=0x0303 len=4"
+      },
+      {
+       "offset": 2549,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ChangeCipherSpec",
+       "raw": "content_type=ChangeCipherSpec version=0x0303 len=1"
+      },
+      {
+       "offset": 2555,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=40"
+      },
+      {
+       "offset": 2600,
+       "direction": "server",
+       "type": "tls",
+       "summary": "ApplicationData",
+       "raw": "content_type=ApplicationData version=0x0303 len=43"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.25,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [
+    {
+     "id": 1,
+     "sessionId": "imap_tls12_3des-s0",
+     "ruleId": "weak-cipher-suite",
+     "ruleName": "Weak cipher suite",
+     "severity": "medium",
+     "title": "TLS_RSA_WITH_3DES_EDE_CBC_SHA classified CBC-mode cipher",
+     "description": "The negotiated cipher TLS_RSA_WITH_3DES_EDE_CBC_SHA (effective key 112-bit) is classified as a CBC-mode cipher. NIST SP 800-52r2 disallows short/weak ciphers for government TLS traffic and recommends blocking them at the server.",
+     "reference": "NIST SP 800-52r2 App A; OWASP TLS Cheat Sheet",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+      "iana": "0xa",
+      "strength": 0.25,
+      "key_len": 112
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11976->192.168.1.20:143",
+      "protocol": "IMAP"
+     }
+    },
+    {
+     "id": 2,
+     "sessionId": "imap_tls12_3des-s0",
+     "ruleId": "non-pfs-key-exchange",
+     "ruleName": "No forward secrecy (PFS)",
+     "severity": "medium",
+     "title": "TLS_RSA_WITH_3DES_EDE_CBC_SHA uses static key exchange",
+     "description": "The negotiated cipher TLS_RSA_WITH_3DES_EDE_CBC_SHA does not use ephemeral (EC)DHE key exchange. If the server private key is compromised, all past sessions can be decrypted (no forward secrecy). Prefer ECDHE suites.",
+     "reference": "NIST SP 800-52r2 \u00a73.3.1; OWASP TLS Cheat Sheet \u00a7'use forward secrecy'",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+      "kex": "rsa"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11976->192.168.1.20:143",
+      "protocol": "IMAP"
+     }
+    },
+    {
+     "id": 3,
+     "sessionId": "imap_tls12_3des-s0",
+     "ruleId": "3des-cipher",
+     "ruleName": "3DES cipher suite",
+     "severity": "medium",
+     "title": "3DES negotiated",
+     "description": "TLS_RSA_WITH_3DES_EDE_CBC_SHA uses 3DES. 3DES/EDE has only ~112 bits of security and is subject to Sweet32 online birthday attacks; prohibited after 2023.",
+     "reference": "NIST 800-131A Rev 2; RFC 8429",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11976->192.168.1.20:143",
+      "protocol": "IMAP"
+     }
+    },
+    {
+     "id": 0,
+     "sessionId": "imap_tls12_3des-s0",
+     "ruleId": "non-aead-bulk-cipher",
+     "ruleName": "Non-AEAD bulk cipher",
+     "severity": "low",
+     "title": "TLS_RSA_WITH_3DES_EDE_CBC_SHA uses legacy bulk encryption",
+     "description": "The negotiated cipher TLS_RSA_WITH_3DES_EDE_CBC_SHA does not use an authenticated AEAD mode (AES-GCM/CCM or ChaCha20-Poly1305). CBC-mode ciphers are subject to padding-oracle attacks (e.g. Lucky13) and lack integrity protection the same way. Prefer AEAD ciphers (NIST SP 800-52r2 preference).",
+     "reference": "NIST SP 800-52r2 \u00a73.3.1; OWASP TLS Cheat Sheet",
+     "kind": "rule",
+     "evidence": {
+      "cipher": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+      "kind": "cbc"
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11976->192.168.1.20:143",
+      "protocol": "IMAP"
+     }
+    },
+    {
+     "id": 4,
+     "sessionId": "imap_tls12_3des-s0",
+     "ruleId": "client-no-pfs-suites",
+     "ruleName": "Client offers no forward-secrecy suites",
+     "severity": "low",
+     "title": "ClientHello advertises no ECDHE/DHE cipher suites",
+     "description": "The client's offered cipher list contains no ephemeral-DH suites, so a PFS-capable server will fall back to a static key exchange if this client is relicensed maintenance.",
+     "reference": "OWASP TLS Cheat Sheet \u00a7'use forward secrecy'",
+     "kind": "rule",
+     "evidence": {
+      "offered": [
+       "0xa"
+      ]
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11976->192.168.1.20:143",
+      "protocol": "IMAP"
+     }
+    }
+   ],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 0,
+    "severityDistribution": {
+     "medium": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:11976->192.168.1.20:143",
+      "protocol": "IMAP",
+      "riskScore": 92,
+      "isAnomaly": false,
+      "maxSeverity": "medium",
+      "tlsVersion": "TLS1.2"
+     }
+    ]
+   }
+  },
+  {
+   "id": "smtp_starttls_strip",
+   "filename": "smtp_starttls_strip.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 1024,
+   "createdAt": "2026-09-01T12:37:58",
+   "completedAt": "2026-09-01T12:38:07",
+   "postureScore": 92,
+   "findingsCount": 2,
+   "sessionsCount": 1,
+   "maxSeverity": "critical",
+   "gotoLabel": "smtp_starttls_strip",
+   "summaries": [
+    {
+     "id": "smtp_starttls_strip-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:11771->192.168.1.20:587",
+     "isStarttls": false,
+     "tlsVersion": null,
+     "cipher": null,
+     "cipherStrength": null,
+     "pfsSupported": null,
+     "certChainValid": false,
+     "riskScore": 92,
+     "isAnomaly": true,
+     "maxSeverity": "critical",
+     "findingCount": 2
+    }
+   ],
+   "sessions": [
+    {
+     "id": "smtp_starttls_strip-s0",
+     "protocol": "SMTP",
+     "fiveTuple": "192.168.1.10:11771->192.168.1.20:587",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 11771,
+     "dstPort": 587,
+     "isStarttls": false,
+     "transitionOffset": null,
+     "tlsVersion": null,
+     "cipher": null,
+     "cipherIana": null,
+     "cipherStrength": null,
+     "cipherKind": null,
+     "pfsSupported": null,
+     "certChainValid": false,
+     "chainResult": "no-cert",
+     "chainError": "",
+     "riskScore": 92,
+     "isAnomaly": true,
+     "maxSeverity": "critical",
+     "findingCount": 2,
+     "clientHello": null,
+     "certChain": [],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "client-command",
+       "summary": "EHLO client.example.com",
+       "raw": "EHLO client.example.com"
+      },
+      {
+       "offset": 25,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "STARTTLS",
+       "raw": "STARTTLS"
+      },
+      {
+       "offset": 35,
+       "direction": "client",
+       "type": "client-command",
+       "summary": "EHLO client.example.com",
+       "raw": "EHLO client.example.com"
+      },
+      {
+       "offset": 60,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "MAIL FROM:<sender@example.com>",
+       "raw": "MAIL FROM:<sender@example.com>"
+      },
+      {
+       "offset": 92,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "RCPT TO:<recipient@example.com>",
+       "raw": "RCPT TO:<recipient@example.com>"
+      },
+      {
+       "offset": 125,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "DATA",
+       "raw": "DATA"
+      },
+      {
+       "offset": 131,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "Subject: Test message",
+       "raw": "Subject: Test message"
+      },
+      {
+       "offset": 154,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "From: sender@example.com",
+       "raw": "From: sender@example.com"
+      },
+      {
+       "offset": 180,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "To: recipient@example.com",
+       "raw": "To: recipient@example.com"
+      },
+      {
+       "offset": 209,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "This is a test email body.",
+       "raw": "This is a test email body."
+      },
+      {
+       "offset": 237,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": ".",
+       "raw": "."
+      },
+      {
+       "offset": 240,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "QUIT",
+       "raw": "QUIT"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 mail.cipherpost.test ESMTP Postfix",
+       "raw": "220 mail.cipherpost.test ESMTP Postfix"
+      },
+      {
+       "offset": 40,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-mail.cipherpost.test",
+       "raw": "250-mail.cipherpost.test"
+      },
+      {
+       "offset": 66,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "250-STARTTLS",
+       "raw": "250-STARTTLS"
+      },
+      {
+       "offset": 80,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "250 8BITMIME",
+       "raw": "250 8BITMIME"
+      },
+      {
+       "offset": 94,
+       "direction": "server",
+       "type": "plaintext-server",
+       "summary": "220 2.0.0 Ready to start TLS",
+       "raw": "220 2.0.0 Ready to start TLS"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.0,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [
+    {
+     "id": 1,
+     "sessionId": "smtp_starttls_strip-s0",
+     "ruleId": "starttls-strip-attempt",
+     "ruleName": "Possible STARTTLS stripping",
+     "severity": "critical",
+     "title": "STARTTLS advertised but no handshake followed",
+     "description": "The SMTP server advertised STARTTLS capability (or the client requested it) but the session proceeded without a TLS handshake. An active attacker may have suppressed/forged the STARTTLS response to force plaintext (STRIPTLS / STARTTLS downgrade). Clients MUST refuse to continue when STARTTLS is not honored.",
+     "reference": "RFC 3207 \u00a74.1.2; OWASP SMTP Transport Security through STARTTLS",
+     "kind": "rule",
+     "evidence": {},
+     "session": {
+      "fiveTuple": "192.168.1.10:11771->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    },
+    {
+     "id": 0,
+     "sessionId": "smtp_starttls_strip-s0",
+     "ruleId": "plaintext-mail-protocol",
+     "ruleName": "Plaintext mail session (no TLS)",
+     "severity": "high",
+     "title": "Email credentials/messages sent in cleartext",
+     "description": "SMTP session carried no TLS. If STARTTLS was expected this is a protocol-stripping / MITM indicator; credentials and message bodies were transmitted in cleartext and are recoverable from the capture.",
+     "reference": "RFC 3207 \u00a74 (SMTP); NIST SP 800-52r2 \u00a73.3",
+     "kind": "rule",
+     "evidence": {
+      "plaintext_bytes": 246
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:11771->192.168.1.20:587",
+      "protocol": "SMTP"
+     }
+    }
+   ],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 1,
+    "severityDistribution": {
+     "critical": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:11771->192.168.1.20:587",
+      "protocol": "SMTP",
+      "riskScore": 92,
+      "isAnomaly": true,
+      "maxSeverity": "critical",
+      "tlsVersion": null
+     }
+    ]
+   }
+  },
+  {
+   "id": "imap_starttls_strip",
+   "filename": "imap_starttls_strip.pcap",
+   "status": "completed",
+   "progress": 1.0,
+   "fileSize": 901,
+   "createdAt": "2026-09-01T12:49:15",
+   "completedAt": "2026-09-01T12:49:24",
+   "postureScore": 92,
+   "findingsCount": 2,
+   "sessionsCount": 1,
+   "maxSeverity": "critical",
+   "gotoLabel": "imap_starttls_strip",
+   "summaries": [
+    {
+     "id": "imap_starttls_strip-s0",
+     "protocol": "IMAP",
+     "fiveTuple": "192.168.1.10:13998->192.168.1.20:143",
+     "isStarttls": false,
+     "tlsVersion": null,
+     "cipher": null,
+     "cipherStrength": null,
+     "pfsSupported": null,
+     "certChainValid": false,
+     "riskScore": 92,
+     "isAnomaly": true,
+     "maxSeverity": "critical",
+     "findingCount": 2
+    }
+   ],
+   "sessions": [
+    {
+     "id": "imap_starttls_strip-s0",
+     "protocol": "IMAP",
+     "fiveTuple": "192.168.1.10:13998->192.168.1.20:143",
+     "srcIp": "192.168.1.10",
+     "dstIp": "192.168.1.20",
+     "srcPort": 13998,
+     "dstPort": 143,
+     "isStarttls": false,
+     "transitionOffset": null,
+     "tlsVersion": null,
+     "cipher": null,
+     "cipherIana": null,
+     "cipherStrength": null,
+     "cipherKind": null,
+     "pfsSupported": null,
+     "certChainValid": false,
+     "chainResult": "no-cert",
+     "chainError": "",
+     "riskScore": 92,
+     "isAnomaly": true,
+     "maxSeverity": "critical",
+     "findingCount": 2,
+     "clientHello": null,
+     "certChain": [],
+     "timeline": [
+      {
+       "offset": 0,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "a001 CAPABILITY",
+       "raw": "a001 CAPABILITY"
+      },
+      {
+       "offset": 17,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "a002 STARTTLS",
+       "raw": "a002 STARTTLS"
+      },
+      {
+       "offset": 32,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "a001 LOGIN user@example.com password123",
+       "raw": "a001 LOGIN user@example.com password123"
+      },
+      {
+       "offset": 73,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "a002 SELECT INBOX",
+       "raw": "a002 SELECT INBOX"
+      },
+      {
+       "offset": 92,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "a003 FETCH 1 BODY[]",
+       "raw": "a003 FETCH 1 BODY[]"
+      },
+      {
+       "offset": 113,
+       "direction": "client",
+       "type": "plaintext",
+       "summary": "a004 LOGOUT",
+       "raw": "a004 LOGOUT"
+      },
+      {
+       "offset": 0,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "* OK [CAPABILITY IMAP4rev1 STARTTLS] Dovecot ready.",
+       "raw": "* OK [CAPABILITY IMAP4rev1 STARTTLS] Dovecot ready."
+      },
+      {
+       "offset": 53,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "* CAPABILITY IMAP4rev1 STARTTLS",
+       "raw": "* CAPABILITY IMAP4rev1 STARTTLS"
+      },
+      {
+       "offset": 86,
+       "direction": "server",
+       "type": "plaintext",
+       "summary": "a002 OK Begin TLS negotiation now",
+       "raw": "a002 OK Begin TLS negotiation now"
+      }
+     ],
+     "shap": [
+      {
+       "feature": "cipher_strength",
+       "value": 0.0,
+       "impact": 4.290496166886297,
+       "method": "score"
+      }
+     ],
+     "ruleMlAgreement": "agrees"
+    }
+   ],
+   "findings": [
+    {
+     "id": 1,
+     "sessionId": "imap_starttls_strip-s0",
+     "ruleId": "starttls-strip-attempt",
+     "ruleName": "Possible STARTTLS stripping",
+     "severity": "critical",
+     "title": "STARTTLS advertised but no handshake followed",
+     "description": "The IMAP server advertised STARTTLS capability (or the client requested it) but the session proceeded without a TLS handshake. An active attacker may have suppressed/forged the STARTTLS response to force plaintext (STRIPTLS / STARTTLS downgrade). Clients MUST refuse to continue when STARTTLS is not honored.",
+     "reference": "RFC 3207 \u00a74.1.2; OWASP SMTP Transport Security through STARTTLS",
+     "kind": "rule",
+     "evidence": {},
+     "session": {
+      "fiveTuple": "192.168.1.10:13998->192.168.1.20:143",
+      "protocol": "IMAP"
+     }
+    },
+    {
+     "id": 0,
+     "sessionId": "imap_starttls_strip-s0",
+     "ruleId": "plaintext-mail-protocol",
+     "ruleName": "Plaintext mail session (no TLS)",
+     "severity": "high",
+     "title": "Email credentials/messages sent in cleartext",
+     "description": "IMAP session carried no TLS. If STARTTLS was expected this is a protocol-stripping / MITM indicator; credentials and message bodies were transmitted in cleartext and are recoverable from the capture.",
+     "reference": "RFC 3207 \u00a74 (SMTP); NIST SP 800-52r2 \u00a73.3",
+     "kind": "rule",
+     "evidence": {
+      "plaintext_bytes": 126
+     },
+     "session": {
+      "fiveTuple": "192.168.1.10:13998->192.168.1.20:143",
+      "protocol": "IMAP"
+     }
+    }
+   ],
+   "fleet": {
+    "totalSessions": 1,
+    "fleetScore": 92,
+    "anomalyCount": 1,
+    "severityDistribution": {
+     "critical": 1
+    },
+    "sessions": [
+     {
+      "fiveTuple": "192.168.1.10:13998->192.168.1.20:143",
+      "protocol": "IMAP",
+      "riskScore": 92,
+      "isAnomaly": true,
+      "maxSeverity": "critical",
+      "tlsVersion": null
+     }
+    ]
+   }
+  }
+ ]
+}

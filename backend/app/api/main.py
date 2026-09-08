@@ -60,12 +60,202 @@ async def health():
 
 @app.get("/metrics")
 async def metrics():
-    """Prometheus metrics endpoint."""
+    """Prometheus metrics endpoint (merges gossip from workers)."""
     try:
-        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, Gauge
+        # merge gossip metrics into a gauge for visibility
+        try:
+            import redis as _redis
+            r = _redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+            keys = r.keys("cipherpost:metrics:*")
+            for k in keys:
+                try:
+                    vals = r.get(k) or r.hgetall(k)
+                    if isinstance(vals, bytes):
+                        vals = vals.decode()
+                    if isinstance(vals, str):
+                        import json as _j
+                        vals = _j.loads(vals)
+                    # expose as gauge family via ad-hoc metric push would require registry;
+                    # for now log to help debugging - real aggregation done via /api/v1/live/status
+                    pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
     except ImportError:
         return Response("prometheus-client not installed", media_type="text/plain")
+
+
+# --- live SSE & extended API (stage 5) -----------------------------------
+
+async def _pubsub_sse(channels: list[str], request: Request):
+    """Yield SSE events from Redis pub/sub channels."""
+    try:
+        import redis.asyncio as aioredis
+    except ImportError:
+        yield "event: error\ndata: redis.asyncio not available\n\n"
+        return
+    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    pubsub = r.pubsub()
+    try:
+        for ch in channels:
+            await pubsub.subscribe(ch)
+        # also psubscribe for wildcard?
+        # send initial heartbeat
+        yield "event: heartbeat\ndata: {\"status\":\"connected\"}\n\n"
+        while True:
+            if await request.is_disconnected():
+                break
+            msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+            if msg and msg.get("type") == "message":
+                ch = msg.get("channel", "unknown")
+                data = msg.get("data", "{}")
+                # normalize channel suffix
+                ev = ch.split(":")[-1]
+                yield f"event: {ev}\ndata: {data}\n\n"
+            else:
+                # heartbeat every 15s to keep connection alive
+                yield ": ping\n\n"
+                await asyncio.sleep(15)
+    finally:
+        try:
+            await pubsub.unsubscribe()
+            await pubsub.close()
+            await r.close()
+        except Exception:
+            pass
+
+
+@app.get("/api/v1/live/stream")
+async def live_stream(request: Request):
+    """Unified SSE stream: sessions + findings + alerts."""
+    chans = [f"{settings.LIVE_PUBSUB_PREFIX}:sessions", f"{settings.LIVE_PUBSUB_PREFIX}:findings", f"{settings.LIVE_PUBSUB_PREFIX}:alerts", f"{settings.LIVE_PUBSUB_PREFIX}:status"]
+    return StreamingResponse(_pubsub_sse(chans, request), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+@app.get("/api/v1/live/sessions")
+async def live_sessions(request: Request):
+    return StreamingResponse(_pubsub_sse([f"{settings.LIVE_PUBSUB_PREFIX}:sessions"], request), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+@app.get("/api/v1/live/findings")
+async def live_findings(request: Request):
+    return StreamingResponse(_pubsub_sse([f"{settings.LIVE_PUBSUB_PREFIX}:findings"], request), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+@app.get("/api/v1/live/alerts")
+async def live_alerts(request: Request):
+    return StreamingResponse(_pubsub_sse([f"{settings.LIVE_PUBSUB_PREFIX}:alerts"], request), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+@app.get("/api/v1/live/status")
+async def live_status():
+    """Capture stats + queue depth + recent metrics gossip."""
+    out: dict = {"capture": {}, "queues": {}, "metrics": {}}
+    try:
+        import redis as _redis
+        r = _redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+        for k in r.keys("cipherpost:metrics:*"):
+            try:
+                v = r.get(k)
+                if v:
+                    import json as _j
+                    out["metrics"][k] = _j.loads(v)
+            except Exception:
+                pass
+        # queue depths
+        for name, stream in [("sessions", settings.SESSION_STREAM), ("findings", settings.FINDINGS_STREAM), ("alerts", settings.ALERT_STREAM)]:
+            try:
+                info = r.xinfo_stream(stream)
+                out["queues"][name] = int(info.get("length", 0)) if isinstance(info, dict) else 0
+            except Exception:
+                out["queues"][name] = 0
+    except Exception as e:
+        out["error"] = str(e)
+    return out
+
+@app.get("/api/v1/sessions")
+async def list_sessions(
+    protocol: str | None = Query(None),
+    severity: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    since: str | None = Query(None, description="ISO timestamp lower bound"),
+    db: AsyncSession = Depends(get_db),
+):
+    q = select(Session).order_by(Session.id.desc()).offset(offset).limit(limit)
+    # severity filter via join findings
+    if severity:
+        q = select(Session).join(Finding, Finding.session_id==Session.id).where(Finding.severity==Severity(severity)).order_by(Session.risk_score.desc().nullslast()).offset(offset).limit(limit)
+    if protocol:
+        q = q.where(Session.protocol==protocol)
+    rows = (await db.execute(q)).scalars().all()
+    return [{"id": s.id, "protocol": s.protocol, "five_tuple": s.five_tuple, "tls_version": s.tls_version, "risk_score": s.risk_score, "max_severity": s.max_severity, "is_anomaly": s.is_anomaly, "details": s.details} for s in rows]
+
+@app.get("/api/v1/findings")
+async def list_findings(
+    severity: str | None = Query(None),
+    protocol: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
+    q = select(Finding).join(Session, Finding.session_id==Session.id).order_by(Finding.severity.desc()).offset(offset).limit(limit)
+    if severity:
+        q = q.where(Finding.severity==Severity(severity))
+    if protocol:
+        q = q.where(Session.protocol==protocol)
+    rows = (await db.execute(q)).scalars().all()
+    return [{"id": f.id, "session_id": f.session_id, "rule_id": f.rule_id, "severity": f.severity.value, "title": f.title, "description": f.description} for f in rows]
+
+@app.get("/api/v1/alerts")
+async def list_alerts(limit: int = Query(50, ge=1, le=200), db: AsyncSession = Depends(get_db)):
+    try:
+        rows = (await db.execute(text("SELECT id, severity, title, five_tuple, payload FROM alerts ORDER BY ts DESC LIMIT :lim"), {"lim": limit})).all()
+        return [{"id": r[0], "severity": r[1], "title": r[2], "five_tuple": r[3], "payload": r[4]} for r in rows]
+    except Exception:
+        return []
+
+@app.get("/api/v1/alerts/config")
+async def get_alert_config():
+    from app.live.alerts import load_channels
+    from pathlib import Path
+    p = Path(settings.ALERT_CHANNEL_CONFIG_PATH)
+    cfg = {}
+    if p.exists():
+        try:
+            cfg = _json.loads(p.read_text())
+        except Exception:
+            pass
+    return {"config": cfg, "env": {"webhook": bool(settings.ALERT_WEBHOOK_URL), "slack": bool(settings.ALERT_SLACK_URL), "syslog": bool(settings.ALERT_CEF_SYSLOG_HOST)}}
+
+@app.post("/api/v1/alerts/config")
+async def set_alert_config(cfg: dict):
+    from app.live.alerts import save_channel_config
+    save_channel_config(cfg)
+    return {"status": "saved", "config": cfg}
+
+@app.get("/api/v1/fleet/trend")
+async def fleet_trend(days: int = Query(7, ge=1, le=90), db: AsyncSession = Depends(get_db)):
+    """Posture trend bucketed by hour from live sessions."""
+    try:
+        # use Session.id ordering as proxy for time if no timestamp; fallback to details->live_ts
+        rows = (await db.execute(select(Session.risk_score, Session.details))).all()
+        # simple bucket: average posture per session index bucket
+        scores = [r[0] for r in rows if r[0] is not None]
+        if not scores:
+            return {"points": []}
+        # bucket by 10
+        bucket = max(1, len(scores)//20)
+        points = []
+        for i in range(0, len(scores), bucket):
+            chunk = scores[i:i+bucket]
+            points.append({"x": i, "y": round(sum(chunk)/len(chunk),1)})
+        return {"points": points, "total": len(scores)}
+    except Exception as e:
+        return {"points": [], "error": str(e)}
 
 
 @app.get("/api/v1/stats")

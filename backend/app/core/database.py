@@ -32,3 +32,25 @@ async def get_db() -> AsyncSession:
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # live tables (alerts, baseline) created lazily; ensure here too for fresh DBs
+        try:
+            from sqlalchemy import text
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS alerts (
+                    id TEXT PRIMARY KEY,
+                    ts TIMESTAMPTZ DEFAULT NOW(),
+                    severity TEXT,
+                    title TEXT,
+                    five_tuple TEXT,
+                    payload JSONB
+                )
+            """))
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS baseline_features (
+                    id SERIAL PRIMARY KEY,
+                    ts TIMESTAMPTZ DEFAULT NOW(),
+                    features JSONB
+                )
+            """))
+        except Exception:
+            pass

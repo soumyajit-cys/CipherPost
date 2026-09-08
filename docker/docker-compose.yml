@@ -49,6 +49,12 @@ services:
     volumes:
       - upload_data:/data/uploads
       - report_data:/data/reports
+      - capture_data:/data/capture
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/health', timeout=2).raise_for_status()"]
+      interval: 10s
+      retries: 5
 
   worker:
     build:
@@ -70,6 +76,84 @@ services:
     volumes:
       - upload_data:/data/uploads
       - report_data:/data/reports
+    restart: unless-stopped
+
+  # --- live acquisition (host network for SPAN/TAP; see README) ---
+  capture:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    # For real SPAN/TAP deployment use network_mode: host and cap_add
+    # network_mode: host  # uncomment for host capture
+    # cap_add: [NET_RAW, NET_ADMIN]
+    command: ["python", "-m", "app.live.capture", "--iface", "eth0"]
+    environment:
+      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_REDIS_URL: redis://redis:6379/0
+      CIPHERPOST_LIVE_IFACE: eth0
+      CIPHERPOST_RAW_CAPTURE_DIR: /data/capture
+      CIPHERPOST_RAW_RETENTION_SECONDS: 21600
+      CIPHERPOST_TRUSTED_CA_BUNDLE_PATH: /app/tests/fixtures/trusted_root.pem
+      CIPHERPOST_LOG_LEVEL: INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - capture_data:/data/capture
+    restart: unless-stopped
+
+  analyzer:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    command: ["python", "-m", "app.live.analyze"]
+    environment:
+      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_REDIS_URL: redis://redis:6379/0
+      CIPHERPOST_TRUSTED_CA_BUNDLE_PATH: /app/tests/fixtures/trusted_root.pem
+      CIPHERPOST_LOG_LEVEL: INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  alerter:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    command: ["python", "-m", "app.live.alerts"]
+    environment:
+      CIPHERPOST_REDIS_URL: redis://redis:6379/0
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_ALERT_MIN_SEVERITY: high
+      CIPHERPOST_ALERT_WEBHOOK_URL: ${CIPHERPOST_ALERT_WEBHOOK_URL:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Replay demo: feeds fixtures through live pipeline (no privileges needed)
+  replay:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    command: ["python", "scripts/replay_harness.py", "tests/fixtures", "--mode", "capture"]
+    volumes:
+      - ../tests/fixtures:/app/tests/fixtures:ro
+      - ../scripts:/app/scripts:ro
+    environment:
+      CIPHERPOST_REDIS_URL: redis://redis:6379/0
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles: ["replay"]
 
   frontend:
     build:
@@ -84,3 +168,4 @@ volumes:
   pgdata:
   upload_data:
   report_data:
+  capture_data:

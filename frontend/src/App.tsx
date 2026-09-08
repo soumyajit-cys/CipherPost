@@ -29,6 +29,7 @@ export default function App() {
             <Route path="/analyses/:id" element={<AnalysisDetailPage />} />
             <Route path="/analyses/:id/sessions/:sessionId" element={<SessionDrilldownPage />} />
             <Route path="/fleet" element={<FleetOverviewPage />} />
+            <Route path="/live" element={<LivePage />} />
             <Route path="*" element={<AnalysisListPage />} />
           </Routes>
         </AppShell>

@@ -5,6 +5,7 @@ import { API_MODE } from '@/api'
 
 const NAV = [
   { to: '/', label: 'Analyses', end: true },
+  { to: '/live', label: 'Live', end: false },
   { to: '/upload', label: 'New Analysis', end: false },
   { to: '/fleet', label: 'Fleet', end: false },
 ]

@@ -265,7 +265,16 @@ class ScenarioLab:
 
     def _speak(self, sc: Scenario) -> None:
         ctx = self._client_ctx()
-        raw = socket.create_connection((self.host, sc.port), timeout=5)
+        raw = None
+        for attempt in range(3):
+            try:
+                raw = socket.create_connection((self.host, sc.port), timeout=5)
+                break
+            except ConnectionRefusedError:
+                if attempt == 2:
+                    raise
+                time.sleep(0.15)
+        assert raw is not None
         try:
             if sc.tls == "implicit":
                 conn = ctx.wrap_socket(raw, server_hostname=SERVER_NAME)

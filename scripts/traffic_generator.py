@@ -260,7 +260,7 @@ class ScenarioLab:
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
-        ctx.set_alpn_protocols([b"mail"])
+        ctx.set_alpn_protocols(["mail"])
         return ctx
 
     def _speak(self, sc: Scenario) -> None:
@@ -320,25 +320,29 @@ class ScenarioLab:
     def run(self, interval: float = 3.0, jitter: float = 1.0,
             once: bool = False, count: int = 1):
         self.start()
+        time.sleep(0.8)  # let listeners bind before first client
         self._log(f"[traffic-gen] {len(self.scenarios)} scenario listeners on "
                   f"{self.host}:{self.ports_base}+ ; interval={interval}s")
-        n = 0
+        emitted = {sc.name: 0 for sc in self.scenarios}
+        rounds = 0
         try:
-            while not self._stop.is_set() and (not once or n < count):
+            while not self._stop.is_set() and (not once or rounds < count):
+                rounds += 1
                 for sc in self.scenarios:
                     if self._stop.is_set():
                         break
+                    if emitted[sc.name] >= 1 and once:
+                        continue
                     try:
-                        self._speak(sc)
-                        n += 1
+                        self._speak(sc)  # retries a few times internally
+                        emitted[sc.name] += 1
                         self._log(f"[traffic-gen] {sc.name} -> {sc.proto} on :{sc.port}")
                     except (ConnectionRefusedError, socket.timeout, OSError, ssl.SSLError) as e:
-                        self._log(f"[traffic-gen] {sc.name} failed: {e}")
+                        self._log(f"[traffic-gen] {sc.name} failed: {type(e).__name__}: {e}")
                     if once:
-                        break
+                        time.sleep(0.25)
+                        continue
                     time.sleep(interval + random.uniform(0, jitter))
-                    if once:
-                        break
         finally:
             self.stop()
 
@@ -372,6 +376,12 @@ def main(argv=None):
 
     lab = ScenarioLab(host=args.host, ports_base=args.ports_base)
     lab.add_classic_matrix()
+    try:
+        trust_path = lab.persist_trust("data/lab/lab_root.pem")
+        print(f"[traffic-gen] lab trust root bundle -> {trust_path}  "
+              f"(set CIPHERPOST_TRUSTED_CA_BUNDLE_PATH={trust_path} for live analysis)")
+    except Exception as e:
+        print(f"[traffic-gen] could not persist trust bundle: {e}")
     lab.run(interval=args.interval, jitter=args.jitter,
             once=args.once, count=args.count)
     return 0

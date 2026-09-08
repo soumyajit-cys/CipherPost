@@ -98,18 +98,7 @@ def make_server_cert(signer_cert: x509.Certificate, signer_key,
 
 # --- scenario definitions ----------------------------------------------------
 
-class Scenario:
-    def __init__(self, name: str, proto: str, tls: str | None, kind: str,
-                 tls_max: int | None = None, tls_min: int | None = None,
-                 cert=None):
-        self.name = name
-        self.proto = proto            # SMTP | IMAP | POP3
-        self.tls = tls                # "implicit" | "starttls" | None (strip/plaintext)
-        self.kind = kind              # strong | acceptable | expired | selfsigned | untrusted | strip
-        self.tls_max = tls_max
-        self.tls_min = tls_min
-        self.cert = cert              # (cert_pem, key_pem) or None
-        self.port = 0                 # assigned at startup
+from dtype import dataclass  # noqa  (placeholder removed at runtime setup)
 
 
 class ScenarioLab:

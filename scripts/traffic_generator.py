@@ -220,9 +220,18 @@ class ScenarioLab:
                 conn = ctx.wrap_socket(conn, server_side=True)
                 self._server_speaks(sc, conn, over_tls=True)
             else:
-                # strip / plaintext: keep answering in plaintext
-                conn.sendall(b"250 ok\r\n" if sc.proto == "SMTP" else b"+OK ok\r\n")
-                conn.recv(1024)
+                # strip: server refuses STARTTLS (stays plaintext)
+                if b"STARTTLS" in req.upper():
+                    conn.sendall(b"454 TLS not available\r\n" if sc.proto == "SMTP"
+                                 else b"+OK plaintext only\r\n")
+                elif b"STLS" in req.upper():
+                    conn.sendall(b"-ERR STLS unavailable\r\n")
+                else:
+                    conn.sendall(b"250 ok\r\n" if sc.proto == "SMTP" else b"+OK ok\r\n")
+                try:
+                    conn.recv(1024)
+                except (ssl.SSLError, OSError, ConnectionError):
+                    pass
         except (ssl.SSLError, OSError, ConnectionError):
             pass
         finally:

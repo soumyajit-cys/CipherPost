@@ -42,34 +42,52 @@ def _name(cn: str) -> x509.Name:
     return x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, cn)])
 
 
-def make_server_cert(expired: bool = False, self_signed: bool = False,
-                     signer: x509.Certificate | None = None,
-                     x509_key: rsa.RSAPrivateKey | ec.EllipticCurvePrivateKey | None = None) -> tuple[bytes, bytes]:
-    """Return (cert_pem, key_pem)."""
-    key = x509_key or rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    if signer is None or self_signed:
-        issuer = _name("CipherPost Test Root")
-        signer_key = key
-        meta = x509.CertificateBuilder()
-    else:
-        issuer = signer.subject
-        signer_key = x509_key  # the CA signing key must be provided alongside signer cert
-        meta = x509.CertificateBuilder()
+def make_root_ca(cn: str = "CipherPost Lab Trusted Root") -> tuple[x509.Certificate, rsa.RSAPrivateKey]:
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    now = datetime.now(timezone.utc)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(_name(cn))
+        .issuer_name(_name(cn))
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(days=1))
+        .not_valid_after(now + timedelta(days=3650))
+        .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+        .sign(key, hashes.SHA256())
+    )
+    return cert, key
+
+
+def make_server_cert(signer_cert: x509.Certificate, signer_key,
+                     expired: bool = False, self_signed: bool = False,
+                     ca: bool = False) -> tuple[bytes, bytes]:
+    """Return (cert_pem, key_pem) leaf signed by signer(s)."""
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    issuer, sign_key = signer_cert.subject, signer_key
+    if self_signed:
+        issuer, sign_key = _name(SERVER_NAME), key
     now = datetime.now(timezone.utc)
     if expired:
         not_before, not_after = now - timedelta(days=30), now - timedelta(days=1)
     else:
         not_before, not_after = now - timedelta(days=1), now + timedelta(days=365)
-    cert = (
-        meta.subject_name(_name(SERVER_NAME))
+    builder = (
+        x509.CertificateBuilder()
+        .subject_name(_name(SERVER_NAME))
         .issuer_name(issuer)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(not_before)
         .not_valid_after(not_after)
-        .add_extension(x509.SubjectAlternativeName([x509.DNSName(SERVER_NAME)]), critical=False)
-        .sign(signer_key, hashes.SHA256())
     )
+    if ca:
+        builder = builder.add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+    builder = builder.add_extension(
+        x509.SubjectAlternativeName([x509.DNSName(SERVER_NAME), x509.IPAddress(ip_address("127.0.0.1"))]),
+        critical=False,
+    )
+    cert = builder.sign(sign_key, hashes.SHA256())
     cert_pem = cert.public_bytes(serialization.Encoding.PEM)
     key_pem = key.private_bytes(
         serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
@@ -116,15 +134,14 @@ class ScenarioLab:
         return s
 
     def add_classic_matrix(self):
-        self._ssl_ctx_pool["_root_key"] = None
-        ca_key = None
-        # strong / acceptable roots share the trusted test CA so chain validates
-        strong_cert, strong_key = make_server_cert()
-        acc_cert, acc_key = make_server_cert()
-        exp_cert, exp_key = make_server_cert(expired=True)
-        ss_cert, ss_key = make_server_cert(self_signed=True)
-        # untrusted: signed by a different root (not in the trust bundle)
-        untr_cert, untr_key = make_server_cert()
+        root_cert, root_key = make_root_ca()
+        other_root, other_root_key = make_root_ca("CipherPost Lab OTHER Root (untrusted)")
+        strong_cert, strong_key = make_server_cert(root_cert, root_key)
+        acc_cert, acc_key = make_server_cert(root_cert, root_key)
+        exp_cert, exp_key = make_server_cert(root_cert, root_key, expired=True)
+        ss_cert, ss_key = make_server_cert(root_cert, root_key, self_signed=True)
+        untr_cert, untr_key = make_server_cert(other_root, other_root_key)
+        self._trust_bundle = root_cert.public_bytes(serialization.Encoding.PEM)
 
         self._add(name="smtp_tls13_strong", proto="SMTP", tls="implicit",
                   kind="strong", cert=(strong_cert, strong_key), tls_max=ssl.TLSVersion.TLSv1_3)

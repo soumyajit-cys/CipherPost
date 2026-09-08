@@ -12,27 +12,43 @@ prioritized findings in JSON/HTML/PDF plus an interactive React dashboard.
 ## Architecture
 
 ```
-PCAP ──▶ Ingestion ──▶ TCP Reassembly ──▶ TLS Handshake/Cert Parsing
-                                              │
-                                              ▼
-                                        Rules Engine (deterministic, primary)
-                                              │
-                                              ▼
-                              ML Risk Scoring (GradientBoost) + Anomaly (IsolationForest)
-                                              │
-                                              ▼
-                              SHAP Explanations + Reports (JSON/HTML/PDF)
-                                              │
-                                              ▼
-                              FastAPI + Celery + PostgreSQL + React Dashboard
+                ┌─────────────┐     Redis Streams / Pub/Sub
+  PCAP ─────────┤  Replay     ├─────────────────────────────────────┐
+  (file)        └──────┬──────┘                                     │
+                      │                                            ▼
+  Live traffic ───────┤  Capture worker (scapy/AF_PACKET)          │
+  (SPAN/TAP,          │  • promiscuous, BPF ports                  │
+   promiscuous)       │  • streaming TCP reassembly (5-tuple,      │
+                      │    idle timeout, memory caps)               │
+                      │  • rolling raw capture (segment files,      │
+                      │    auto-purged after window)                │
+                      └──────┬──────────────────────────────────────┘
+                             │  cipherpost:sessions (XADD)
+                             ▼
+                      ┌──────────────┐
+                      │   Analysis   │──▶ TLS/Handshake + X.509 + Rules (primary, auditable)
+                      │   worker     │──▶ ML posture (GradientBoost 0-100) + IsolationForest (rolling 7d baseline) + SHAP
+                      └──────┬───────┘
+                             │ findings  (cipherpost:findings)
+                ┌────────────┼────────────────┐
+                ▼            ▼                ▼
+           PostgreSQL   Alert dispatcher   SSE pub/sub ──▶ React (live via EventSource)
+           (sessions,   (webhook / Slack /  (Live page)
+            findings,    syslog CEF /       Recharts, dense SOC aesthetic
+            alerts,      email, dedup +     + PCAP import (replay)
+            baseline)    rate-limit)
+                │            │
+                └─────┬──────┘
+                      ▼
+              FastAPI + Reports (JSON/HTML/PDF, time-window fleet trend)
 ```
 
-- **Stage 1** — Corpus generation: synthetic labeled PCAPs (16 scenarios) + shared trust root
-- **Stage 2** — Protocol detection & TCP stream reassembly (SYN-anchored, STARTTLS-aware)
-- **Stage 3** — TLS handshake & X.509 certificate analysis + 19 deterministic rules
-- **Stage 4** — ML risk scoring (0–100), Isolation Forest anomaly detection, SHAP explainability
-- **Stage 5** — Reporting (JSON/HTML/PDF) + FastAPI + Celery + React dashboard
-- **Stage 6** — Docker, robustness/fuzz tests, monitoring
+- **Stage 1** — Corpus + lab traffic generator (`scripts/traffic_generator.py`) across TLS matrix (strong/1.2/expired/self-signed/untrusted/STARTTLS-strip)
+- **Stage 2** — Live capture daemon: scapy sniff (or pcap replay) → streaming reassembly keyed by 5-tuple → Redis `cipherpost:sessions`
+- **Stage 3** — Analysis worker consumes sessions → shared `analyze_session()` (handshake, certs, 19 rules); validated 100% P/R vs corpus
+- **Stage 4** — Rolling ML baseline (`FLEET_BASELINE_WINDOW_DAYS=7`, refit every N sessions) + SHAP, published to `cipherpost:findings`
+- **Stage 5** — Alert dispatcher (pluggable webhook/slack/syslog/email, threshold/dedup/rate-limit) + SSE live feeds (`/live/*`) + historical queries + live dashboard
+- **Stage 6** — Deterministic replay harness, fuzz/load tests, Dockerized full stack, Prometheus `/metrics` + structured logs
 
 ## Quick Start (full stack via Docker)
 

@@ -41,8 +41,8 @@ def test_rolling_store_write_and_purge():
         assert ref is not None
         frames = store.read_frames([ref])
         assert len(frames) == 1
-        # purge after window
-        import time
+        # current segment is protected; close then purge
+        store._close_current()
         removed = store.purge(now=1000+10)
         assert removed >= 1
 

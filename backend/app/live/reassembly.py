@@ -17,9 +17,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
-from app.live.packets import Packet, TCP_FLAG_FIN, TCP_FLAG_RST
+from app.live.packets import Packet
 from app.parsing.reassembly import (
-    StreamAssembler, Session, Protocol, _ip_str,
+    StreamAssembler, Session, Protocol,
     detect_protocol, _assign_tls_segments,
 )
 

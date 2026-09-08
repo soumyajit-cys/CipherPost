@@ -6,6 +6,7 @@ import UploadPage from '@/pages/UploadPage'
 import AnalysisDetailPage from '@/pages/AnalysisDetailPage'
 import SessionDrilldownPage from '@/pages/SessionDrilldownPage'
 import FleetOverviewPage from '@/pages/FleetOverviewPage'
+import LivePage from '@/pages/LivePage'
 
 const queryClient = new QueryClient({
   defaultOptions: {

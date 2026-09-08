@@ -30,8 +30,10 @@ from datetime import datetime, timedelta, timezone
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, rsa
+from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
+from ipaddress import ip_address
+from pathlib import Path
 
 # --- cert helpers ----------------------------------------------------------
 
@@ -168,6 +170,12 @@ class ScenarioLab:
         self._add(name="smtp_starttls_strip", proto="SMTP", tls=None, kind="strip")
         self._add(name="imap_starttls_strip", proto="IMAP", tls=None, kind="strip")
         return self
+
+    def persist_trust(self, path: str) -> str:
+        """Write the lab's trusted root so analysis can validate the 'valid' chains."""
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        Path(path).write_bytes(getattr(self, "_trust_bundle", b""))
+        return path
 
     # --- server side ----------------------------------------------------------
     def _server_ctx(self, sc: Scenario) -> ssl.SSLContext | None:

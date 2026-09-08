@@ -53,12 +53,36 @@ prioritized findings in JSON/HTML/PDF plus an interactive React dashboard.
 ## Quick Start (full stack via Docker)
 
 ```bash
+# Batch + live stack (capture, analyzer, alerter, API, worker, frontend)
 docker compose -f docker/docker-compose.yml up --build
+
+# With replay demo (feeds fixtures through live pipeline, no privileges needed)
+docker compose -f docker/docker-compose.yml --profile replay up --build
 ```
 
-- Frontend dashboard: http://localhost:3000
+- Frontend dashboard: http://localhost:3000 — live feed at `/live`
 - API: http://localhost:8000 (docs at http://localhost:8000/docs)
 - PostgreSQL: localhost:5432, Redis: localhost:6379
+- Prometheus: http://localhost:8000/metrics
+
+### Live capture deployment (SPAN/TAP)
+
+CipherPost is designed to sit behind a **SPAN/mirror port or network TAP**, not on the mail host itself. The capture container must see *other hosts'* traffic.
+
+```yaml
+# in docker-compose.yml — capture service
+capture:
+  network_mode: host      # so the container sees the host's interface
+  cap_add: [NET_RAW, NET_ADMIN]   # instead of privileged:true / root
+  command: ["python", "-m", "app.live.capture", "--iface", "eth0"]
+```
+
+Required Linux capabilities: `CAP_NET_RAW` + `CAP_NET_ADMIN` (or `privileged: true` as a shortcut). No full root required. Configure the interface via `CIPHERPOST_LIVE_IFACE` and the BPF port list via `CIPHERPOST_LIVE_BPF_PORTS` (default `25,587,465,110,995,143,993`). For environments where live network access is unavailable (hackathon judging), use the **replay demo** above or upload a PCAP via the dashboard — the analysis engine is identical.
+
+### Rolling retention & resource limits
+
+- Raw frames are written to time-chunked segment files in `CIPHERPOST_RAW_CAPTURE_DIR` (`/data/capture`). Files older than `CIPHERPOST_RAW_RETENTION_SECONDS` (default 6h, configurable 1–24h) are auto-purged. Sessions store `raw_refs` for forensic replay while within the window; older refs resolve to “purged”.
+- Reassembly is bounded: `CIPHERPOST_LIVE_MAX_SESSIONS` (default 4096) concurrent streams, `CIPHERPOST_LIVE_MAX_SESSION_BUFFER_BYTES` per stream (default 512 KiB), `CIPHERPOST_LIVE_IDLE_TIMEOUT` (default 60s). Over-cap streams are finalized with `closed_by=cap/evicted` and counted in `/metrics` and `live/status`, never OOM.
 
 ## Local development
 
@@ -120,7 +144,7 @@ PYTHONPATH=backend/. python scripts/export_mock_data.py
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/v1/upload` | Upload `.pcap` → create analysis job |
+| POST | `/api/v1/upload` | Upload `.pcap` → create analysis job (also feeds live pipeline in replay mode) |
 | GET  | `/api/v1/jobs` | List jobs |
 | GET  | `/api/v1/jobs/{id}` | Job status/progress |
 | GET  | `/api/v1/jobs/{id}/sessions` | Per-session results |
@@ -128,7 +152,16 @@ PYTHONPATH=backend/. python scripts/export_mock_data.py
 | GET  | `/api/v1/jobs/{id}/shap` | SHAP explanations |
 | GET  | `/api/v1/jobs/{id}/fleet` | Fleet summary metrics |
 | GET  | `/api/v1/jobs/{id}/report.{json\|html\|pdf}` | Report export |
+| GET  | `/api/v1/sessions?protocol=&severity=&limit=` | Historical sessions (live+batch, filterable) |
+| GET  | `/api/v1/findings?severity=&protocol=` | Historical findings |
+| GET  | `/api/v1/fleet/trend?days=7` | Posture trend (live store) |
+| GET  | `/api/v1/live/stream` | **SSE** unified live feed (sessions+findings+alerts) |
+| GET  | `/api/v1/live/sessions`, `/live/findings`, `/live/alerts` | SSE per channel |
+| GET  | `/api/v1/live/status` | Capture stats + queue depths + metrics gossip |
+| GET  | `/api/v1/alerts` | Recent dispatched alerts |
+| GET/POST | `/api/v1/alerts/config` | Alert channel config (webhook/slack/syslog/email) |
 | GET  | `/api/v1/health`, `/metrics` | Health + Prometheus metrics |
+| Webhook | `POST {ALERT_WEBHOOK_URL}` | Real-time alert (threshold `ALERT_MIN_SEVERITY`, dedup window, rate-limit) |
 
 ## Methodology notes
 

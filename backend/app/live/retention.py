@@ -37,18 +37,23 @@ class RollingRawStore:
         self.segment_seconds = int(segment_seconds)
         self._current: Path | None = None
         self._fh = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._purge_thread = threading.Thread(target=self._purge_loop, daemon=True)
         self._stop = threading.Event()
         self._frames = 0
         self._bytes = 0
 
     def start(self):
-        self._purge_thread.start()
+        if not self._purge_thread.is_alive():
+            self._purge_thread = threading.Thread(target=self._purge_loop, daemon=True)
+            self._purge_thread.start()
 
     def stop(self):
         self._stop.set()
-        self._purge_thread.join(timeout=2)
+        try:
+            self._purge_thread.join(timeout=2)
+        except RuntimeError:
+            pass
         self._close_current()
 
     def _close_current(self):
@@ -64,12 +69,20 @@ class RollingRawStore:
     def _open_segment(self, ts: float) -> Path:
         seg = int(ts) // self.segment_seconds * self.segment_seconds
         path = self.dir / f"cap-{seg}{_EXT}"
-        if path == self._current and self._fh:
+        with self._lock:
+            if path == self._current and self._fh:
+                return path
+            # inline close without re-locking (we already hold RLock, so safe to call)
+            if self._fh:
+                try:
+                    self._fh.close()
+                except OSError:
+                    pass
+                self._fh = None
+                self._current = None
+            self._fh = open(path, "ab")
+            self._current = path
             return path
-        self._close_current()
-        self._fh = open(path, "ab")
-        self._current = path
-        return path
 
     def write(self, ts: float, frame: bytes):
         """Append a frame; returns (segment_name, offset, length)."""

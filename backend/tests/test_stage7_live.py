@@ -48,19 +48,20 @@ def test_rolling_store_write_and_purge():
 
 def test_alert_dedup_and_rate_limit():
     from app.live.alerts import AlertDispatcher
-    import redis
-    # use fakeredis if available, else skip
-    try:
-        import fakeredis
-        r = fakeredis.FakeRedis(decode_responses=False)
-    except ImportError:
-        # fallback: use real redis if available, else skip
-        try:
-            r = redis.Redis.from_url("redis://localhost:6379/1", decode_responses=False)
-            r.ping()
-            r.flushdb()
-        except Exception:
-            return
+    class FakeRedis:
+        def __init__(self): self.store={}
+        def xgroup_create(self, *a, **k): pass
+        def xinfo_groups(self, *a, **k): return []
+        def xinfo_stream(self, *a, **k): return {}
+        def setex(self, *a, **k): pass
+        def get(self, *a, **k): return None
+        def keys(self, *a, **k): return []
+        def hgetall(self, *a, **k): return {}
+        def xadd(self, *a, **k): return "0-1"
+        def xreadgroup(self, *a, **k): return []
+        def xack(self, *a, **k): return 1
+        def publish(self, *a, **k): return 1
+    r = FakeRedis()
     disp = AlertDispatcher(redis_client=r, adapters=[])
     disp.min_sev = 0  # alert everything
     f = {"max_severity":"high","five_tuple":"1.1.1.1:123->2.2.2.2:25","rule_id":"test-rule","severity":"high"}

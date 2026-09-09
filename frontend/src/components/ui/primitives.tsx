@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 // ── SeverityBadge ──────────────────────────────────────────────────────────
@@ -58,19 +59,41 @@ export function ScoreGauge({
   const { text } = scoreColor(score)
   const dim = size === 'lg' ? 'h-28 w-28 text-3xl' : size === 'sm' ? 'h-12 w-12 text-base' : 'h-20 w-20 text-xl'
   const ring = size === 'lg' ? '[&>span]:ring-4' : '[&>span]:ring-2'
+  // tick animation on change
+  const [display, setDisplay] = useState(s)
+  const [ticking, setTicking] = useState(false)
+  useEffect(() => {
+    if (display === s) return
+    setTicking(true)
+    const start = display
+    const delta = s - start
+    const dur = 420
+    const t0 = performance.now()
+    let raf = 0
+    const step = (now: number) => {
+      const p = Math.min(1, (now - t0) / dur)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setDisplay(Math.round(start + delta * eased))
+      if (p < 1) raf = requestAnimationFrame(step)
+      else setTicking(false)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [s])
+  // import hooks at top if needed — inline to keep file self-contained
   return (
     <div className="flex flex-col items-center gap-1">
       <div
         className={cn(
-          'flex items-center justify-center rounded-full text-center',
+          'flex items-center justify-center rounded-full text-center transition-colors duration-500',
           dim,
           'bg-base-850 border border-base-600/60 shadow-inner',
           ring,
         )}
         style={{ boxShadow: `inset 0 0 0 4px ${scoreColorHex(score)}22` }}
       >
-        <span className={cn('font-bold tabular-nums leading-none', text)} style={{ textShadow: `0 0 18px ${scoreColorHex(score)}66` }}>
-          {score == null ? '·' : s}
+        <span className={cn('font-bold tabular-nums leading-none transition-all', text, ticking && 'animate-tick')} style={{ textShadow: `0 0 18px ${scoreColorHex(score)}66` }}>
+          {score == null ? '·' : display}
           {score != null && size !== 'sm' && showLabel && (
             <span className={cn('ml-px text-[0.45em] font-semibold', text)}>/100</span>
           )}
@@ -82,6 +105,9 @@ export function ScoreGauge({
     </div>
   )
 }
+
+// need hooks
+import { useEffect, useState } from 'react'
 
 // ── CodeBlock ───────────────────────────────────────────────────────────────
 

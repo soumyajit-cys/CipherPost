@@ -33,7 +33,7 @@ export default function UploadPage() {
     if (jobStatus.isSuccess && jobStatus.data?.status === 'completed') {
       qc.invalidateQueries({ queryKey: queryKeys.analyses })
       qc.invalidateQueries({ queryKey: queryKeys.fleet })
-      navigate(`/analyses/${jobStatus.data.id}`)
+      navigate(`/app/analyses/${jobStatus.data.id}`)
     }
   }, [jobStatus.isSuccess, jobStatus.data?.status, jobId, navigate, qc])
 

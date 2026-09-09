@@ -12,13 +12,15 @@ const SEV_STYLES = {
   none: 'bg-transparent text-base-400 border-base-500/40',
 } as const
 
-export function SeverityBadge({ severity, className }: { severity: string; className?: string }) {
+export function SeverityBadge({ severity, className, pulse }: { severity: string; className?: string; pulse?: boolean }) {
   const s = (severity || 'none') as keyof typeof SEV_STYLES
+  const isCritical = s === 'critical'
   return (
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded border px-1.5 py-px text-[11px] font-semibold uppercase tracking-wide',
         SEV_STYLES[s] ?? SEV_STYLES.none,
+        isCritical && pulse && 'animate-pulse-sev',
         className,
       )}
     >
@@ -106,8 +108,7 @@ export function ScoreGauge({
   )
 }
 
-// need hooks
-import { useEffect, useState } from 'react'
+
 
 // ── CodeBlock ───────────────────────────────────────────────────────────────
 

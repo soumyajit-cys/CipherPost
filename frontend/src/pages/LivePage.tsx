@@ -99,7 +99,7 @@ export default function LivePage() {
         </Panel>
         <Panel padded={false} className="overflow-hidden">
           <div className="p-3">
-            <Stat label="Findings" value={<span className={cn('tabular-nums', findings.length && 'text-sev-medium')}>{findings.length}</span>} valueClassName={findings.length ? 'text-sev-medium' : undefined} />
+            <Stat label="Findings" value={<span className={cn('tabular-nums', findings.length ? 'text-sev-medium' : undefined)}>{findings.length}</span>} valueClassName={findings.length ? 'text-sev-medium' : undefined} />
             <div className="mt-2 text-xs text-base-500">Severity-ranked, threshold + dedup</div>
           </div>
           <div className="h-1 w-full bg-base-800">
@@ -108,7 +108,7 @@ export default function LivePage() {
         </Panel>
         <Panel padded={false} className="overflow-hidden">
           <div className="p-3">
-            <Stat label="Alerts dispatched" value={<span className={cn('tabular-nums', alerts.length && 'text-sev-critical')}>{alerts.length}</span>} valueClassName={alerts.length ? 'text-sev-critical' : undefined} />
+            <Stat label="Alerts dispatched" value={<span className={cn('tabular-nums', alerts.length ? 'text-sev-critical' : undefined)}>{alerts.length}</span>} valueClassName={alerts.length ? 'text-sev-critical' : undefined} />
             <div className="mt-2 text-xs text-base-500">webhook / Slack / SIEM · rate-limited</div>
           </div>
           <div className="h-1 w-full bg-base-800">

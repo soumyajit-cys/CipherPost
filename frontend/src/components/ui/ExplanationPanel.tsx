@@ -25,9 +25,7 @@ export function ExplanationPanel({
   const sorted = [...rows].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact)).slice(0, 12)
   const maxAbs = Math.max(...sorted.map((r) => Math.abs(r.impact)), 0.01)
 
-  // Split into positive / negative for legend
-  const pos = sorted.filter((r) => r.impact >= 0)
-  const neg = sorted.filter((r) => r.impact < 0)
+
 
   return (
     <div>

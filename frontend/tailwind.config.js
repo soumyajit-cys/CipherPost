@@ -34,6 +34,20 @@ export default {
         positive: '#22c55e',
         accent: '#38bdf8',
       },
+      keyframes: {
+        'slide-in': { '0%': { opacity: '0', transform: 'translateY(4px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+        'pulse-sev': { '0%,100%': { boxShadow: '0 0 0 0 currentColor' }, '50%': { boxShadow: '0 0 0 4px transparent' } },
+        'tick': { '0%': { transform: 'translateY(2px)', opacity: '0.6' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+        'shimmer': { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
+      },
+      animation: {
+        'slide-in': 'slide-in 180ms cubic-bezier(0.2,0,0,1)',
+        'pulse-sev': 'pulse-sev 1.2s ease-out 1',
+        'tick': 'tick 180ms ease-out',
+      },
+      boxShadow: {
+        panel: '0 1px 2px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04) inset',
+      },
     },
   },
   plugins: [],

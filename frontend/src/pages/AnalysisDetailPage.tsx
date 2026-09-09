@@ -176,7 +176,7 @@ function ExportButtons({ id }: { id: string }) {
   )
 }
 
-function SessionTable({ sessions, analysisId, onSelect }: { sessions: SessionSummary[]; analysisId: string; onSelect: (id: string) => void }) {
+function SessionTable({ sessions, onSelect }: { sessions: SessionSummary[]; analysisId: string; onSelect: (id: string) => void }) {
   const [protocol, setProtocol] = useState<string>('all')
 
   const rows = useMemo(() => (protocol === 'all' ? sessions : sessions.filter((s) => s.protocol === protocol)), [sessions, protocol])
@@ -262,19 +262,7 @@ function SessionTable({ sessions, analysisId, onSelect }: { sessions: SessionSum
   )
 }
 
-function CipherStrength({ value }: { value: number | null }) {
-  if (value == null) return <span className="text-base-500">—</span>
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="h-1.5 w-10 overflow-hidden rounded-full bg-base-800">
-        <span className={cn('block h-full rounded-full', value >= 0.85 ? 'bg-positive' : value >= 0.6 ? 'bg-sev-medium' : 'bg-sev-high')} style={{ width: `${value * 100}%` }} />
-      </span>
-      <span className={cn('font-mono text-[11px] font-semibold tabular-nums', value >= 0.85 ? 'text-positive' : value >= 0.6 ? 'text-sev-medium' : 'text-sev-high')}>
-        {value.toFixed(2)}
-      </span>
-    </div>
-  )
-}
+
 
 function FindingsList({ findings }: { findings: Finding[] }) {
   const [severityFilter, setSeverityFilter] = useState<string>('all')

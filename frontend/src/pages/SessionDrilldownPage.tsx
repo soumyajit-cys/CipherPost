@@ -29,7 +29,9 @@ export default function SessionDrilldownPage() {
 
   return (
     <div>
-      <Link to={`/analyses/${id}`} className="text-[11px] text-base-400 hover:text-accent">← Back to analysis</Link>
+      <Link to={`/app/analyses/${id}`} className="inline-flex items-center gap-1 text-[11px] font-medium text-base-400 hover:text-accent">
+        ← Back to analysis
+      </Link>
 
       <div className="mb-3 mt-1 flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">

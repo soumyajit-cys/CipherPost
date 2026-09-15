@@ -223,27 +223,41 @@ async def list_audit(limit: int = Query(100, ge=1, le=500),
             for r in rows]
 
 
+_GOSSIP_GAUGES: dict = {}
+
+
 @app.get("/metrics")
 async def metrics():
-    """Prometheus metrics endpoint (merges gossip from workers)."""
+    """Prometheus metrics endpoint (merges gossip from workers as gauges)."""
     try:
         from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, Gauge
-        # merge gossip metrics into a gauge for visibility
+        import re as _re
+
+        def _gauge(worker: str, metric: str):
+            name = "cipherpost_" + _re.sub(r"[^a-zA-Z0-9_]", "_", f"{worker}_{metric}")
+            g = _GOSSIP_GAUGES.get(name)
+            if g is None:
+                g = Gauge(name, f"Gossiped worker metric {worker}.{metric}",
+                          ["worker", "metric"])
+                _GOSSIP_GAUGES[name] = g
+            return g
+
         try:
             import redis as _redis
             r = _redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
-            keys = r.keys("cipherpost:metrics:*")
-            for k in keys:
+            for k in r.keys("cipherpost:metrics:*"):
                 try:
-                    vals = r.get(k) or r.hgetall(k)
+                    vals = r.get(k)
                     if isinstance(vals, bytes):
                         vals = vals.decode()
                     if isinstance(vals, str):
                         import json as _j
                         vals = _j.loads(vals)
-                    # expose as gauge family via ad-hoc metric push would require registry;
-                    # for now log to help debugging - real aggregation done via /api/v1/live/status
-                    pass
+                    worker = k.split(":")[-1]
+                    for m, v in (vals or {}).items():
+                        if m == "ts" or not isinstance(v, (int, float)):
+                            continue
+                        _gauge(worker, m).labels(worker=worker, metric=m).set(float(v))
                 except Exception:
                     pass
         except Exception:

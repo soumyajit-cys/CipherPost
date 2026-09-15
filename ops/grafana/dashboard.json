@@ -1,0 +1,49 @@
+{
+  "title": "CipherPost Operations",
+  "tags": ["cipherpost", "security"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Packets seen (capture)",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "cipherpost_capture_packets_seen" }]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Sessions emitted",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [{ "expr": "cipherpost_capture_sessions_emitted" }]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Sessions dropped (cap)",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [{ "expr": "cipherpost_capture_sessions_dropped" }]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Alerts dispatched",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [{ "expr": "cipherpost_alerts_alerts_dispatched" }]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Analysis queue depth",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 4 },
+      "targets": [{ "expr": "cipherpost_analysis_queue_depth" }]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Alert dispatch latency (ms)",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 4 },
+      "targets": [{ "expr": "cipherpost_alerts_alert_latency_ms" }]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Sessions analyzed",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 10 },
+      "targets": [{ "expr": "cipherpost_analysis_sessions_analyzed" }]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "API process memory (bytes)",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 10 },
+      "targets": [{ "expr": "process_resident_memory_bytes" }]
+    }
+  ]
+}

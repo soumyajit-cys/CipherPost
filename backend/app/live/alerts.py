@@ -78,6 +78,37 @@ class SyslogCefAdapter(AlertAdapter):
             log.warning("syslog send failed: %s", e)
             return False
 
+class SplunkHECAdapter(AlertAdapter):
+    """Splunk HTTP Event Collector: documented SIEM path (track 4).
+
+    Configure SPLUNK_HEC_URL (e.g. https://splunk:8088/services/collector),
+    SPLUNK_HEC_TOKEN, optionally SPLUNK_HEC_INDEX / SOURCETYPE.
+    """
+    name = "splunk-hec"
+
+    def __init__(self, url: str, token: str, index: str = "",
+                 sourcetype: str = "cipherpost:alert", verify: bool = True):
+        self.url = url.rstrip("/")
+        self.token = token
+        self.index = index
+        self.sourcetype = sourcetype
+        self.verify = verify
+
+    def send(self, alert: dict) -> bool:
+        event = {"time": alert.get("ts"), "source": "cipherpost",
+                 "sourcetype": self.sourcetype, "event": alert}
+        if self.index:
+            event["index"] = self.index
+        try:
+            r = httpx.post(self.url, json=event,
+                           headers={"Authorization": f"Splunk {self.token}"},
+                           timeout=5, verify=self.verify)
+            return r.status_code < 300
+        except Exception as e:
+            log.warning("splunk hec send failed: %s", e)
+            return False
+
+
 class EmailAdapter(AlertAdapter):
     name = "email"
     def __init__(self, host: str, port: int, frm: str, to: str):
@@ -120,6 +151,12 @@ def load_channels() -> list[AlertAdapter]:
     email_host = cfg.get("email_host") or settings.ALERT_EMAIL_SMTP_HOST
     if email_host:
         adapters.append(EmailAdapter(email_host, int(cfg.get("email_port", settings.ALERT_EMAIL_SMTP_PORT)), cfg.get("email_from", settings.ALERT_EMAIL_FROM), cfg.get("email_to", settings.ALERT_EMAIL_TO)))
+    splunk_url = cfg.get("splunk_hec_url") or settings.SPLUNK_HEC_URL
+    if splunk_url:
+        adapters.append(SplunkHECAdapter(
+            splunk_url, cfg.get("splunk_hec_token") or settings.SPLUNK_HEC_TOKEN,
+            index=cfg.get("splunk_hec_index") or settings.SPLUNK_HEC_INDEX,
+            sourcetype=cfg.get("splunk_hec_sourcetype") or settings.SPLUNK_HEC_SOURCETYPE))
     return adapters
 
 def save_channel_config(cfg: dict):

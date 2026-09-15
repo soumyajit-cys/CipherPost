@@ -71,6 +71,21 @@ class Settings(BaseSettings):
     ALERT_EMAIL_TO: str = ""
     ALERT_CHANNEL_CONFIG_PATH: Path = Path("/data/alert_channels.json")
 
+    # --- SIEM (track 4: Splunk HEC) -------------------------------------------
+    SPLUNK_HEC_URL: Optional[str] = None
+    SPLUNK_HEC_TOKEN: str = ""
+    SPLUNK_HEC_INDEX: str = ""
+    SPLUNK_HEC_SOURCETYPE: str = "cipherpost:alert"
+
+    # --- ticketing (track 4) ----------------------------------------------------
+    TICKETING_ENABLED: bool = False
+    TICKET_MIN_SEVERITY: str = "critical"
+    JIRA_URL: Optional[str] = None  # e.g. https://your.atlassian.net
+    JIRA_EMAIL: str = ""
+    JIRA_API_TOKEN: str = ""
+    JIRA_PROJECT: str = ""
+    JIRA_ISSUE_TYPE: str = "Task"
+
     # --- capture agents (track 3) ---------------------------------------------
     AGENT_ID: str = ""  # default: <hostname>/<iface>
     AGENT_HEARTBEAT_SECONDS: float = 10.0

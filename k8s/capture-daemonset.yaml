@@ -1,0 +1,41 @@
+# Capture agents: one pod per node with a mirror/SPAN-fed interface.
+# - hostNetwork: true so the pod sees the node's interfaces
+# - NET_RAW + NET_ADMIN capabilities instead of privileged/root
+# - AGENT_ID defaults to <node-hostname>/<iface>; dashboard shows each agent
+# Throughput: BPF pre-filter keeps only mail ports; per-agent caps
+# (LIVE_MAX_SESSIONS, LIVE_MAX_SESSION_BUFFER_BYTES) bound memory — tune via
+# ConfigMap per expected site volume (start 100m/128Mi per 1k pkts/s).
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: capture
+  namespace: cipherpost
+spec:
+  selector:
+    matchLabels: { app: capture }
+  template:
+    metadata:
+      labels: { app: capture }
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        cipherpost/capture: "true"   # label only SPAN-fed nodes
+      containers:
+        - name: capture
+          image: cipherpost/worker:latest
+          command: ["python", "-m", "app.live.capture", "--iface", "eth0"]
+          securityContext:
+            capabilities:
+              add: ["NET_RAW", "NET_ADMIN"]
+          envFrom:
+            - configMapRef: { name: cipherpost-config }
+            - secretRef: { name: cipherpost-secrets }
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { cpu: "2", memory: 2Gi }
+          volumeMounts:
+            - { name: capture, mountPath: /data/capture }
+      volumes:
+        - name: capture
+          hostPath: { path: /var/lib/cipherpost/capture, type: DirectoryOrCreate }

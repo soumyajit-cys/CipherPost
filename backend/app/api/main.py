@@ -561,7 +561,10 @@ async def get_job(job_id: str,
 
 
 @app.get("/api/v1/jobs/{job_id}/sessions")
-async def get_sessions(job_id: str, db: AsyncSession = Depends(get_db)):
+async def get_sessions(job_id: str,
+                       ctx: AuthContext = Depends(get_current_user),
+                       db: AsyncSession = Depends(get_db)):
+    await _get_org_job(job_id, ctx, db)
     q = select(Session).where(Session.job_id == job_id).order_by(Session.risk_score.desc().nullslast())
     rows = (await db.execute(q)).scalars().all()
     return [

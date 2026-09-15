@@ -407,7 +407,8 @@ async def list_findings(
     if protocol:
         q = q.where(Session.protocol==protocol)
     rows = (await db.execute(q)).scalars().all()
-    return [{"id": f.id, "session_id": f.session_id, "rule_id": f.rule_id, "severity": f.severity.value, "title": f.title, "description": f.description} for f in rows]
+    from app.proactive.compliance import compliance_for
+    return [{"id": f.id, "session_id": f.session_id, "rule_id": f.rule_id, "severity": f.severity.value, "title": f.title, "description": f.description, "compliance": compliance_for(f.rule_id)} for f in rows]
 
 @app.get("/api/v1/alerts")
 async def list_alerts(limit: int = Query(50, ge=1, le=200),
@@ -464,6 +465,73 @@ async def fleet_trend(days: int = Query(7, ge=1, le=90),
         return {"points": points, "total": len(scores)}
     except Exception as e:
         return {"points": [], "error": str(e)}
+
+
+@app.get("/api/v1/certs")
+async def list_certs(limit: int = Query(100, ge=1, le=500),
+                     ctx: AuthContext = Depends(get_current_user),
+                     db: AsyncSession = Depends(get_db)):
+    """Certificate inventory (track 2): every distinct leaf cert observed."""
+    from app.models.entities import TrackedCert
+    q = select(TrackedCert)
+    if ctx.org_id:
+        q = q.where((TrackedCert.org_id == ctx.org_id) | (TrackedCert.org_id.is_(None)))
+    q = q.order_by(TrackedCert.last_seen.desc()).limit(limit)
+    rows = (await db.execute(q)).scalars().all()
+    return [{"fingerprint": r.fingerprint[:16] + "…", "subject_cn": r.subject_cn,
+             "issuer_cn": r.issuer_cn, "sans": r.sans,
+             "not_after": r.not_after.isoformat() if r.not_after else None,
+             "pubkey": f"{r.pubkey_alg} {r.pubkey_bits or ''}".strip(),
+             "self_signed": r.is_self_signed, "chain_result": r.chain_result,
+             "seen_count": r.seen_count,
+             "last_seen": r.last_seen.isoformat() if r.last_seen else None}
+            for r in rows]
+
+
+@app.get("/api/v1/certs/expiring")
+async def certs_expiring(days: int = Query(30, ge=1, le=365),
+                         ctx: AuthContext = Depends(get_current_user),
+                         db: AsyncSession = Depends(get_db)):
+    """Proactive expiry forecast: certs expiring within `days` (or expired)."""
+    from datetime import datetime
+    from app.models.entities import TrackedCert
+    horizon = datetime.utcnow() + __import__("datetime").timedelta(days=days)
+    q = select(TrackedCert).where(TrackedCert.not_after.is_not(None),
+                                  TrackedCert.not_after <= horizon)
+    if ctx.org_id:
+        q = q.where((TrackedCert.org_id == ctx.org_id) | (TrackedCert.org_id.is_(None)))
+    rows = (await db.execute(q.order_by(TrackedCert.not_after.asc()))).scalars().all()
+    now = datetime.utcnow()
+    return [{"fingerprint": r.fingerprint[:16] + "…", "subject_cn": r.subject_cn,
+             "not_after": r.not_after.isoformat() if r.not_after else None,
+             "days_remaining": (r.not_after - now).days if r.not_after else None,
+             "expired": bool(r.not_after and r.not_after < now),
+             "seen_count": r.seen_count}
+            for r in rows]
+
+
+@app.get("/api/v1/compliance/summary")
+async def compliance_summary(framework: str | None = Query(None),
+                             ctx: AuthContext = Depends(get_current_user),
+                             db: AsyncSession = Depends(get_db)):
+    """Findings grouped by compliance control (track 2)."""
+    from app.proactive.compliance import summary_for_findings, FRAMEWORKS
+    if framework and framework not in FRAMEWORKS:
+        raise HTTPException(400, f"Unknown framework. Choose from {sorted(FRAMEWORKS)}")
+    q = select(Finding.rule_id, Finding.severity).join(
+        Session, Finding.session_id == Session.id).where(Session.org_id == ctx.org_id)
+    rows = (await db.execute(q)).all()
+    return summary_for_findings(
+        [{"rule_id": r[0], "severity": r[1].value if hasattr(r[1], "value") else str(r[1])}
+         for r in rows], framework)
+
+
+@app.get("/api/v1/domains/{domain}/transport-security")
+async def domain_transport_security(domain: str,
+                                    ctx: AuthContext = Depends(get_current_user)):
+    """MTA-STS/DANE posture for a domain (track 2; honest stub without DNS)."""
+    from app.proactive.mta_sts import check_domain
+    return check_domain(domain)
 
 
 @app.get("/api/v1/stats")
@@ -598,6 +666,7 @@ async def get_findings(
         Session.risk_score.desc().nullslast(),
     )
     rows = (await db.execute(q)).scalars().all()
+    from app.proactive.compliance import compliance_for as _cf
     return [
         {
             "id": f.id, "session_id": f.session_id,
@@ -605,6 +674,7 @@ async def get_findings(
             "severity": f.severity.value, "title": f.title,
             "description": f.description, "reference": f.reference,
             "kind": f.kind, "evidence": f.evidence,
+            "compliance": _cf(f.rule_id),
         }
         for f in rows
     ]

@@ -1,0 +1,128 @@
+# API + Celery worker + analyzer + alerter.
+# Throughput assumptions (per analyzer replica, 4 vCPU):
+#   ~200 sessions/min sustained incl. TLS parse + rules + ML + SHAP.
+# Scale analyzer replicas (or HPA below) with SESSION_STREAM depth
+# (see /api/v1/live/status queues.sessions).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: cipherpost
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: api }
+  template:
+    metadata:
+      labels: { app: api }
+    spec:
+      containers:
+        - name: api
+          image: cipherpost/api:latest
+          ports: [{ containerPort: 8000 }]
+          envFrom:
+            - configMapRef: { name: cipherpost-config }
+            - secretRef: { name: cipherpost-secrets }
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { cpu: "1", memory: 1Gi }
+          readinessProbe:
+            httpGet: { path: /api/v1/health, port: 8000 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /api/v1/health, port: 8000 }
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: cipherpost
+spec:
+  selector: { app: api }
+  ports: [{ port: 8000 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: cipherpost
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: celery-worker }
+  template:
+    metadata:
+      labels: { app: celery-worker }
+    spec:
+      containers:
+        - name: worker
+          image: cipherpost/worker:latest
+          command: ["celery", "-A", "app.services.tasks", "worker", "--loglevel=info", "--concurrency=2"]
+          envFrom:
+            - configMapRef: { name: cipherpost-config }
+            - secretRef: { name: cipherpost-secrets }
+          resources:
+            requests: { cpu: 500m, memory: 1Gi }
+            limits: { cpu: "2", memory: 2Gi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analyzer
+  namespace: cipherpost
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: analyzer }
+  template:
+    metadata:
+      labels: { app: analyzer }
+    spec:
+      containers:
+        - name: analyzer
+          image: cipherpost/worker:latest
+          command: ["python", "-m", "app.live.analyze"]
+          envFrom:
+            - configMapRef: { name: cipherpost-config }
+            - secretRef: { name: cipherpost-secrets }
+          resources:
+            requests: { cpu: "1", memory: 2Gi }
+            limits: { cpu: "4", memory: 4Gi }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: analyzer
+  namespace: cipherpost
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: analyzer }
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alerter
+  namespace: cipherpost
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: alerter }
+  template:
+    metadata:
+      labels: { app: alerter }
+    spec:
+      containers:
+        - name: alerter
+          image: cipherpost/worker:latest
+          command: ["python", "-m", "app.live.alerts"]
+          envFrom:
+            - configMapRef: { name: cipherpost-config }
+            - secretRef: { name: cipherpost-secrets }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 512Mi }

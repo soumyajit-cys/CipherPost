@@ -402,7 +402,7 @@ async def list_sessions(
     if protocol:
         q = q.where(Session.protocol==protocol)
     rows = (await db.execute(q)).scalars().all()
-    return [{"id": s.id, "protocol": s.protocol, "five_tuple": s.five_tuple, "tls_version": s.tls_version, "risk_score": s.risk_score, "max_severity": s.max_severity, "is_anomaly": s.is_anomaly, "details": s.details} for s in rows]
+    return [{"id": s.id, "protocol": s.protocol, "five_tuple": s.five_tuple, "tls_version": s.tls_version, "risk_score": s.risk_score, "max_severity": s.max_severity, "is_anomaly": s.is_anomaly, "model_version": s.model_version, "details": s.details} for s in rows]
 
 @app.get("/api/v1/findings")
 async def list_findings(
@@ -684,6 +684,7 @@ async def get_sessions(job_id: str,
             "is_starttls": s.is_starttls, "is_anomaly": s.is_anomaly,
             "risk_score": s.risk_score, "max_severity": s.max_severity,
             "overall_finding_count": s.overall_finding_count,
+            "model_version": s.model_version,
             "details": s.details,
         }
         for s in rows

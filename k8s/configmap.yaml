@@ -1,0 +1,23 @@
+# Non-secret configuration. Secrets (DB password, JWT secret, admin password,
+# webhook URLs) go in secret.yaml — never commit real values.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cipherpost-config
+  namespace: cipherpost
+data:
+  CIPHERPOST_REDIS_URL: "redis://redis:6379/0"
+  CIPHERPOST_CELERY_BROKER_URL: "redis://redis:6379/0"
+  CIPHERPOST_CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+  CIPHERPOST_TRUSTED_CA_BUNDLE_PATH: "/app/tests/fixtures/trusted_root.pem"
+  CIPHERPOST_LOG_LEVEL: "INFO"
+  CIPHERPOST_LOG_FORMAT: "json"
+  # capture defaults; override per-site via DaemonSet env or node labels
+  CIPHERPOST_LIVE_IFACE: "eth0"
+  CIPHERPOST_LIVE_BPF_PORTS: "25,587,465,110,995,143,993"
+  CIPHERPOST_RAW_RETENTION_SECONDS: "21600"
+  CIPHERPOST_ALERT_MIN_SEVERITY: "high"
+  CIPHERPOST_FLEET_BASELINE_WINDOW_DAYS: "7"
+  CIPHERPOST_CERT_EXPIRY_WARN_DAYS: "30"
+  VITE_API_MODE: "http"
+  VITE_API_BASE_URL: "/api/v1"

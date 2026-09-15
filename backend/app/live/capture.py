@@ -230,6 +230,7 @@ class CaptureWorker:
         else:
             do_once()
         self._drain()
+        self.heartbeat.stop()
         self.gossip.stop()
         self.store.stop()
         log.info("replay finished")

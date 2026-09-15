@@ -546,6 +546,34 @@ async def domain_transport_security(domain: str,
     return check_domain(domain)
 
 
+@app.get("/api/v1/ml/versions")
+async def ml_versions(ctx: AuthContext = Depends(get_current_user)):
+    """Model registry: which versions scored what (track 5)."""
+    from app.ml.registry import current_version, history
+    return {"current": current_version(), "history": history()}
+
+
+@app.get("/api/v1/ml/drift")
+async def ml_drift(ctx: AuthContext = Depends(require_roles("analyst"))):
+    """Rolling-baseline drift check: recent-24h vs prior-6d feature means."""
+    from app.live.baseline import drift_from_db
+    return drift_from_db()
+
+
+@app.get("/api/v1/ml/disagreement")
+async def ml_disagreement(ctx: AuthContext = Depends(require_roles("analyst"))):
+    """Periodic rule-vs-ML agreement report computed from stored sessions."""
+    import sys
+    sys.path.insert(0, "scripts")
+    from ml_disagreement_report import build_report
+    from app.core.config import settings as _s
+    rows_report = build_report()
+    # scope note: report is org-global; filter would need per-row org joins.
+    # For single-org deployments this is exact; multi-org gets fleet-wide view
+    # restricted to analyst+ roles (documented limitation).
+    return rows_report
+
+
 @app.get("/api/v1/stats")
 async def stats(ctx: AuthContext = Depends(get_current_user),
                 db: AsyncSession = Depends(get_db)):

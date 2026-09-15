@@ -183,6 +183,7 @@ class CaptureWorker:
 
         log.info("live capture stopping, final drain...")
         self._drain()
+        self.heartbeat.stop()
         self.gossip.stop()
         self.store.stop()
         log.info("capture stopped: packets=%d sessions=%d", self._packets_seen, self._sessions_emitted)
@@ -190,9 +191,10 @@ class CaptureWorker:
     def run_replay(self, loop: bool = False):
         """Replay mode: iterate pcap files through same pipeline."""
         assert self.replay_paths
-        log.info("replay mode: %s speed=%s loop=%s", self.replay_paths, self.replay_speed, loop)
+        log.info("replay mode: %s speed=%s loop=%s agent=%s", self.replay_paths, self.replay_speed, loop, self.agent_id)
         self.store.start()
         self.gossip.start()
+        self.heartbeat.start(self._agent_info(), self._agent_stats)
         for sig in (signal.SIGTERM, signal.SIGINT):
             try:
                 signal.signal(sig, self._signal)

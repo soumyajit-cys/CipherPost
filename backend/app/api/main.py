@@ -380,12 +380,13 @@ async def list_sessions(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     since: str | None = Query(None, description="ISO timestamp lower bound"),
+    ctx: AuthContext = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    q = select(Session).order_by(Session.id.desc()).offset(offset).limit(limit)
+    q = select(Session).where(Session.org_id == ctx.org_id).order_by(Session.id.desc()).offset(offset).limit(limit)
     # severity filter via join findings
     if severity:
-        q = select(Session).join(Finding, Finding.session_id==Session.id).where(Finding.severity==Severity(severity)).order_by(Session.risk_score.desc().nullslast()).offset(offset).limit(limit)
+        q = select(Session).join(Finding, Finding.session_id==Session.id).where(Finding.severity==Severity(severity), Session.org_id == ctx.org_id).order_by(Session.risk_score.desc().nullslast()).offset(offset).limit(limit)
     if protocol:
         q = q.where(Session.protocol==protocol)
     rows = (await db.execute(q)).scalars().all()
@@ -397,9 +398,10 @@ async def list_findings(
     protocol: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    ctx: AuthContext = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    q = select(Finding).join(Session, Finding.session_id==Session.id).order_by(Finding.severity.desc()).offset(offset).limit(limit)
+    q = select(Finding).join(Session, Finding.session_id==Session.id).where(Session.org_id == ctx.org_id).order_by(Finding.severity.desc()).offset(offset).limit(limit)
     if severity:
         q = q.where(Finding.severity==Severity(severity))
     if protocol:

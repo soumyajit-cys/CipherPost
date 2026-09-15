@@ -110,6 +110,7 @@ class AnalysisWorker:
                 cert_age_days= min((c.days_remaining for c in sa.certs if c.days_remaining is not None), default=None) if sa.certs else None,
                 is_anomaly=scoring_result.anomaly.is_anomaly if scoring_result else False,
                 risk_score=scoring_result.risk.posture_score if scoring_result else None,
+                model_version=(scoring_result.risk.model_version if scoring_result else None),
                 overall_finding_count=len(sa.findings),
                 max_severity= max((f.severity for f in sa.findings), key=lambda s: {"info":0,"low":1,"medium":2,"high":3,"critical":4}.get(s,0), default=None) if sa.findings else None,
                 org_id=default_org_id,

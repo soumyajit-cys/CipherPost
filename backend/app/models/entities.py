@@ -66,6 +66,7 @@ class Session(Base):
     risk_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     overall_finding_count: Mapped[int] = mapped_column(Integer, default=0)
     max_severity: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    model_version: Mapped[str | None] = mapped_column(String(64), nullable=True)  # track 5: which model scored this
     org_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("organizations.id"), nullable=True, index=True)
     details: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
 

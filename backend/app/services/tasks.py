@@ -107,6 +107,7 @@ def process_analysis_job(self, job_id: str):
                 ),
                 is_anomaly=sr.anomaly.is_anomaly,
                 risk_score=sr.risk.posture_score,
+                model_version=sr.risk.model_version,
                 overall_finding_count=len(sa.findings),
                 max_severity=(
                     max(

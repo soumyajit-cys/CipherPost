@@ -519,13 +519,21 @@ async def upload_pcap(
     return {"job_id": job_id, "status": "pending", "filename": file.filename}
 
 
+async def _get_org_job(job_id: str, ctx: AuthContext, db: AsyncSession):
+    job = await db.get(AnalysisJob, job_id)
+    if not job or (job.org_id is not None and job.org_id != ctx.org_id):
+        raise HTTPException(404, "Job not found")
+    return job
+
+
 @app.get("/api/v1/jobs")
 async def list_jobs(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    ctx: AuthContext = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    q = select(AnalysisJob).order_by(AnalysisJob.created_at.desc()).offset(offset).limit(limit)
+    q = select(AnalysisJob).where(AnalysisJob.org_id == ctx.org_id).order_by(AnalysisJob.created_at.desc()).offset(offset).limit(limit)
     rows = (await db.execute(q)).scalars().all()
     return [
         {
@@ -539,10 +547,10 @@ async def list_jobs(
 
 
 @app.get("/api/v1/jobs/{job_id}")
-async def get_job(job_id: str, db: AsyncSession = Depends(get_db)):
-    job = await db.get(AnalysisJob, job_id)
-    if not job:
-        raise HTTPException(404, "Job not found")
+async def get_job(job_id: str,
+                  ctx: AuthContext = Depends(get_current_user),
+                  db: AsyncSession = Depends(get_db)):
+    job = await _get_org_job(job_id, ctx, db)
     return {
         "id": job.id, "filename": job.filename, "status": job.status.value,
         "progress": job.progress, "message": job.message, "error": job.error,

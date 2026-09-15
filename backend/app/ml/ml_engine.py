@@ -189,6 +189,14 @@ class SessionScorer:
             return
         X, names, ids = session_features_matrix(analyses)
         self._feature_names = names
+        try:
+            from app.ml.registry import record_training
+            self._model_version = record_training(
+                len(analyses), names,
+                params={"model": "HistGradientBoostingClassifier",
+                        "max_iter": 200, "learning_rate": 0.1, "max_depth": 4})
+        except Exception:
+            pass
         # Labels: 1 = "at risk" (has any finding with severity >= medium)
         y = np.array([
             1 if max_severity(sa.findings) in ("medium", "high", "critical") else 0
@@ -204,10 +212,16 @@ class SessionScorer:
         feats = extract_features(sa)
         X = np.array([feats.get(n, 0.0) for n in self._feature_names], dtype=np.float32).reshape(1, -1)
         prob, label = self.risk_model.predict(X)
+        try:
+            from app.ml.registry import current_version
+            model_version = getattr(self, "_model_version", None) or current_version()
+        except Exception:
+            model_version = "0.1.0"
         risk = RiskScore(
             probability=prob,
             posture_score=int(round(prob * 100)),
             class_label=label,
+            model_version=model_version,
         )
         anomaly = self.anomaly_model.predict(X)
         shap_vals = compute_shap(self.risk_model, X, self._feature_names)

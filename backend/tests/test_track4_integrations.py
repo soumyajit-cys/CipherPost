@@ -72,7 +72,7 @@ def test_python_sdk_paths_match_server_routes():
     from app.api.main import app
 
     src = open("sdk/python/cipherpost_client.py").read()
-    sdk_paths = set(re.findall(r'"/api/v1[^"]*"', src))
+    sdk_paths = set(re.findall(r'"(/api/v1[^"]*)"', src))
     # strip path params for comparison
     route_templates = set()
     for r in app.routes:

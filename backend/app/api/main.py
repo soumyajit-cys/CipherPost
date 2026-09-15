@@ -255,6 +255,30 @@ async def metrics():
 
 # --- live SSE & extended API (stage 5) -----------------------------------
 
+async def _sse_ctx(request: Request, token: str | None,
+                   db: AsyncSession) -> AuthContext:
+    """SSE auth: EventSource cannot send headers, so accept ?token= as well."""
+    if token:
+        from app.core.auth import decode_token
+        try:
+            claims = decode_token(token)
+        except ValueError:
+            raise HTTPException(401, "Invalid SSE token")
+        user = await db.get(User, claims["sub"])
+        if user is None or not user.is_active:
+            raise HTTPException(401, "User inactive")
+        return AuthContext(user_id=user.id, email=user.email,
+                           org_id=user.org_id, role=user.role.value, via="jwt")
+    # fall back to Authorization header via the standard dependency path
+    creds = None
+    auth = request.headers.get("authorization", "")
+    if auth.lower().startswith("bearer "):
+        from fastapi.security import HTTPAuthorizationCredentials
+        creds = HTTPAuthorizationCredentials(scheme="Bearer",
+                                             credentials=auth[7:].strip())
+    return await get_current_user(request, creds, db)
+
+
 async def _pubsub_sse(channels: list[str], request: Request):
     """Yield SSE events from Redis pub/sub channels."""
     try:
@@ -294,29 +318,37 @@ async def _pubsub_sse(channels: list[str], request: Request):
 
 
 @app.get("/api/v1/live/stream")
-async def live_stream(request: Request):
+async def live_stream(request: Request, token: str | None = Query(None),
+                      db: AsyncSession = Depends(get_db)):
     """Unified SSE stream: sessions + findings + alerts."""
+    await _sse_ctx(request, token, db)
     chans = [f"{settings.LIVE_PUBSUB_PREFIX}:sessions", f"{settings.LIVE_PUBSUB_PREFIX}:findings", f"{settings.LIVE_PUBSUB_PREFIX}:alerts", f"{settings.LIVE_PUBSUB_PREFIX}:status"]
     return StreamingResponse(_pubsub_sse(chans, request), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 @app.get("/api/v1/live/sessions")
-async def live_sessions(request: Request):
+async def live_sessions(request: Request, token: str | None = Query(None),
+                        db: AsyncSession = Depends(get_db)):
+    await _sse_ctx(request, token, db)
     return StreamingResponse(_pubsub_sse([f"{settings.LIVE_PUBSUB_PREFIX}:sessions"], request), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 @app.get("/api/v1/live/findings")
-async def live_findings(request: Request):
+async def live_findings(request: Request, token: str | None = Query(None),
+                        db: AsyncSession = Depends(get_db)):
+    await _sse_ctx(request, token, db)
     return StreamingResponse(_pubsub_sse([f"{settings.LIVE_PUBSUB_PREFIX}:findings"], request), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 @app.get("/api/v1/live/alerts")
-async def live_alerts(request: Request):
+async def live_alerts(request: Request, token: str | None = Query(None),
+                      db: AsyncSession = Depends(get_db)):
+    await _sse_ctx(request, token, db)
     return StreamingResponse(_pubsub_sse([f"{settings.LIVE_PUBSUB_PREFIX}:alerts"], request), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 @app.get("/api/v1/live/status")
-async def live_status():
+async def live_status(ctx: AuthContext = Depends(get_current_user)):
     """Capture stats + queue depth + recent metrics gossip."""
     out: dict = {"capture": {}, "queues": {}, "metrics": {}}
     try:

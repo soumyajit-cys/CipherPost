@@ -658,14 +658,16 @@ async def get_fleet_summary(job_id: str,
 
 
 @app.get("/api/v1/jobs/{job_id}/report.{fmt}")
-async def get_report(job_id: str, fmt: str, db: AsyncSession = Depends(get_db)):
+async def get_report(job_id: str, fmt: str,
+                     ctx: AuthContext = Depends(get_current_user),
+                     db: AsyncSession = Depends(get_db)):
     if fmt not in ("json", "html", "pdf"):
         raise HTTPException(400, "Format must be json, html, or pdf")
-    job = await db.get(AnalysisJob, job_id)
-    if not job:
-        raise HTTPException(404, "Job not found")
+    job = await _get_org_job(job_id, ctx, db)
     if job.status != JobStatus.COMPLETED:
         raise HTTPException(409, "Job not yet completed")
+    await log_audit(db, ctx.org_id, ctx.email, "report.export", job.filename,
+                    {"job_id": job_id, "format": fmt})
 
     report_path = settings.REPORTS_DIR / f"{job_id}.{fmt}"
     if report_path.exists():

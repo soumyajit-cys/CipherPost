@@ -126,6 +126,11 @@ class AnalysisWorker:
             if scoring_result:
                 for c in scoring_result.shap_contributions:
                     Session.add(ShaPRow(session_id=sess_id, feature=c.feature, value=c.value, impact=c.impact))
+            try:
+                from app.proactive.certs import track_session_certs
+                track_session_certs(sa, default_org_id, Session)
+            except Exception:
+                pass
             Session.commit()
             return sess_id
         except Exception as e:

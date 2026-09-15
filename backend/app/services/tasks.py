@@ -133,6 +133,12 @@ def process_analysis_job(self, job_id: str):
                     value=c.value, impact=c.impact,
                 ))
 
+            try:
+                from app.proactive.certs import track_session_certs
+                track_session_certs(sa, getattr(job, "org_id", None), Session)
+            except Exception:
+                pass
+
         # Fleet summary
         from app.models.entities import SessionSummary
         avg_score = sum(s.risk.posture_score for s in scores) / max(1, len(scores))

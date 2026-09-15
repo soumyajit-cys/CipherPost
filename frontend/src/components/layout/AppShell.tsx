@@ -65,6 +65,36 @@ function LiveIndicator() {
   )
 }
 
+function UserChip() {
+  const [user, setUser] = useState<{ email: string; role: string } | null>(null)
+  useEffect(() => {
+    let live = true
+    import('@/api').then(({ api }) => {
+      api.me().then((u) => live && setUser({ email: u.email, role: u.role })).catch(() => {})
+    })
+    return () => { live = false }
+  }, [])
+  if (!user) return null
+  return (
+    <span className="hidden items-center gap-2 rounded border border-base-600/60 px-2 py-0.5 text-[11px] text-base-300 md:flex" title={`${user.email} · ${user.role}`}>
+      <span className="max-w-[140px] truncate font-medium">{user.email}</span>
+      <span className="rounded bg-base-700 px-1 font-mono uppercase">{user.role}</span>
+      <button
+        className="text-base-500 hover:text-base-200"
+        title="Sign out"
+        onClick={() => {
+          import('@/api').then(({ api }) => {
+            api.logout()
+            window.location.href = '/app/login'
+          })
+        }}
+      >
+        ⎋
+      </button>
+    </span>
+  )
+}
+
 function useTheme() {
   const [dark, setDark] = useState(() => {
     const stored = localStorage.getItem('cipherpost-theme')

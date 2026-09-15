@@ -8,6 +8,8 @@ import SessionDrilldownPage from '@/pages/SessionDrilldownPage'
 import FleetOverviewPage from '@/pages/FleetOverviewPage'
 import LivePage from '@/pages/LivePage'
 import LandingPage from '@/pages/LandingPage'
+import LoginPage from '@/pages/LoginPage'
+import { API_MODE, api } from '@/api'
 
 const queryClient = new QueryClient({
   defaultOptions: {

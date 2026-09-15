@@ -17,10 +17,34 @@ import type {
 import { SEVERITY_ORDER } from '../types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
+const TOKEN_KEY = 'cipherpost_token'
+
+function authHeaders(): Record<string, string> {
+  const t = localStorage.getItem(TOKEN_KEY)
+  return t ? { Authorization: `Bearer ${t}` } : {}
+}
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`)
+  const res = await fetch(`${BASE}${path}`, { headers: authHeaders() })
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY)
+    throw new Error('UNAUTHORIZED')
+  }
   if (!res.ok) throw new Error(`GET ${path} → ${res.status}`)
+  return res.json() as Promise<T>
+}
+
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body),
+  })
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY)
+    throw new Error('UNAUTHORIZED')
+  }
+  if (!res.ok) throw new Error(`POST ${path} → ${res.status}`)
   return res.json() as Promise<T>
 }
 

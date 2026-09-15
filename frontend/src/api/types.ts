@@ -188,9 +188,26 @@ export interface UploadHandle {
   abort: () => void
 }
 
+export interface AuthUser {
+  id: string
+  email: string
+  role: 'admin' | 'analyst' | 'auditor'
+  org_id: string
+}
+
 export interface ApiClient {
   /** List all analyses (summaries). */
   listAnalyses(): Promise<AnalysisSummary[]>
+  /** Authenticate (http mode: JWT; mock mode: fixture stub). */
+  login(email: string, password: string): Promise<{ token: string; user: AuthUser }>
+  /** Current session user. */
+  me(): Promise<AuthUser>
+  /** Clear local session. */
+  logout(): void
+  /** Current bearer token, if any (used for SSE ?token=). */
+  authToken(): string | null
+  /** Download a report with auth headers (anchor hrefs can't send them). */
+  downloadReport(id: string, format: 'json' | 'html' | 'pdf'): Promise<void>
   /** Full detail for one analysis (sessions + findings + fleet). */
   getAnalysis(id: string): Promise<AnalysisDetail>
   /** Drill-down for a single session within an analysis. */

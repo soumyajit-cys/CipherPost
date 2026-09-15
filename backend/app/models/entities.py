@@ -170,6 +170,35 @@ class ApiKey(Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class TrackedCert(Base):
+    """Persistent certificate inventory, independent of sessions.
+
+    One row per observed leaf certificate (keyed by SHA-256 fingerprint).
+    Powers proactive expiry forecasting: alert N days *before* expiry,
+    not just when an already-expired cert is observed on the wire.
+    """
+    __tablename__ = "tracked_certs"
+
+    fingerprint: Mapped[str] = mapped_column(String(128), primary_key=True)
+    org_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("organizations.id"), nullable=True, index=True)
+    subject_cn: Mapped[str] = mapped_column(String(512), default="")
+    issuer_cn: Mapped[str] = mapped_column(String(512), default="")
+    sans: Mapped[list | None] = mapped_column(JSONBType, nullable=True)
+    not_before: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    not_after: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    pubkey_alg: Mapped[str] = mapped_column(String(64), default="")
+    pubkey_bits: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    signature_alg: Mapped[str] = mapped_column(String(128), default="")
+    is_self_signed: Mapped[bool] = mapped_column(Boolean, default=False)
+    chain_result: Mapped[str] = mapped_column(String(64), default="")
+    first_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    seen_count: Mapped[int] = mapped_column(Integer, default=1)
+    expiry_alerted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    __table_args__ = (Index("ix_trackedcert_org_notafter", "org_id", "not_after"),)
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

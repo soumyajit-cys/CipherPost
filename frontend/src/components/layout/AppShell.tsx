@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { API_MODE } from '@/api'
+import { API_MODE, api } from '@/api'
 
 const NAV = [
   { to: '/app', label: 'Analyses', end: true },
@@ -69,9 +69,7 @@ function UserChip() {
   const [user, setUser] = useState<{ email: string; role: string } | null>(null)
   useEffect(() => {
     let live = true
-    import('@/api').then(({ api }) => {
-      api.me().then((u) => live && setUser({ email: u.email, role: u.role })).catch(() => {})
-    })
+    api.me().then((u) => live && setUser({ email: u.email, role: u.role })).catch(() => {})
     return () => { live = false }
   }, [])
   if (!user) return null
@@ -83,10 +81,8 @@ function UserChip() {
         className="text-base-500 hover:text-base-200"
         title="Sign out"
         onClick={() => {
-          import('@/api').then(({ api }) => {
-            api.logout()
-            window.location.href = '/app/login'
-          })
+          api.logout()
+          window.location.href = '/app/login'
         }}
       >
         ⎋

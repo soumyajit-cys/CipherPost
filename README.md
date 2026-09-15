@@ -169,9 +169,41 @@ PYTHONPATH=backend/. python scripts/export_mock_data.py
   references NIST SP 800-52r2 / OWASP / RFCs. ML augments it, never replaces it.
 - ML labels initially derive from the rules engine on the labeled corpus; this
   limitation is documented and surfaced to users via SHAP values and an explicit
-  rule-vs-ML disagreement report.
+  rule-vs-ML disagreement report (`scripts/ml_disagreement_report.py`,
+  `GET /api/v1/ml/disagreement`). Every score carries its `model_version`
+  (`GET /api/v1/ml/versions`); fleet drift is monitored (`GET /api/v1/ml/drift`).
 - Certificate chain validation uses a configured trust store
   (`CIPHERPOST_TRUSTED_CA_BUNDLE_PATH`, default `tests/fixtures/trusted_root.pem`).
+  Observed leaf certs are inventoried (`GET /api/v1/certs`) with proactive
+  expiry forecasting (`GET /api/v1/certs/expiring`).
+
+## Maturity: what's production-ready vs evolving
+
+Honestly labeled, so teams can deploy with eyes open (see THREAT_MODEL.md,
+DEPLOYMENT.md, docs/auth.md):
+
+**Production-ready:** streaming capture→analysis→alert pipeline; 19-rule
+engine (100% P/R on labeled corpus); JWT/RBAC/API-key auth with audit log;
+org-scoped tenancy columns; Splunk HEC + Jira integrations; rolling ML
+baseline with versioning/drift/disagreement reporting; replay determinism
+(live == batch); Docker + Kubernetes manifests; CI with eval gates and
+secret/container scans; backup scripts; Grafana starter dashboard.
+
+**Evolving / know the limits:** MTA-STS/DANE checking is a documented stub
+(no DNS resolver in scope — reports `not-checked`, never faked); ML labels
+remain rules-derived (scores are prioritization, not ground truth);
+multi-org is data-model-ready but single shared sensor writes to the
+default org; k8s Postgres/Redis are for small clusters (use managed
+services in production); frontend compliance tags and agents strip assume
+the http backend mode.
+
+## Further documentation
+
+- `docs/auth.md` — auth, roles, API keys, tenancy, audit
+- `docs/design-system.md` — shared landing/dashboard visual language
+- `THREAT_MODEL.md` — what it catches, what it doesn't, own attack surface
+- `DEPLOYMENT.md` — compose / SPAN-TAP / Kubernetes, secrets, backup/DR
+- `sdk/python/`, `sdk/typescript/` — typed API clients (contract-tested)
 
 ## Project layout
 

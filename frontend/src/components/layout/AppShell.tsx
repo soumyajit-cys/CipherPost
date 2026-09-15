@@ -130,6 +130,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 View live
               </Link>
             )}
+            {isApp && <UserChip />}
             <button
               onClick={toggle}
               aria-label="toggle theme"

@@ -159,8 +159,17 @@ PYTHONPATH=backend/. python scripts/export_mock_data.py
 | GET  | `/api/v1/live/sessions`, `/live/findings`, `/live/alerts` | SSE per channel |
 | GET  | `/api/v1/live/status` | Capture stats + queue depths + metrics gossip |
 | GET  | `/api/v1/alerts` | Recent dispatched alerts |
-| GET/POST | `/api/v1/alerts/config` | Alert channel config (webhook/slack/syslog/email) |
-| GET  | `/api/v1/health`, `/metrics` | Health + Prometheus metrics |
+| GET/POST | `/api/v1/alerts/config` | Alert channel config, admin-only (webhook/slack/syslog/email/splunk) |
+| POST | `/api/v1/auth/login` | Login → JWT; `GET /auth/me` for session |
+| GET/POST/PATCH | `/api/v1/users` | User admin, admin-only |
+| GET/POST/DELETE | `/api/v1/api-keys` | SIEM/script keys (raw shown once), admin-only |
+| GET  | `/api/v1/audit` | Audit log, admin/auditor |
+| GET  | `/api/v1/agents` | Capture-agent heartbeats (multi-site coverage) |
+| GET  | `/api/v1/certs`, `/certs/expiring?days=` | Cert inventory + expiry forecast |
+| GET  | `/api/v1/compliance/summary?framework=` | Findings by control (PCI-DSS-4.0, ISO-27001-2022, NIST-CSF-2.0, OWASP-TLS, CERT-In) |
+| GET  | `/api/v1/domains/{d}/transport-security` | MTA-STS/DANE status (honest stub without DNS) |
+| GET  | `/api/v1/ml/versions`, `/ml/drift`, `/ml/disagreement` | Model registry, drift check, agreement report |
+| GET  | `/api/v1/health`, `/metrics` | Health + Prometheus metrics (incl. worker gossip gauges) |
 | Webhook | `POST {ALERT_WEBHOOK_URL}` | Real-time alert (threshold `ALERT_MIN_SEVERITY`, dedup window, rate-limit) |
 
 ## Methodology notes
@@ -209,14 +218,20 @@ the http backend mode.
 
 ```
 backend/app/
-  core/       config, database, logging
-  models/     SQLAlchemy entities
+  core/       config, database, logging, auth (JWT/RBAC/API keys)
+  models/     SQLAlchemy entities (orgs, users, keys, audit, certs)
   parsing/    reassembly, TLS parsing, certs, rules, analysis, corpus gen, eval
-  ml/         features, ML engine, eval
+  ml/         features, ML engine, eval, model registry
+  proactive/  cert inventory, compliance mapping, MTA-STS/DANE stub
+  live/       capture, analysis, alerts (+splunk), ticketing (jira), agents
   reporting/  JSON/HTML/PDF report generator
   api/        FastAPI application
   services/   Celery worker tasks
-frontend/     React + Recharts dashboard
+frontend/     React + Recharts dashboard (+ landing, login, agents strip)
 docker/       Dockerfiles, docker-compose, nginx
+k8s/          namespace, config, services, capture DaemonSet, HPA, ingress
+sdk/          typed Python + TypeScript API clients (contract-tested)
+ops/          Grafana dashboard, Prometheus notes
+scripts/      traffic gen, replay harness, backup, disagreement report
 tests/        corpus fixtures + integration/robustness suites
 ```

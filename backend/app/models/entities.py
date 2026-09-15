@@ -115,3 +115,66 @@ class SessionSummary(Base):
     string_value: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     job: Mapped[AnalysisJob] = relationship(back_populates="summary")
+
+
+# ---------------------------------------------------------------------------
+# Track 1: multi-tenancy + auth. org_id is nullable for backward compat with
+# rows created before auth existed; all new writes set it. Queries filter by
+# the caller's org, so true multi-tenancy is a policy change, not a migration.
+# ---------------------------------------------------------------------------
+
+class Organization(Base):
+    __tablename__ = "organizations"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(256), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    users: Mapped[list["User"]] = relationship(back_populates="org")
+
+
+class UserRole(str, enum.Enum):
+    ADMIN = "admin"
+    ANALYST = "analyst"
+    AUDITOR = "auditor"
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    org_id: Mapped[str] = mapped_column(String(64), ForeignKey("organizations.id"), index=True)
+    email: Mapped[str] = mapped_column(String(256), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(512))
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.ANALYST)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    org: Mapped[Organization] = relationship(back_populates="users")
+
+
+class ApiKey(Base):
+    __tablename__ = "api_keys"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    org_id: Mapped[str] = mapped_column(String(64), ForeignKey("organizations.id"), index=True)
+    user_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(256))
+    key_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    prefix: Mapped[str] = mapped_column(String(16))
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_id: Mapped[str] = mapped_column(String(64), index=True)
+    actor: Mapped[str] = mapped_column(String(256))  # email or "api-key:<prefix>"
+    action: Mapped[str] = mapped_column(String(128), index=True)
+    resource: Mapped[str] = mapped_column(String(512), default="")
+    detail: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

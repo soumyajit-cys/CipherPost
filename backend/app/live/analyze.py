@@ -160,7 +160,7 @@ class AnalysisWorker:
         # publish findings
         findings_payload = {
             "session_id": sess_id or sess.five_tuple,
-            "org_id": getattr(self, "_default_org_id", None),
+            "org_id": getattr(self, "_org_cache", None),
             "five_tuple": sess.five_tuple,
             "protocol": sess.protocol.value if hasattr(sess.protocol, "value") else str(sess.protocol),
             "findings": [{"rule_id": f.rule_id, "severity": f.severity, "title": f.title} for f in sa.findings],

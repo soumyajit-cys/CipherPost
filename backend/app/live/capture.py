@@ -65,6 +65,12 @@ class CaptureWorker:
         self._packets_seen = 0
         self._sessions_emitted = 0
         self._lock = threading.Lock()
+        from app.live.agents import AgentHeartbeat, default_agent_id
+        self.agent_id = settings.AGENT_ID or default_agent_id(self.iface)
+        self.heartbeat = AgentHeartbeat(
+            self.r, self.agent_id,
+            interval=settings.AGENT_HEARTBEAT_SECONDS,
+            ttl=settings.AGENT_TTL_SECONDS)
 
     def _signal(self, signum, frame):
         log.info("signal %s received, shutting down", signum)
@@ -116,10 +122,22 @@ class CaptureWorker:
         self.gossip.counters.set("sessions_active", self.asm.stats.active)
         self.gossip.counters.set("sessions_dropped", self.asm.stats.evicted)
 
+    def _agent_info(self) -> dict:
+        return {"mode": "replay" if self.replay_paths else "live",
+                "iface": self.iface,
+                "bpf": _bpf() if not self.replay_paths else ""}
+
+    def _agent_stats(self) -> dict:
+        return {"packets_seen": self._packets_seen,
+                "sessions_emitted": self._sessions_emitted,
+                **self.asm.stats.as_dict()}
+
     def run_live(self):
-        log.info("capture live on iface=%s bpf='%s' promisc=%s", self.iface, _bpf(), self.promisc)
+        log.info("capture live on iface=%s bpf='%s' promisc=%s agent=%s",
+                 self.iface, _bpf(), self.promisc, self.agent_id)
         self.store.start()
         self.gossip.start()
+        self.heartbeat.start(self._agent_info(), self._agent_stats)
         # signal handling
         for sig in (signal.SIGTERM, signal.SIGINT):
             try:

@@ -62,6 +62,19 @@ class AnalysisWorker:
         log.info("signal %s", signum)
         self._stop.set()
 
+    def _default_org_id(self, Session) -> str | None:
+        """Cached lookup of the default org id (live sensor scope)."""
+        if getattr(self, "_org_cache", None) is not None:
+            return self._org_cache
+        try:
+            from app.models.entities import Organization
+            org = Session.query(Organization).filter(
+                Organization.name == settings.DEFAULT_ORG_NAME).first()
+            self._org_cache = org.id if org else None
+        except Exception:
+            self._org_cache = None
+        return self._org_cache
+
     def _persist(self, sa, scoring_result, raw_refs, session_raw_ts):
         """Persist session+findings+shap to Postgres using sync session."""
         Session = _get_sync_session()
@@ -69,13 +82,11 @@ class AnalysisWorker:
             from app.models.entities import Session as SessionModel, Finding, ShaPRow, Severity
             sess_id = uuid.uuid4().hex
             # derive job: use LIVE_JOB_TAG as a synthetic job id (ensure exists)
-            from app.models.entities import AnalysisJob, JobStatus, Organization
+            from app.models.entities import AnalysisJob, JobStatus
             job_id = settings.LIVE_JOB_TAG
             job = Session.get(AnalysisJob, job_id)
             # live-ingested data belongs to the default org (single shared sensor)
-            default_org = Session.query(Organization).filter(
-                Organization.name == settings.DEFAULT_ORG_NAME).first()
-            default_org_id = default_org.id if default_org else None
+            default_org_id = self._default_org_id(Session)
             if not job:
                 job = AnalysisJob(id=job_id, filename="live-capture", pcap_path="live", status=JobStatus.PROCESSING, file_size=0, org_id=default_org_id)
                 Session.add(job)
@@ -149,6 +160,7 @@ class AnalysisWorker:
         # publish findings
         findings_payload = {
             "session_id": sess_id or sess.five_tuple,
+            "org_id": getattr(self, "_default_org_id", None),
             "five_tuple": sess.five_tuple,
             "protocol": sess.protocol.value if hasattr(sess.protocol, "value") else str(sess.protocol),
             "findings": [{"rule_id": f.rule_id, "severity": f.severity, "title": f.title} for f in sa.findings],

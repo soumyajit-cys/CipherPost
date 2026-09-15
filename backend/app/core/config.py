@@ -26,6 +26,14 @@ class Settings(BaseSettings):
 
     TRUSTED_CA_BUNDLE_PATH: Optional[str] = None
 
+    # --- auth / tenancy (track 1) -------------------------------------------
+    AUTH_REQUIRED: bool = True  # set False only for isolated demo environments
+    JWT_SECRET: str = "change-me-in-production"
+    JWT_EXPIRY_SECONDS: int = 86400
+    ADMIN_EMAIL: str = "admin@cipherpost.local"
+    ADMIN_PASSWORD: str = "change-me-on-first-login"
+    DEFAULT_ORG_NAME: str = "default"
+
     # --- live acquisition (stage 2+) ----------------------------------------
     LIVE_IFACE: str = "lo"                     # SPAN/TAP-fed interface (promiscuous)
     LIVE_PROMISC: bool = True

@@ -215,6 +215,8 @@ export interface ApiClient {
   logout(): void
   /** Current bearer token, if any (used for SSE ?token=). */
   authToken(): string | null
+  /** Capture agents with recent heartbeats (track 3). */
+  getAgents(): Promise<{ agents: { agent_id: string; mode: string; iface: string; online: boolean; age_seconds: number; stats?: Record<string, number> }[] }>
   /** Download a report with auth headers (anchor hrefs can't send them). */
   downloadReport(id: string, format: 'json' | 'html' | 'pdf'): Promise<void>
   /** Full detail for one analysis (sessions + findings + fleet). */

@@ -373,6 +373,18 @@ async def live_status(ctx: AuthContext = Depends(get_current_user)):
         out["error"] = str(e)
     return out
 
+@app.get("/api/v1/agents")
+async def list_agents(ctx: AuthContext = Depends(get_current_user)):
+    """Capture agents with recent heartbeats (track 3)."""
+    from app.live.agents import list_agents as _list
+    try:
+        import redis as _redis
+        r = _redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+        return {"agents": _list(r)}
+    except Exception as e:
+        return {"agents": [], "error": str(e)}
+
+
 @app.get("/api/v1/sessions")
 async def list_sessions(
     protocol: str | None = Query(None),

@@ -162,6 +162,37 @@ export const mockClient: ApiClient = {
   reportUrl(id: string, format: 'json' | 'html' | 'pdf'): string {
     return `/api/v1/jobs/${id}/report.${format}`
   },
+
+  async downloadReport(): Promise<void> {
+    await simulateLatency()
+    // mock mode: nothing to download; no-op to keep the contract
+  },
+
+  async login(email: string) {
+    await simulateLatency()
+    sessionStorage.setItem('cipherpost_mock_user', email)
+    return {
+      token: 'mock-token',
+      user: { id: 'mock-admin', email, role: 'admin' as const, org_id: 'org-default' },
+    }
+  },
+
+  async me() {
+    return {
+      id: 'mock-admin',
+      email: sessionStorage.getItem('cipherpost_mock_user') ?? 'admin@cipherpost.local',
+      role: 'admin' as const,
+      org_id: 'org-default',
+    }
+  },
+
+  logout() {
+    sessionStorage.removeItem('cipherpost_mock_user')
+  },
+
+  authToken() {
+    return 'mock-token'
+  },
 }
 
 export interface FleetShape {

@@ -467,9 +467,10 @@ async def fleet_trend(days: int = Query(7, ge=1, le=90),
 
 
 @app.get("/api/v1/stats")
-async def stats(db: AsyncSession = Depends(get_db)):
+async def stats(ctx: AuthContext = Depends(get_current_user),
+                db: AsyncSession = Depends(get_db)):
     """Aggregate stats across all jobs (for monitoring)."""
-    jobs_res = await db.execute(select(AnalysisJob.id, AnalysisJob.status))
+    jobs_res = await db.execute(select(AnalysisJob.id, AnalysisJob.status).where(AnalysisJob.org_id == ctx.org_id))
     rows = jobs_res.all()
     status_counts = {}
     for _, status in rows:
@@ -484,6 +485,7 @@ async def stats(db: AsyncSession = Depends(get_db)):
 @app.post("/api/v1/upload", response_model=dict)
 async def upload_pcap(
     file: UploadFile = File(...),
+    ctx: AuthContext = Depends(require_roles("analyst")),
     db: AsyncSession = Depends(get_db),
 ):
     if not file.filename or not file.filename.lower().endswith(".pcap"):
@@ -503,9 +505,12 @@ async def upload_pcap(
         pcap_path=str(pcap_path),
         status=JobStatus.PENDING,
         file_size=len(content),
+        org_id=ctx.org_id,
     )
     db.add(job)
     await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "pcap.upload", file.filename,
+                    {"job_id": job_id, "bytes": len(content)})
 
     # Dispatch Celery task
     from app.services.tasks import process_analysis_job

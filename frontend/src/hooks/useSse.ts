@@ -9,7 +9,15 @@ export function useSse(url: string | null, enabled = true) {
 
   useEffect(() => {
     if (!url || !enabled) return
-    const es = new EventSource(url)
+    // EventSource can't send headers: attach JWT as ?token= (backend accepts it)
+    let finalUrl = url
+    try {
+      const t = localStorage.getItem('cipherpost_token')
+      if (t && !url.includes('token=')) {
+        finalUrl = url + (url.includes('?') ? '&' : '?') + `token=${encodeURIComponent(t)}`
+      }
+    } catch { /* private mode */ }
+    const es = new EventSource(finalUrl)
     esRef.current = es
     es.onopen = () => setConnected(true)
     es.onerror = () => setConnected(false)

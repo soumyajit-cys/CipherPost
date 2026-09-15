@@ -174,6 +174,8 @@ class AlertDispatcher:
         self._rate_window: list[float] = []
         self.consumer = bus.StreamConsumer(self.r, settings.FINDINGS_STREAM, settings.ALERT_CONSUMER_GROUP, f"alerter-{uuid.uuid4().hex[:6]}")
         self.min_sev = SEV_ORDER.get(settings.ALERT_MIN_SEVERITY, 3)
+        self._ticketing = None
+        self._ticketing_tried = False
 
     def _signal(self, s, f):
         self._stop.set()
@@ -220,6 +222,22 @@ class AlertDispatcher:
         latency = time.time() - start
         self.gossip.counters.inc("alerts_dispatched" if ok_any else "alerts_failed")
         self.gossip.counters.set("alert_latency_ms", latency*1000)
+        # ticketing (track 4): best-effort, deduped per rule+target like alerts
+        try:
+            from app.live.ticketing import load_ticket_backend, should_ticket
+            if self._ticketing is None and not self._ticketing_tried:
+                self._ticketing_tried = True
+                self._ticketing = load_ticket_backend()
+            if self._ticketing is not None and should_ticket(alert):
+                tkey = f"ticket:{alert['rule_id']}:{alert['five_tuple']}"
+                if time.time() - self._dedup.get(tkey, 0) > settings.ALERT_DEDUP_WINDOW_SECONDS:
+                    url = self._ticketing.create(alert)
+                    if url:
+                        alert["ticket_url"] = url
+                        self._dedup[tkey] = time.time()
+                        self.gossip.counters.inc("tickets_created")
+        except Exception as e:
+            log.debug("ticketing skipped: %s", e)
         # persist alert to DB + publish
         try:
             bus.publish_alert(self.r, alert)

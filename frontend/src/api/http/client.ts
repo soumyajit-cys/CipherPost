@@ -277,7 +277,12 @@ export const httpClient: ApiClient = {
   async uploadPcap(file: File): Promise<{ jobId: string }> {
     const fd = new FormData()
     fd.append('file', file)
-    const res = await fetch(`${BASE}/upload`, { method: 'POST', body: fd })
+    const res = await fetch(`${BASE}/upload`, { method: 'POST', body: fd, headers: authHeaders() })
+    if (res.status === 401) {
+      localStorage.removeItem(TOKEN_KEY)
+      throw new Error('UNAUTHORIZED')
+    }
+    if (res.status === 403) throw new Error('upload requires analyst role or higher')
     if (!res.ok) throw new Error(`upload failed → ${res.status}`)
     const body = (await res.json()) as { job_id: string }
     return { jobId: body.job_id }
@@ -285,5 +290,41 @@ export const httpClient: ApiClient = {
 
   reportUrl(id: string, format: 'json' | 'html' | 'pdf'): string {
     return `${BASE}/jobs/${id}/report.${format}`
+  },
+
+  async downloadReport(id: string, format: 'json' | 'html' | 'pdf'): Promise<void> {
+    const res = await fetch(`${BASE}/jobs/${id}/report.${format}`, { headers: authHeaders() })
+    if (res.status === 401) {
+      localStorage.removeItem(TOKEN_KEY)
+      throw new Error('UNAUTHORIZED')
+    }
+    if (!res.ok) throw new Error(`report download failed → ${res.status}`)
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `cipherpost-${id}.${format}`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  },
+
+  async login(email: string, password: string) {
+    const body = await post<{ token: string; user: { id: string; email: string; role: 'admin' | 'analyst' | 'auditor'; org_id: string } }>('/auth/login', { email, password })
+    localStorage.setItem(TOKEN_KEY, body.token)
+    return body
+  },
+
+  async me() {
+    return get<{ id: string; email: string; role: 'admin' | 'analyst' | 'auditor'; org_id: string }>('/auth/me')
+  },
+
+  logout() {
+    localStorage.removeItem(TOKEN_KEY)
+  },
+
+  authToken() {
+    return localStorage.getItem(TOKEN_KEY)
   },
 }

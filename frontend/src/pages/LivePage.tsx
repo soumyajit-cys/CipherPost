@@ -1,10 +1,41 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useSse } from '@/hooks/useSse'
-import { API_MODE } from '@/api'
+import { API_MODE, api } from '@/api'
 import { Panel, EmptyState, Stat } from '@/components/ui/State'
 import { SeverityBadge } from '@/components/ui/primitives'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+
+function AgentsStrip() {
+  const { data } = useQuery({
+    queryKey: ['agents'],
+    queryFn: () => api.getAgents(),
+    refetchInterval: 10_000,
+  })
+  const agents = data?.agents ?? []
+  if (!agents.length) return null
+  return (
+    <Panel title="Capture agents" subtitle={`${agents.filter((a) => a.online).length}/${agents.length} online`}>
+      <div className="flex flex-wrap gap-2">
+        {agents.map((a) => (
+          <span
+            key={a.agent_id}
+            title={`${a.mode} · ${a.iface} · ${a.stats?.packets_seen ?? 0} pkts · ${a.age_seconds}s ago`}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded border px-2 py-1 font-mono text-[11px]',
+              a.online ? 'border-positive/30 bg-positive/10 text-positive' : 'border-sev-critical/30 bg-sev-critical/10 text-sev-critical',
+            )}
+          >
+            <span className={cn('h-1.5 w-1.5 rounded-full', a.online ? 'bg-positive animate-pulse' : 'bg-sev-critical')} />
+            {a.agent_id}
+            <span className="text-base-400">· {a.mode}</span>
+          </span>
+        ))}
+      </div>
+    </Panel>
+  )
+}
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 

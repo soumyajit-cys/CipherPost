@@ -69,13 +69,19 @@ class AnalysisWorker:
             from app.models.entities import Session as SessionModel, Finding, ShaPRow, Severity
             sess_id = uuid.uuid4().hex
             # derive job: use LIVE_JOB_TAG as a synthetic job id (ensure exists)
-            from app.models.entities import AnalysisJob, JobStatus
+            from app.models.entities import AnalysisJob, JobStatus, Organization
             job_id = settings.LIVE_JOB_TAG
             job = Session.get(AnalysisJob, job_id)
+            # live-ingested data belongs to the default org (single shared sensor)
+            default_org = Session.query(Organization).filter(
+                Organization.name == settings.DEFAULT_ORG_NAME).first()
+            default_org_id = default_org.id if default_org else None
             if not job:
-                job = AnalysisJob(id=job_id, filename="live-capture", pcap_path="live", status=JobStatus.PROCESSING, file_size=0)
+                job = AnalysisJob(id=job_id, filename="live-capture", pcap_path="live", status=JobStatus.PROCESSING, file_size=0, org_id=default_org_id)
                 Session.add(job)
                 Session.commit()
+            elif job.org_id is None and default_org_id:
+                job.org_id = default_org_id
             # map fields
             sess = SessionModel(
                 id=sess_id, job_id=job_id,
@@ -95,6 +101,7 @@ class AnalysisWorker:
                 risk_score=scoring_result.risk.posture_score if scoring_result else None,
                 overall_finding_count=len(sa.findings),
                 max_severity= max((f.severity for f in sa.findings), key=lambda s: {"info":0,"low":1,"medium":2,"high":3,"critical":4}.get(s,0), default=None) if sa.findings else None,
+                org_id=default_org_id,
                 details={"raw_refs": raw_refs or [], "live_ts": session_raw_ts},
             )
             Session.add(sess)

@@ -70,6 +70,25 @@ async def _seed_auth():
                             settings.ADMIN_EMAIL)
         if (settings.JWT_SECRET or "") in ("", "change-me-in-production"):
             log.warning("CIPHERPOST_JWT_SECRET is not set — tokens use a dev-only secret")
+        # Backfill pre-auth rows into the default org so tenant scoping is total.
+        try:
+            from sqlalchemy import text as _text
+            async with async_session() as session:
+                async with session.begin():
+                    await session.execute(_text(
+                        "UPDATE analysis_jobs SET org_id = :oid "
+                        "WHERE org_id IS NULL"), {"oid": org.id})
+                    await session.execute(_text(
+                        "UPDATE sessions SET org_id = :oid "
+                        "WHERE org_id IS NULL"), {"oid": org.id})
+                    try:
+                        await session.execute(_text(
+                            "UPDATE alerts SET org_id = :oid "
+                            "WHERE org_id IS NULL"), {"oid": org.id})
+                    except Exception:
+                        pass  # alerts table may not exist yet on some backends
+        except Exception as e:
+            log.warning("org backfill skipped: %s", e)
     except Exception as e:
         logging.getLogger("cipherpost.auth.seed").warning("auth seed skipped: %s", e)
         # live tables (alerts, baseline) created lazily; ensure here too for fresh DBs

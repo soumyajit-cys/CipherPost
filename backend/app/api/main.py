@@ -31,8 +31,14 @@ import json as _json
 
 from app.core.config import settings
 from app.core.database import get_db, init_db
+from app.core.auth import (
+    AuthContext, get_current_user, require_roles,
+    hash_password, verify_password, create_access_token,
+    generate_api_key, log_audit,
+)
 from app.models.entities import (
     AnalysisJob, Session, Finding, ShaPRow, SessionSummary, JobStatus, Severity,
+    Organization, User, UserRole, ApiKey, AuditLog,
 )
 
 app = FastAPI(

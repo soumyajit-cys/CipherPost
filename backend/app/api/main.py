@@ -64,6 +64,165 @@ async def health():
     return {"status": "ok", "version": settings.APP_VERSION}
 
 
+# --- auth / users / api keys / audit (track 1) -------------------------------
+# NOTE (contract change, explicit): every /api/v1 route except /health and
+# /metrics now requires authentication (JWT Bearer from dashboard login, or
+# X-API-Key for programmatic access). Unauthenticated calls get 401;
+# under-privileged calls get 403. See docs/auth.md.
+
+@app.post("/api/v1/auth/login")
+async def login(body: dict, db: AsyncSession = Depends(get_db)):
+    from datetime import datetime
+    email = (body.get("email") or "").strip().lower()
+    user = (await db.execute(select(User).where(User.email == email))).scalars().first()
+    if user is None or not user.is_active or not verify_password(
+            body.get("password") or "", user.password_hash):
+        raise HTTPException(401, "Invalid email or password")
+    user.last_login = datetime.utcnow()
+    await db.commit()
+    token = create_access_token(user.id, user.org_id, user.role.value)
+    await log_audit(db, user.org_id, user.email, "auth.login", "session")
+    return {"token": token,
+            "user": {"id": user.id, "email": user.email,
+                     "role": user.role.value, "org_id": user.org_id}}
+
+
+@app.get("/api/v1/auth/me")
+async def me(ctx: AuthContext = Depends(get_current_user)):
+    return {"id": ctx.user_id, "email": ctx.email,
+            "role": ctx.role, "org_id": ctx.org_id, "via": ctx.via}
+
+
+@app.get("/api/v1/users")
+async def list_users(ctx: AuthContext = Depends(require_roles("admin")),
+                     db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(
+        select(User).where(User.org_id == ctx.org_id))).scalars().all()
+    return [{"id": u.id, "email": u.email, "role": u.role.value,
+             "is_active": u.is_active,
+             "created_at": u.created_at.isoformat() if u.created_at else None,
+             "last_login": u.last_login.isoformat() if u.last_login else None}
+            for u in rows]
+
+
+@app.post("/api/v1/users")
+async def create_user(body: dict,
+                      ctx: AuthContext = Depends(require_roles("admin")),
+                      db: AsyncSession = Depends(get_db)):
+    import uuid
+    email = (body.get("email") or "").strip().lower()
+    role = (body.get("role") or "analyst").strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(400, "Valid email required")
+    if role not in ("admin", "analyst", "auditor"):
+        raise HTTPException(400, "role must be admin|analyst|auditor")
+    if not body.get("password") or len(body["password"]) < 10:
+        raise HTTPException(400, "password must be >= 10 chars")
+    exists = (await db.execute(select(User).where(User.email == email))).scalars().first()
+    if exists:
+        raise HTTPException(409, "User already exists")
+    user = User(id="user-" + uuid.uuid4().hex[:12], org_id=ctx.org_id,
+                email=email, password_hash=hash_password(body["password"]),
+                role=UserRole(role), is_active=True)
+    db.add(user)
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "user.create", email,
+                    {"role": role})
+    return {"id": user.id, "email": user.email, "role": user.role.value}
+
+
+@app.patch("/api/v1/users/{user_id}")
+async def update_user(user_id: str, body: dict,
+                      ctx: AuthContext = Depends(require_roles("admin")),
+                      db: AsyncSession = Depends(get_db)):
+    user = await db.get(User, user_id)
+    if user is None or user.org_id != ctx.org_id:
+        raise HTTPException(404, "User not found")
+    if user.id == ctx.user_id and body.get("is_active") is False:
+        raise HTTPException(400, "Cannot deactivate yourself")
+    if "role" in body:
+        if body["role"] not in ("admin", "analyst", "auditor"):
+            raise HTTPException(400, "role must be admin|analyst|auditor")
+        user.role = UserRole(body["role"])
+    if "is_active" in body:
+        user.is_active = bool(body["is_active"])
+    if body.get("password"):
+        if len(body["password"]) < 10:
+            raise HTTPException(400, "password must be >= 10 chars")
+        user.password_hash = hash_password(body["password"])
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "user.update", user.email, body and
+                    {k: v for k, v in body.items() if k != "password"})
+    return {"id": user.id, "email": user.email, "role": user.role.value,
+            "is_active": user.is_active}
+
+
+@app.get("/api/v1/api-keys")
+async def list_api_keys(ctx: AuthContext = Depends(require_roles("analyst")),
+                        db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(
+        select(ApiKey).where(ApiKey.org_id == ctx.org_id,
+                             ApiKey.revoked.is_(False)))).scalars().all()
+    return [{"id": k.id, "name": k.name, "prefix": k.prefix,
+             "created_at": k.created_at.isoformat() if k.created_at else None,
+             "expires_at": k.expires_at.isoformat() if k.expires_at else None}
+            for k in rows]
+
+
+@app.post("/api/v1/api-keys")
+async def create_api_key(body: dict,
+                         ctx: AuthContext = Depends(require_roles("admin")),
+                         db: AsyncSession = Depends(get_db)):
+    import uuid
+    from datetime import datetime, timedelta
+    name = (body.get("name") or "").strip() or "siem-integration"
+    raw, digest, prefix = generate_api_key()
+    expires_at = None
+    if body.get("expires_days"):
+        expires_at = datetime.utcnow() + timedelta(days=int(body["expires_days"]))
+    db.add(ApiKey(id="key-" + uuid.uuid4().hex[:12], org_id=ctx.org_id,
+                  user_id=ctx.user_id, name=name, key_hash=digest,
+                  prefix=prefix, expires_at=expires_at))
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "apikey.create", name,
+                    {"prefix": prefix})
+    # raw key is returned ONCE — only the hash is stored
+    return {"raw_key": raw, "prefix": prefix,
+            "warning": "Store this key now; it cannot be retrieved again"}
+
+
+@app.delete("/api/v1/api-keys/{key_id}")
+async def revoke_api_key(key_id: str,
+                         ctx: AuthContext = Depends(require_roles("admin")),
+                         db: AsyncSession = Depends(get_db)):
+    key = await db.get(ApiKey, key_id)
+    if key is None or key.org_id != ctx.org_id:
+        raise HTTPException(404, "API key not found")
+    key.revoked = True
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "apikey.revoke", key.name,
+                    {"prefix": key.prefix})
+    return {"status": "revoked", "prefix": key.prefix}
+
+
+@app.get("/api/v1/audit")
+async def list_audit(limit: int = Query(100, ge=1, le=500),
+                     action: str | None = Query(None),
+                     ctx: AuthContext = Depends(get_current_user),
+                     db: AsyncSession = Depends(get_db)):
+    if ctx.role not in ("admin", "auditor"):
+        raise HTTPException(403, "Admins and auditors only")
+    q = select(AuditLog).where(AuditLog.org_id == ctx.org_id)
+    if action:
+        q = q.where(AuditLog.action == action)
+    q = q.order_by(AuditLog.id.desc()).limit(limit)
+    rows = (await db.execute(q)).scalars().all()
+    return [{"id": r.id, "actor": r.actor, "action": r.action,
+             "resource": r.resource, "detail": r.detail,
+             "created_at": r.created_at.isoformat() if r.created_at else None}
+            for r in rows]
+
+
 @app.get("/metrics")
 async def metrics():
     """Prometheus metrics endpoint (merges gossip from workers)."""

@@ -152,15 +152,14 @@ function ExportButtons({ id }: { id: string }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {formats.map(({ fmt, label }) => (
-        <a
+        <button
           key={fmt}
-          href={api.reportUrl(id, fmt)}
-          target="_blank"
-          rel="noreferrer"
+          title="Download (authenticated)"
+          onClick={() => api.downloadReport(id, fmt).catch(() => window.open(api.reportUrl(id, fmt), '_blank'))}
           className="rounded border border-base-600 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-base-300 hover:border-accent/50 hover:text-accent transition-colors"
         >
           {label}
-        </a>
+        </button>
       ))}
       <button
         onClick={() => {

@@ -63,6 +63,17 @@ export function useJobStatus(jobId: string, enabled: boolean) {
   })
 }
 
+/** Current session user (role drives UI gating). */
+export function useMe(enabled = true) {
+  return useQuery({
+    queryKey: ['me'],
+    queryFn: () => api.me(),
+    enabled,
+    staleTime: 60_000,
+    retry: false,
+  })
+}
+
 /** Upload a PCAP and await completion. Invalidates the analyses list on success. */
 export function useUpload() {
   const qc = useQueryClient()

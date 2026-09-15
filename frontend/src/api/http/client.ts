@@ -322,6 +322,10 @@ export const httpClient: ApiClient = {
     return get<{ id: string; email: string; role: 'admin' | 'analyst' | 'auditor'; org_id: string }>('/auth/me')
   },
 
+  async getAgents() {
+    return get<{ agents: { agent_id: string; mode: string; iface: string; online: boolean; age_seconds: number; stats?: Record<string, number> }[] }>('/agents')
+  },
+
   logout() {
     localStorage.removeItem(TOKEN_KEY)
   },

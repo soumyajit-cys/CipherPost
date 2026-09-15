@@ -193,6 +193,11 @@ export const mockClient: ApiClient = {
   authToken() {
     return 'mock-token'
   },
+
+  async getAgents() {
+    await simulateLatency()
+    return { agents: [{ agent_id: 'demo/lo', mode: 'replay', iface: 'lo', online: true, age_seconds: 3, stats: { packets_seen: 1284 } }] }
+  },
 }
 
 export interface FleetShape {

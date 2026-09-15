@@ -410,15 +410,17 @@ async def list_findings(
     return [{"id": f.id, "session_id": f.session_id, "rule_id": f.rule_id, "severity": f.severity.value, "title": f.title, "description": f.description} for f in rows]
 
 @app.get("/api/v1/alerts")
-async def list_alerts(limit: int = Query(50, ge=1, le=200), db: AsyncSession = Depends(get_db)):
+async def list_alerts(limit: int = Query(50, ge=1, le=200),
+                      ctx: AuthContext = Depends(get_current_user),
+                      db: AsyncSession = Depends(get_db)):
     try:
-        rows = (await db.execute(text("SELECT id, severity, title, five_tuple, payload FROM alerts ORDER BY ts DESC LIMIT :lim"), {"lim": limit})).all()
+        rows = (await db.execute(text("SELECT id, severity, title, five_tuple, payload FROM alerts WHERE org_id = :org ORDER BY ts DESC LIMIT :lim"), {"lim": limit, "org": ctx.org_id})).all()
         return [{"id": r[0], "severity": r[1], "title": r[2], "five_tuple": r[3], "payload": r[4]} for r in rows]
     except Exception:
         return []
 
 @app.get("/api/v1/alerts/config")
-async def get_alert_config():
+async def get_alert_config(ctx: AuthContext = Depends(require_roles("analyst"))):
     from app.live.alerts import load_channels
     from pathlib import Path
     p = Path(settings.ALERT_CHANNEL_CONFIG_PATH)
@@ -431,17 +433,24 @@ async def get_alert_config():
     return {"config": cfg, "env": {"webhook": bool(settings.ALERT_WEBHOOK_URL), "slack": bool(settings.ALERT_SLACK_URL), "syslog": bool(settings.ALERT_CEF_SYSLOG_HOST)}}
 
 @app.post("/api/v1/alerts/config")
-async def set_alert_config(cfg: dict):
+async def set_alert_config(cfg: dict,
+                           ctx: AuthContext = Depends(require_roles("admin")),
+                           db: AsyncSession = Depends(get_db)):
     from app.live.alerts import save_channel_config
     save_channel_config(cfg)
+    await log_audit(db, ctx.org_id, ctx.email, "alertconfig.update", "channels",
+                    {k: ("***" if "url" in k or "token" in k else v)
+                     for k, v in cfg.items()})
     return {"status": "saved", "config": cfg}
 
 @app.get("/api/v1/fleet/trend")
-async def fleet_trend(days: int = Query(7, ge=1, le=90), db: AsyncSession = Depends(get_db)):
+async def fleet_trend(days: int = Query(7, ge=1, le=90),
+                      ctx: AuthContext = Depends(get_current_user),
+                      db: AsyncSession = Depends(get_db)):
     """Posture trend bucketed by hour from live sessions."""
     try:
         # use Session.id ordering as proxy for time if no timestamp; fallback to details->live_ts
-        rows = (await db.execute(select(Session.risk_score, Session.details))).all()
+        rows = (await db.execute(select(Session.risk_score, Session.details).where(Session.org_id == ctx.org_id))).all()
         # simple bucket: average posture per session index bucket
         scores = [r[0] for r in rows if r[0] is not None]
         if not scores:

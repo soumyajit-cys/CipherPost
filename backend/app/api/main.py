@@ -586,8 +586,10 @@ async def get_sessions(job_id: str,
 async def get_findings(
     job_id: str,
     severity: Optional[str] = Query(None),
+    ctx: AuthContext = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await _get_org_job(job_id, ctx, db)
     q = select(Finding).join(Session).where(Session.job_id == job_id)
     if severity:
         q = q.where(Finding.severity == Severity(severity))
@@ -609,7 +611,10 @@ async def get_findings(
 
 
 @app.get("/api/v1/jobs/{job_id}/shap")
-async def get_shap(job_id: str, db: AsyncSession = Depends(get_db)):
+async def get_shap(job_id: str,
+                   ctx: AuthContext = Depends(get_current_user),
+                   db: AsyncSession = Depends(get_db)):
+    await _get_org_job(job_id, ctx, db)
     q = (
         select(ShaPRow)
         .join(Session)
@@ -625,7 +630,10 @@ async def get_shap(job_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @app.get("/api/v1/jobs/{job_id}/fleet")
-async def get_fleet_summary(job_id: str, db: AsyncSession = Depends(get_db)):
+async def get_fleet_summary(job_id: str,
+                            ctx: AuthContext = Depends(get_current_user),
+                            db: AsyncSession = Depends(get_db)):
+    await _get_org_job(job_id, ctx, db)
     sessions_q = select(Session).where(Session.job_id == job_id)
     sessions = (await db.execute(sessions_q)).scalars().all()
     if not sessions:

@@ -223,6 +223,46 @@ class AlertDispatcher:
         except Exception as e:
             log.debug("alert persist failed: %s", e)
 
+    def _expiry_sweep(self):
+        """Proactive cert-expiry alerts (track 2): warn before expiry."""
+        try:
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+            from app.proactive.certs import find_expiring, mark_alerted
+            engine = create_engine(settings.DATABASE_URL_SYNC)
+            db = sessionmaker(bind=engine)()
+            try:
+                rows = find_expiring(None, settings.CERT_EXPIRY_WARN_DAYS, db)
+                fresh = [r for r in rows
+                         if not r.expiry_alerted_at or
+                         (time.time() - r.expiry_alerted_at.timestamp()) > 86400]
+                for r in fresh:
+                    try:
+                        from datetime import datetime
+                        days = (r.not_after - datetime.utcnow()).days if r.not_after else -1
+                    except Exception:
+                        days = -1
+                    self._dispatch({
+                        "rule_id": "cert-expiry-forecast",
+                        "severity": "high" if days < 0 else ("medium" if days > 7 else "high"),
+                        "title": ("Certificate already expired" if days < 0
+                                  else f"Certificate expires in {days} days"),
+                        "description": (f"{r.subject_cn} (issuer {r.issuer_cn}) "
+                                        f"expires {r.not_after}; seen {r.seen_count}x "
+                                        f"since {r.first_seen}. Rotate before expiry."),
+                        "five_tuple": "",
+                        "protocol": "",
+                        "org_id": r.org_id,
+                        "risk_score": None,
+                        "findings": [],
+                    })
+                if fresh:
+                    mark_alerted(db, [r.fingerprint for r in fresh])
+            finally:
+                db.close()
+        except Exception as e:
+            log.debug("expiry sweep skipped: %s", e)
+
     def run(self):
         log.info("alert dispatcher starting, min_severity=%s adapters=%s", settings.ALERT_MIN_SEVERITY, [a.name for a in self.adapters])
         self.gossip.start()
@@ -231,7 +271,11 @@ class AlertDispatcher:
                 signal.signal(sig, self._signal)
             except ValueError:
                 pass
+        last_expiry = 0.0
         while not self._stop.is_set():
+            if time.time() - last_expiry > settings.CERT_EXPIRY_CHECK_INTERVAL_SECONDS:
+                last_expiry = time.time()
+                self._expiry_sweep()
             items = self.consumer.poll(timeout_ms=800)
             if not items:
                 continue

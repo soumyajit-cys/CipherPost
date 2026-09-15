@@ -118,6 +118,8 @@ export default function LivePage() {
         </div>
       </div>
 
+      <AgentsStrip />
+
       <div className="grid gap-3 sm:grid-cols-3">
         <Panel padded={false} className="overflow-hidden">
           <div className="p-3">

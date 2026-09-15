@@ -101,9 +101,14 @@ async def _seed_auth():
                     severity TEXT,
                     title TEXT,
                     five_tuple TEXT,
-                    payload JSONB
+                    payload JSONB,
+                    org_id TEXT
                 )
             """))
+            try:
+                await conn.execute(text("ALTER TABLE alerts ADD COLUMN IF NOT EXISTS org_id TEXT"))
+            except Exception:
+                pass
             await conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS baseline_features (
                     id SERIAL PRIMARY KEY,

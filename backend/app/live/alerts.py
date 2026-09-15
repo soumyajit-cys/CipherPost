@@ -170,6 +170,7 @@ class AlertDispatcher:
             "rule_id": finding.get("rule_id") or (finding.get("findings", [{}])[0].get("rule_id") if finding.get("findings") else ""),
             "risk_score": finding.get("risk_score"),
             "findings": finding.get("findings", []),
+            "org_id": finding.get("org_id"),
         }
         ok_any = False
         start = time.time()
@@ -207,11 +208,17 @@ class AlertDispatcher:
                         severity TEXT,
                         title TEXT,
                         five_tuple TEXT,
-                        payload JSONB
+                        payload JSONB,
+                        org_id TEXT
                     )
                 """))
-                conn.execute(text("INSERT INTO alerts (id, severity, title, five_tuple, payload) VALUES (:id,:sev,:title,:ft,:payload) ON CONFLICT DO NOTHING"),
-                             {"id": alert["id"], "sev": alert["severity"], "title": alert["title"], "ft": alert["five_tuple"], "payload": json.dumps(alert)})
+                # idempotent column add for pre-existing tables
+                try:
+                    conn.execute(text("ALTER TABLE alerts ADD COLUMN IF NOT EXISTS org_id TEXT"))
+                except Exception:
+                    pass
+                conn.execute(text("INSERT INTO alerts (id, severity, title, five_tuple, payload, org_id) VALUES (:id,:sev,:title,:ft,:payload,:org) ON CONFLICT DO NOTHING"),
+                             {"id": alert["id"], "sev": alert["severity"], "title": alert["title"], "ft": alert["five_tuple"], "payload": json.dumps(alert), "org": alert.get("org_id")})
                 conn.commit()
         except Exception as e:
             log.debug("alert persist failed: %s", e)

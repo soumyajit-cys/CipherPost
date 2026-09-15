@@ -90,6 +90,79 @@ class RollingBaseline:
             self._trained = True
             self._last_refit = time.time()
 
+def compute_drift(reference: np.ndarray, recent: np.ndarray,
+                  feature_names: list[str], z_threshold: float = 3.0) -> dict:
+    """Compare recent-window feature means vs a reference window.
+
+    Returns per-feature standardized shifts plus an overall verdict. A drift
+    verdict means *either* a real network change (new mail cluster, TLS
+    policy rollout) *or* a data-quality problem (parser regression, clock
+    skew) — both worth operator attention, hence an ops-level signal, not a
+    user-facing finding. Pure function over arrays: unit-testable.
+    """
+    import math
+    out = {"features": [], "drifted": [], "verdict": "ok"}
+    if reference.shape[0] < 5 or recent.shape[0] < 5:
+        out["verdict"] = "insufficient-data"
+        return out
+    ref_mean = reference.mean(axis=0)
+    pooled_std = np.sqrt((reference.var(axis=0) + recent.var(axis=0)) / 2.0)
+    rec_mean = recent.mean(axis=0)
+    for i, name in enumerate(feature_names):
+        std = float(pooled_std[i]) if i < len(pooled_std) else 0.0
+        shift = float(rec_mean[i] - ref_mean[i]) if i < len(rec_mean) else 0.0
+        z = shift / std if std > 1e-9 else 0.0
+        flagged = abs(z) >= z_threshold and abs(shift) > 1e-9
+        out["features"].append({"feature": name, "ref_mean": float(ref_mean[i]),
+                                "recent_mean": float(rec_mean[i]),
+                                "z": round(z, 3), "drifted": bool(flagged)})
+        if flagged:
+            out["drifted"].append(name)
+    # verdict needs several features to move (single-feature moves are usually
+    # policy rollouts, e.g. one cipher disabled fleet-wide)
+    min_features = int(getattr(settings, "DRIFT_MIN_FEATURES", 3))
+    out["verdict"] = "drift" if len(out["drifted"]) >= min_features else "ok"
+    return out
+
+
+def drift_from_db(hours_recent: int = 24, days_reference: int = 6) -> dict:
+    """Load windows from baseline_features and run compute_drift."""
+    from sqlalchemy import create_engine, text
+    from datetime import timedelta
+    try:
+        engine = create_engine(settings.DATABASE_URL_SYNC)
+        now = datetime.utcnow()
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("SELECT 1 FROM baseline_features LIMIT 1")).fetchall()
+            except Exception:
+                return {"verdict": "no-data", "features": [], "drifted": []}
+            import json as _json
+
+            def load(since, until=None):
+                q = "SELECT features FROM baseline_features WHERE ts >= :since"
+                params = {"since": since}
+                if until is not None:
+                    q += " AND ts < :until"
+                    params["until"] = until
+                q += " ORDER BY ts DESC LIMIT 5000"
+                rows = conn.execute(text(q), params).fetchall()
+                vecs = []
+                for (feat,) in rows:
+                    if isinstance(feat, str):
+                        feat = _json.loads(feat)
+                    vecs.append([float((feat or {}).get(n, 0)) for n in FEATURE_NAMES])
+                return np.array(vecs, dtype=np.float32) if vecs else np.zeros((0, len(FEATURE_NAMES)), dtype=np.float32)
+
+            recent = load(now - timedelta(hours=hours_recent))
+            reference = load(now - timedelta(days=days_reference),
+                             now - timedelta(hours=hours_recent))
+            return compute_drift(reference, recent, FEATURE_NAMES,
+                                 float(getattr(settings, "DRIFT_Z_THRESHOLD", 3.0)))
+    except Exception as e:
+        log.debug("drift check skipped: %s", e)
+        return {"verdict": "error", "features": [], "drifted": [], "error": str(e)[:200]}
+
     def score(self, sa):
         # ensure scorer trained (lazy)
         if not getattr(self.scorer, "_trained", False):

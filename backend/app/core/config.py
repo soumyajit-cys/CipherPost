@@ -102,6 +102,10 @@ class Settings(BaseSettings):
     FLEET_BASELINE_REFIT_EVERY: int = 200      # session count between refits
     FLEET_ANOMALY_CONTAMINATION: float = 0.1
 
+    # --- ML maturity (track 5) --------------------------------------------------
+    DRIFT_Z_THRESHOLD: float = 3.0
+    DRIFT_MIN_FEATURES: int = 3
+
     class Config:
         env_prefix = "CIPHERPOST_"
         env_file = ".env"

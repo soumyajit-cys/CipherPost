@@ -192,6 +192,7 @@ export const httpClient: ApiClient = {
         reference: f.reference,
         kind: f.kind as never,
         evidence: f.evidence,
+        compliance: f.compliance ?? null,
         session: { fiveTuple: sess?.five_tuple ?? '', protocol: sess?.protocol ?? '' },
       }
     })

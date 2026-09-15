@@ -32,6 +32,46 @@ async def get_db() -> AsyncSession:
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await _seed_auth()
+
+
+async def _seed_auth():
+    """Create default org + bootstrap admin on first boot (idempotent).
+
+    Production MUST override CIPHERPOST_ADMIN_PASSWORD and CIPHERPOST_JWT_SECRET.
+    """
+    import logging
+    import uuid
+    log = logging.getLogger("cipherpost.auth.seed")
+    try:
+        from app.models.entities import Organization, User, UserRole
+        from app.core.auth import hash_password
+        async with async_session() as session:
+            from sqlalchemy import select
+            org = (await session.execute(
+                select(Organization).where(
+                    Organization.name == settings.DEFAULT_ORG_NAME))).scalars().first()
+            if org is None:
+                org = Organization(id="org-" + uuid.uuid4().hex[:12],
+                                   name=settings.DEFAULT_ORG_NAME)
+                session.add(org)
+                await session.commit()
+            admin = (await session.execute(
+                select(User).where(User.email == settings.ADMIN_EMAIL))).scalars().first()
+            if admin is None:
+                session.add(User(
+                    id="user-" + uuid.uuid4().hex[:12],
+                    org_id=org.id, email=settings.ADMIN_EMAIL,
+                    password_hash=hash_password(settings.ADMIN_PASSWORD),
+                    role=UserRole.ADMIN, is_active=True,
+                ))
+                await session.commit()
+                log.warning("bootstrap admin created (%s) — change the password immediately",
+                            settings.ADMIN_EMAIL)
+        if (settings.JWT_SECRET or "") in ("", "change-me-in-production"):
+            log.warning("CIPHERPOST_JWT_SECRET is not set — tokens use a dev-only secret")
+    except Exception as e:
+        logging.getLogger("cipherpost.auth.seed").warning("auth seed skipped: %s", e)
         # live tables (alerts, baseline) created lazily; ensure here too for fresh DBs
         try:
             from sqlalchemy import text

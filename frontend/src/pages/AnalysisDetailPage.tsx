@@ -307,6 +307,11 @@ function FindingsList({ findings }: { findings: Finding[] }) {
                     </span>
                     {f.reference && <span className="font-mono text-accent/80">{f.reference}</span>}
                     {f.kind !== 'rule' && <span className="rounded bg-base-700 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-base-200">{f.kind}</span>}
+                    {(f.compliance ?? []).slice(0, 4).map((c, i) => (
+                      <span key={i} title={`${c.framework_title} — ${c.note}`} className="rounded border border-base-600 px-1.5 py-0.5 font-mono text-[10px] text-base-400">
+                        {c.framework} {c.control}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>

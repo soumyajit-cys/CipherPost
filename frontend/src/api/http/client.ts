@@ -85,6 +85,7 @@ interface BackendFinding {
   reference: string
   kind: string
   evidence: Record<string, unknown> | null
+  compliance?: { framework: string; control: string; framework_title: string; note: string; url: string }[] | null
 }
 interface BackendShap {
   session_id: string

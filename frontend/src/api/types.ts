@@ -25,6 +25,14 @@ export interface AnalysisSummary {
   maxSeverity: SeverityLabel | null
 }
 
+export interface ComplianceTag {
+  framework: string
+  control: string
+  framework_title: string
+  note: string
+  url: string
+}
+
 export interface Finding {
   id: number
   sessionId: string
@@ -37,6 +45,7 @@ export interface Finding {
   kind: 'rule' | 'ml' | 'anomaly'
   evidence: Record<string, unknown> | null
   session: { fiveTuple: string; protocol: string }
+  compliance?: ComplianceTag[] | null
 }
 
 export interface SessionSummary {

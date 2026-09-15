@@ -16,9 +16,14 @@ data/blobs/
 data/models/
 backend/data/
 
-# Env & secrets
+# Env & secrets — NEVER commit real secrets (track 6).
+# .env was historically tracked; it is now ignored. Copy .env.example.
+.env
 .env.local
 .env.prod
+k8s/secret.local.yaml
+*.pem
+!tests/fixtures/*.pem
 
 # OS
 .DS_Store

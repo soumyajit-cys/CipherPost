@@ -1,3 +1,4 @@
+import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
@@ -21,19 +22,37 @@ const queryClient = new QueryClient({
   },
 })
 
+function RequireAuth({ children }: { children: JSX.Element }) {
+  const [state, setState] = React.useState<'checking' | 'ok' | 'denied'>(
+    API_MODE === 'mock' ? 'ok' : api.authToken() ? 'checking' : 'denied',
+  )
+  React.useEffect(() => {
+    if (API_MODE === 'mock' || state !== 'checking') return
+    api.me().then(() => setState('ok')).catch(() => setState('denied'))
+  }, [state])
+  if (state === 'checking') {
+    return <AppShell><div className="py-10 text-center text-sm text-base-400">Checking session…</div></AppShell>
+  }
+  if (state === 'denied') return <Navigate to="/app/login" replace />
+  return children
+}
+
 function DashboardRoutes() {
   return (
-    <AppShell>
-      <Routes>
-        <Route path="/" element={<AnalysisListPage />} />
-        <Route path="/live" element={<LivePage />} />
-        <Route path="/upload" element={<UploadPage />} />
-        <Route path="/fleet" element={<FleetOverviewPage />} />
-        <Route path="/analyses/:id" element={<AnalysisDetailPage />} />
-        <Route path="/analyses/:id/sessions/:sessionId" element={<SessionDrilldownPage />} />
-        <Route path="*" element={<AnalysisListPage />} />
-      </Routes>
-    </AppShell>
+    <RequireAuth>
+      <AppShell>
+        <Routes>
+          <Route path="/" element={<AnalysisListPage />} />
+          <Route path="/live" element={<LivePage />} />
+          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/fleet" element={<FleetOverviewPage />} />
+          <Route path="/analyses/:id" element={<AnalysisDetailPage />} />
+          <Route path="/analyses/:id/sessions/:sessionId" element={<SessionDrilldownPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<AnalysisListPage />} />
+        </Routes>
+      </AppShell>
+    </RequireAuth>
   )
 }
 

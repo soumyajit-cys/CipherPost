@@ -71,6 +71,11 @@ class Settings(BaseSettings):
     ALERT_EMAIL_TO: str = ""
     ALERT_CHANNEL_CONFIG_PATH: Path = Path("/data/alert_channels.json")
 
+    # --- capture agents (track 3) ---------------------------------------------
+    AGENT_ID: str = ""  # default: <hostname>/<iface>
+    AGENT_HEARTBEAT_SECONDS: float = 10.0
+    AGENT_TTL_SECONDS: float = 30.0
+
     # --- proactive detection (track 2) ----------------------------------------
     CERT_EXPIRY_WARN_DAYS: int = 30  # forecast horizon for expiry alerts
     CERT_EXPIRY_CHECK_INTERVAL_SECONDS: int = 900  # alerter sweep cadence

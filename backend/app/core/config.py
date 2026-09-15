@@ -71,6 +71,11 @@ class Settings(BaseSettings):
     ALERT_EMAIL_TO: str = ""
     ALERT_CHANNEL_CONFIG_PATH: Path = Path("/data/alert_channels.json")
 
+    # --- proactive detection (track 2) ----------------------------------------
+    CERT_EXPIRY_WARN_DAYS: int = 30  # forecast horizon for expiry alerts
+    CERT_EXPIRY_CHECK_INTERVAL_SECONDS: int = 900  # alerter sweep cadence
+    DNS_RESOLVER: Optional[str] = None  # e.g. "8.8.8.8"; unset = MTA-STS/DANE stay stubbed
+
     # --- rolling fleet baseline (stage 4) --------------------------------------
     FLEET_BASELINE_WINDOW_DAYS: int = 7
     FLEET_BASELINE_MIN_SAMPLES: int = 20

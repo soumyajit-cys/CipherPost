@@ -131,6 +131,15 @@ class Settings(BaseSettings):
     SUPPRESSION_MAX_DAYS: int = 180
     SUPPRESSION_EXPIRING_SOON_DAYS: int = 14
 
+    # --- data lifecycle (phase 2 task 4, days; 0 = keep forever) -------------
+    RETENTION_RAW_DAYS: int = 7  # raw capture files also bounded by RAW_RETENTION_SECONDS
+    RETENTION_SESSIONS_DAYS: int = 90
+    RETENTION_FINDINGS_DAYS: int = 90
+    RETENTION_ALERTS_DAYS: int = 180
+    RETENTION_AUDIT_DAYS: int = 365  # audit log defaults to longest
+    RETENTION_BATCH_SIZE: int = 1000
+    RETENTION_INTERVAL_SECONDS: int = 3600
+
     class Config:
         env_prefix = "CIPHERPOST_"
         env_file = ".env"

@@ -90,6 +90,8 @@ def process_analysis_job(self, job_id: str):
             import uuid as _uuid
 
             sess_id = _uuid.uuid4().hex[:64]
+            from datetime import datetime, timezone
+            _now = datetime.now(timezone.utc)
             sess = SessionModel(
                 id=sess_id, job_id=job_id,
                 protocol=sa.protocol, five_tuple=sa.five_tuple,
@@ -116,6 +118,7 @@ def process_analysis_job(self, job_id: str):
                         default=None
                     ) if sa.findings else None
                 ),
+                created_at=_now,
             )
             Session.add(sess)
 
@@ -126,6 +129,7 @@ def process_analysis_job(self, job_id: str):
                     severity=Severity(f.severity), title=f.title,
                     description=f.description, reference=f.reference,
                     kind=f.kind, evidence=f.evidence or {},
+                    created_at=_now,
                 ))
 
             for c in sr.shap_contributions:

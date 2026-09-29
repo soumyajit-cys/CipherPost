@@ -137,6 +137,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.worker
+    user: "10001:10001"
     command: ["python", "-m", "app.live.analyze"]
     environment:
       CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost

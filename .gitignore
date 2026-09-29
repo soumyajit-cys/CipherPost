@@ -8,6 +8,8 @@ __pycache__/
 # Node
 node_modules/
 frontend/dist/
+*.tsbuildinfo
+frontend/vite.config.d.ts
 
 # Runtime data
 data/uploads/

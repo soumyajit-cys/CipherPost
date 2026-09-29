@@ -14,7 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from app.core.config import settings
@@ -41,7 +41,7 @@ def record_training(n_samples: int, feature_names: list[str],
                     params: dict | None = None, metrics: dict | None = None) -> str:
     """Persist a training record; return the new model version."""
     version = f"{BASE_VERSION}-{n_samples}-{_feature_hash(list(feature_names))}"
-    entry = {"version": version, "trained_at": datetime.utcnow().isoformat(),
+    entry = {"version": version, "trained_at": datetime.now(timezone.utc).isoformat(),
              "n_samples": n_samples, "feature_names": list(feature_names),
              "params": params or {}, "metrics": metrics or {}}
     try:

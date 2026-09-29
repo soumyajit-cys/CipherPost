@@ -165,11 +165,18 @@ def save_channel_config(cfg: dict):
     p.write_text(json.dumps(cfg, indent=2))
 
 class AlertDispatcher:
-    def __init__(self, redis_client=None, adapters: list[AlertAdapter] | None = None):
+    def __init__(self, redis_client=None, adapters: list[AlertAdapter] | None = None,
+                 group_hold_seconds: float = 10.0):
+        from app.live.alert_state import RedisAlertState, GroupBuffer
         self.r = redis_client or redis.Redis.from_url(settings.REDIS_URL, decode_responses=False)
         self.adapters = adapters if adapters is not None else load_channels()
         self.gossip = Gossiper(self.r, "alerts", interval=5)
         self._stop = threading.Event()
+        self.state = RedisAlertState(self.r, settings.ALERT_DEDUP_WINDOW_SECONDS,
+                                     settings.ALERT_RATE_LIMIT_PER_MINUTE)
+        self.groups = GroupBuffer(hold_seconds=group_hold_seconds)
+        # Legacy in-memory maps kept as the Redis-unavailable fallback lives
+        # inside RedisAlertState; these remain for ticketing dedup compat.
         self._dedup: dict[str, float] = {}  # key -> last_ts
         self._rate_window: list[float] = []
         self.consumer = bus.StreamConsumer(self.r, settings.FINDINGS_STREAM, settings.ALERT_CONSUMER_GROUP, f"alerter-{uuid.uuid4().hex[:6]}")
@@ -183,16 +190,6 @@ class AlertDispatcher:
     def _should_alert(self, finding: dict) -> bool:
         sev = finding.get("max_severity") or finding.get("severity") or "info"
         if SEV_ORDER.get(sev, 0) < self.min_sev:
-            return False
-        # dedup per rule+five_tuple
-        key = f"{finding.get('rule_id','')}:{finding.get('five_tuple','')}"
-        now = time.time()
-        last = self._dedup.get(key, 0)
-        if now - last < settings.ALERT_DEDUP_WINDOW_SECONDS:
-            return False
-        # rate limit
-        self._rate_window = [t for t in self._rate_window if now - t < 60]
-        if len(self._rate_window) >= settings.ALERT_RATE_LIMIT_PER_MINUTE:
             return False
         return True
 

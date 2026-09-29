@@ -344,7 +344,7 @@ def _validate_rrsig(name: str, rrs, rrsigs, anchor) -> bool:
         keys = None
         for _ in range(5):
             try:
-                keyans = res.resolve(keyname, "DNSKEY", want_dnssec=False)
+                keyans = res.resolve(keyname, "DNSKEY")
                 keys = list(keyans)
                 break
             except Exception:

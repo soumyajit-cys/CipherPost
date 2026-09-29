@@ -8,6 +8,7 @@ const NAV = [
   { to: '/app/live', label: 'Live', end: false },
   { to: '/app/upload', label: 'New Analysis', end: false },
   { to: '/app/fleet', label: 'Fleet', end: false },
+  { to: '/app/suppressions', label: 'Suppressions', end: false },
 ]
 
 function LiveIndicator() {

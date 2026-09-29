@@ -72,8 +72,9 @@ def _b64url_decode(data: str) -> bytes:
 
 def _jwt_secret() -> bytes:
     from app.core import config as _cfgmod
-    env = (getattr(settings, "ENV", "production") or "production").strip().lower()
-    secret = getattr(settings, "JWT_SECRET", "") or ""
+    s = _cfgmod.settings
+    env = (getattr(s, "ENV", "production") or "production").strip().lower()
+    secret = getattr(s, "JWT_SECRET", "") or ""
     if env == "dev":
         # Dev only: ephemeral per-process secret + loud warning. Never use a
         # hardcoded constant that an attacker could read from the public repo.

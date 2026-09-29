@@ -50,10 +50,13 @@ export function useSse(url: string | null, enabled = true) {
       }
     }
     // listen to all event types used by backend
-    ;["sessions","findings","alerts","status","heartbeat","message"].forEach((ev) => es.addEventListener(ev, handler as any))
-    es.onmessage = handler as any
+      ;["sessions","findings","alerts","status","heartbeat","message"].forEach((ev) => es.addEventListener(ev, handler as any))
+      es.onmessage = handler as any
+    })
     return () => {
-      es.close()
+      cancelled = true
+      esRef.current?.close()
+      esRef.current = null
       setConnected(false)
     }
   }, [url, enabled])

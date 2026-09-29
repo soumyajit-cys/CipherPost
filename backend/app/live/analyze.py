@@ -184,7 +184,7 @@ class AnalysisWorker:
             sa = _analyze_session(sess, trust_store=settings.TRUSTED_CA_BUNDLE_PATH)
         except Exception as e:
             log.warning("analyze_session failed %s: %s", sess.five_tuple, e)
-            return
+            raise
         # score
         scoring = None
         try:
@@ -192,8 +192,15 @@ class AnalysisWorker:
             scoring = self.scorer.score(sa) if hasattr(self.scorer, "score") else None
         except Exception as e:
             log.debug("scoring failed: %s", e)
-        # persist
-        sess_id = self._persist(sa, scoring, raw_refs, sess.start_ts)
+        # persist (idempotent on deterministic session id)
+        sess_id, created = self._persist(
+            sa, scoring, raw_refs, sess.start_ts,
+            session_id=deterministic_session_id(sess_payload if isinstance(sess_payload, dict) else {}),
+        )
+        if not created:
+            # Redelivery: already stored, ack without republishing findings.
+            self.gossip.counters.inc("sessions_duplicate_skipped")
+            return sess_id, False
         # publish findings
         findings_payload = {
             "session_id": sess_id or sess.five_tuple,

@@ -227,6 +227,11 @@ class AnalysisWorker:
             self.gossip.counters.set("queue_depth", self.consumer.queue_depth())
         except Exception:
             pass
+        try:
+            self.gossip.counters.set("dlq_depth", self.consumer.dlq_depth())
+        except Exception:
+            pass
+        return sess_id, True
 
     def run(self):
         log.info("analysis worker starting, stream=%s group=%s", settings.SESSION_STREAM, settings.ANALYSIS_CONSUMER_GROUP)

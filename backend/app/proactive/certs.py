@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 log = logging.getLogger("cipherpost.proactive.certs")
 
@@ -27,7 +27,7 @@ def track_session_certs(sa, org_id: str | None, db) -> int:
     """
     try:
         from app.models.entities import TrackedCert
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         n = 0
         for c in (getattr(sa, "certs", None) or []):
             der = getattr(c, "der", b"") or b""
@@ -71,7 +71,7 @@ def find_expiring(org_id: str | None, within_days: int, db,
     """Certs expiring within `within_days` (or already expired)."""
     from sqlalchemy import or_
     from app.models.entities import TrackedCert
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     horizon = now + timedelta(days=within_days)
     q = db.query(TrackedCert).filter(TrackedCert.not_after.is_not(None))
     if org_id:
@@ -86,7 +86,7 @@ def find_expiring(org_id: str | None, within_days: int, db,
 def mark_alerted(db, fingerprints: list[str]) -> None:
     try:
         from app.models.entities import TrackedCert
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         for fp in fingerprints:
             row = db.get(TrackedCert, fp)
             if row is not None:

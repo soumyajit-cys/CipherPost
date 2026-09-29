@@ -30,6 +30,36 @@ jobs:
       - name: Dependency vulnerability scan
         run: pip-audit -r backend/requirements.txt
 
+  migrate-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: cipherpost
+          POSTGRES_USER: cipherpost
+          POSTGRES_PASSWORD: cipherpost
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U cipherpost"
+          --health-interval=5s --health-timeout=3s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install backend deps (pinned)
+        run: pip install -r backend/requirements.txt
+      - name: Upgrade empty Postgres to head
+        env:
+          CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@localhost:5432/cipherpost
+        run: PYTHONPATH=backend python -m app.migrate
+      - name: Check no model/migration drift
+        env:
+          CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@localhost:5432/cipherpost
+        run: PYTHONPATH=backend alembic -c backend/alembic.ini check
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

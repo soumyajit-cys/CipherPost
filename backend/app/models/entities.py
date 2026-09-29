@@ -74,6 +74,7 @@ class Session(Base):
     model_version: Mapped[str | None] = mapped_column(String(64), nullable=True)  # track 5: which model scored this
     org_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("organizations.id"), nullable=True, index=True)
     details: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     job: Mapped[AnalysisJob] = relationship(back_populates="sessions")
     findings: Mapped[list["Finding"]] = relationship(back_populates="session", cascade="all, delete-orphan")

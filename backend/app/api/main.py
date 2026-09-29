@@ -400,8 +400,8 @@ async def live_alerts(request: Request, token: str | None = Query(None),
 
 @app.get("/api/v1/live/status")
 async def live_status(ctx: AuthContext = Depends(get_current_user)):
-    """Capture stats + queue depth + recent metrics gossip."""
-    out: dict = {"capture": {}, "queues": {}, "metrics": {}}
+    """Capture stats + queue depth + DLQ depth + recent metrics gossip."""
+    out: dict = {"capture": {}, "queues": {}, "dlq": {}, "metrics": {}}
     try:
         import redis as _redis
         r = _redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)

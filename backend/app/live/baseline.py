@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 import numpy as np
 
@@ -41,7 +41,7 @@ class RollingBaseline:
         try:
             from sqlalchemy import create_engine, text
             engine = create_engine(settings.DATABASE_URL_SYNC)
-            cutoff = datetime.utcnow() - timedelta(days=settings.FLEET_BASELINE_WINDOW_DAYS)
+            cutoff = datetime.now(timezone.utc) - timedelta(days=settings.FLEET_BASELINE_WINDOW_DAYS)
             with engine.connect() as conn:
                 # baseline_features may not exist yet -> create lazily
                 conn.execute(text("""
@@ -131,7 +131,7 @@ def drift_from_db(hours_recent: int = 24, days_reference: int = 6) -> dict:
     from datetime import timedelta
     try:
         engine = create_engine(settings.DATABASE_URL_SYNC)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         with engine.connect() as conn:
             try:
                 conn.execute(text("SELECT 1 FROM baseline_features LIMIT 1")).fetchall()

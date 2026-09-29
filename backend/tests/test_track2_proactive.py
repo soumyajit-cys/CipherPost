@@ -92,9 +92,11 @@ def test_compliance_summary_groups():
 
 
 def test_mta_sts_stub_is_honest():
+    """Phase 2: real checks never guess. .invalid (RFC 2606) cannot resolve,
+    so the result must be dns-error (or not-published), never fabricated ok."""
     from app.proactive.mta_sts import check_domain, mismatch_for_session
-    r = check_domain("example.com")
-    assert r["status"] == "not-checked"
-    assert r["mta_sts"]["supported"] is False
-    assert mismatch_for_session("example.com", False) is None
+    r = check_domain("nonexistent.invalid")
+    assert r["status"] in ("dns-error", "not-published", "not-checked")
+    assert r["mta_sts"]["supported"] is True  # real implementation present
+    assert mismatch_for_session("nonexistent.invalid", False) is None
     assert check_domain("")["status"] == "invalid-domain"

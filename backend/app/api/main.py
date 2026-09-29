@@ -17,7 +17,7 @@ import os
 import uuid
 import shutil
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Query, Request
@@ -73,7 +73,7 @@ async def health():
 
 @app.post("/api/v1/auth/login")
 async def login(body: dict, request: Request, db: AsyncSession = Depends(get_db)):
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timezone
     from app.core.auth import (
         is_login_locked, record_login_failure, record_login_success,
     )
@@ -192,12 +192,12 @@ async def create_api_key(body: dict,
                          ctx: AuthContext = Depends(require_roles("admin")),
                          db: AsyncSession = Depends(get_db)):
     import uuid
-    from datetime import datetime, timedelta
+    from datetime import datetime, timezone, timedelta
     name = (body.get("name") or "").strip() or "siem-integration"
     raw, digest, prefix = generate_api_key()
     expires_at = None
     if body.get("expires_days"):
-        expires_at = datetime.utcnow() + timedelta(days=int(body["expires_days"]))
+        expires_at = datetime.now(timezone.utc) + timedelta(days=int(body["expires_days"]))
     db.add(ApiKey(id="key-" + uuid.uuid4().hex[:12], org_id=ctx.org_id,
                   user_id=ctx.user_id, name=name, key_hash=digest,
                   prefix=prefix, expires_at=expires_at))
@@ -556,19 +556,34 @@ async def certs_expiring(days: int = Query(30, ge=1, le=365),
                          ctx: AuthContext = Depends(get_current_user),
                          db: AsyncSession = Depends(get_db)):
     """Proactive expiry forecast: certs expiring within `days` (or expired)."""
-    from datetime import datetime
+    from datetime import datetime, timezone
     from app.models.entities import TrackedCert
-    horizon = datetime.utcnow() + __import__("datetime").timedelta(days=days)
+    horizon = datetime.now(timezone.utc) + __import__("datetime").timedelta(days=days)
     q = select(TrackedCert).where(TrackedCert.not_after.is_not(None),
                                   TrackedCert.not_after <= horizon)
     if ctx.org_id:
         q = q.where((TrackedCert.org_id == ctx.org_id) | (TrackedCert.org_id.is_(None)))
     rows = (await db.execute(q.order_by(TrackedCert.not_after.asc()))).scalars().all()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
+
+    def _days_remaining(na):
+        if not na:
+            return None
+        if na.tzinfo is None:
+            na = na.replace(tzinfo=timezone.utc)
+        return (na - now).days
+
+    def _is_expired(na):
+        if not na:
+            return False
+        if na.tzinfo is None:
+            na = na.replace(tzinfo=timezone.utc)
+        return na < now
+
     return [{"fingerprint": r.fingerprint[:16] + "…", "subject_cn": r.subject_cn,
              "not_after": r.not_after.isoformat() if r.not_after else None,
-             "days_remaining": (r.not_after - now).days if r.not_after else None,
-             "expired": bool(r.not_after and r.not_after < now),
+             "days_remaining": _days_remaining(r.not_after),
+             "expired": _is_expired(r.not_after),
              "seen_count": r.seen_count}
             for r in rows]
 

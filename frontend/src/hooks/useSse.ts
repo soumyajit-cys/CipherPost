@@ -41,15 +41,15 @@ export function useSse(url: string | null, enabled = true) {
       esRef.current = es
       es.onopen = () => setConnected(true)
       es.onerror = () => setConnected(false)
-    const handler = (e: MessageEvent) => {
-      try {
-        const data = JSON.parse(e.data)
-        setEvents((prev) => [{ event: e.type || data.event || 'message', data: data.data ?? data, ts: Date.now() }, ...prev].slice(0, 200))
-      } catch {
-        setEvents((prev) => [{ event: e.type, data: e.data, ts: Date.now() }, ...prev].slice(0, 200))
+      const handler = (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data)
+          setEvents((prev) => [{ event: e.type || data.event || 'message', data: data.data ?? data, ts: Date.now() }, ...prev].slice(0, 200))
+        } catch {
+          setEvents((prev) => [{ event: e.type, data: e.data, ts: Date.now() }, ...prev].slice(0, 200))
+        }
       }
-    }
-    // listen to all event types used by backend
+      // listen to all event types used by backend
       ;["sessions","findings","alerts","status","heartbeat","message"].forEach((ev) => es.addEventListener(ev, handler as any))
       es.onmessage = handler as any
     })

@@ -738,18 +738,33 @@ async def certs_expiring(days: int = Query(30, ge=1, le=365),
 
 @app.get("/api/v1/compliance/summary")
 async def compliance_summary(framework: str | None = Query(None),
+                             include_suppressed: bool = Query(False),
                              ctx: AuthContext = Depends(get_current_user),
                              db: AsyncSession = Depends(get_db)):
-    """Findings grouped by compliance control (track 2)."""
+    """Findings grouped by compliance control (track 2).
+
+    Suppressed findings are excluded by default and counted separately as
+    "accepted risk" (pass include_suppressed=true to include them normally).
+    """
     from app.proactive.compliance import summary_for_findings, FRAMEWORKS
     if framework and framework not in FRAMEWORKS:
         raise HTTPException(400, f"Unknown framework. Choose from {sorted(FRAMEWORKS)}")
-    q = select(Finding.rule_id, Finding.severity).join(
+    q = select(Finding.rule_id, Finding.severity, Session.five_tuple).join(
         Session, Finding.session_id == Session.id).where(Session.org_id == ctx.org_id)
     rows = (await db.execute(q)).all()
-    return summary_for_findings(
-        [{"rule_id": r[0], "severity": r[1].value if hasattr(r[1], "value") else str(r[1])}
-         for r in rows], framework)
+    from app.proactive.suppressions import match_suppression
+    sups = await _active_suppressions(db, ctx.org_id)
+    live, accepted = [], 0
+    for rule_id, sev, ft in rows:
+        m = match_suppression(rule_id, {"five_tuple": ft or ""}, sups)
+        if m is not None and not include_suppressed:
+            accepted += 1
+            continue
+        live.append({"rule_id": rule_id,
+                     "severity": sev.value if hasattr(sev, "value") else str(sev)})
+    out = summary_for_findings(live, framework)
+    out["suppressed_accepted_risk"] = accepted
+    return out
 
 
 @app.get("/api/v1/domains/{domain}/transport-security")

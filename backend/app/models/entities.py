@@ -80,7 +80,9 @@ class Session(Base):
     findings: Mapped[list["Finding"]] = relationship(back_populates="session", cascade="all, delete-orphan")
     shaps: Mapped[list["ShaPRow"]] = relationship(back_populates="session", cascade="all, delete-orphan")
 
-    __table_args__ = (Index("ix_session_job", "job_id"),)
+    __table_args__ = (Index("ix_session_job", "job_id"),
+                      Index("ix_sessions_created_at", "created_at"),
+                      Index("ix_sessions_org_created", "org_id", "created_at"))
 
 
 class Finding(Base):

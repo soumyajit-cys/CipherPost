@@ -61,6 +61,10 @@ async def _seed_auth():
             admin = (await session.execute(
                 select(User).where(User.email == settings.ADMIN_EMAIL))).scalars().first()
             if admin is None:
+                # Re-validate here so a misconfigured process cannot bootstrap
+                # a default-password admin even if init_db check was bypassed.
+                from app.core.config import validate_startup_secrets
+                validate_startup_secrets()
                 session.add(User(
                     id="user-" + uuid.uuid4().hex[:12],
                     org_id=org.id, email=settings.ADMIN_EMAIL,
@@ -70,8 +74,8 @@ async def _seed_auth():
                 await session.commit()
                 log.warning("bootstrap admin created (%s) — change the password immediately",
                             settings.ADMIN_EMAIL)
-        if (settings.JWT_SECRET or "") in ("", "change-me-in-production"):
-            log.warning("CIPHERPOST_JWT_SECRET is not set — tokens use a dev-only secret")
+        # Weak-secret warnings are now enforced at startup (validate_startup_secrets);
+        # dev mode logs its ephemeral-secret warning from auth._jwt_secret.
         # Backfill pre-auth rows into the default org so tenant scoping is total.
         try:
             from sqlalchemy import text as _text

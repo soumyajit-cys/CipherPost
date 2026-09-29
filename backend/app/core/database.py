@@ -30,6 +30,8 @@ async def get_db() -> AsyncSession:
 
 
 async def init_db():
+    from app.core.config import validate_startup_secrets
+    validate_startup_secrets()  # refuse to start in production with weak secrets
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await _seed_auth()

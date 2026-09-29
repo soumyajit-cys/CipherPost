@@ -138,6 +138,50 @@ def test_unsigned_tlsa_is_insecure_never_dane(monkeypatch):
         fake.stop()
 
 
+def test_signed_tlsa_validates_secure_with_anchor(monkeypatch):
+    import datetime
+    import dns.dnssec
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from app.core import config as cfg
+
+    # Zone key for signed.test.
+    priv = ec.generate_private_key(ec.SECP256R1())
+    dnskey = dns.dnssec.make_dnskey(priv.public_key(), "ECDSAP256SHA256",
+                                    flags=int(dns.dnssec.Flag.ZONE) | int(dns.dnssec.Flag.SEP))
+    keyname = dns.name.from_text("signed.test")
+    tlsa_owner = dns.name.from_text("_25._tcp.mx1.signed.test")
+    tlsa = dns.rrset.from_text("_25._tcp.mx1.signed.test.", 60, "IN", "TLSA",
+                               "3 1 1 8a9a70596b7a04efa01acc0d13f14147444d1b9b7f39a0c3f6a5c96381a87e")
+    now = datetime.datetime.now(datetime.timezone.utc)
+    sig = dns.dnssec.sign(
+        tlsa, priv, keyname, dnskey,
+        inception=now - datetime.timedelta(hours=1),
+        expiration=now + datetime.timedelta(days=1))
+    sigset = dns.rrset.from_rdata(tlsa_owner, 60, [sig])
+
+    fake = FakeDNS().start()
+    fake.add("mx1.signed.test", "A", "93.184.216.34")
+    fake.add("signed.test", "MX", "10 mx1.signed.test.")
+    fake.zones[("_25._tcp.mx1.signed.test", "TLSA")] = [tlsa, sigset]
+    fake.zones[("signed.test", "DNSKEY")] = [
+        dns.rrset.from_rdata(keyname, 60, [dnskey])]
+    old_anchor = cfg.settings.DNSSEC_TRUST_ANCHOR
+    import dns.rdata
+    cfg.settings.DNSSEC_TRUST_ANCHOR = base64.b64encode(dnskey.to_wire()).decode()
+    try:
+        _patch_resolver_port(monkeypatch, fake)
+        import app.proactive.mta_sts as m
+        res = m._fetch_tlsa("mx1.signed.test")
+        assert res["dnssec"] == "secure", res
+        # Wrong anchor -> cannot establish trust.
+        cfg.settings.DNSSEC_TRUST_ANCHOR = base64.b64encode(b"\x00" * 32).decode()
+        res2 = m._fetch_tlsa("mx1.signed.test")
+        assert res2["dnssec"] in ("dnssec-failed", "bogus"), res2
+    finally:
+        cfg.settings.DNSSEC_TRUST_ANCHOR = old_anchor
+        fake.stop()
+
+
 def test_ssrf_guards():
     import app.proactive.mta_sts as m
     import pytest

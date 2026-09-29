@@ -246,4 +246,10 @@ export interface ApiClient {
   uploadPcap(file: File, onProgress?: (pct: number) => void): Promise<{ jobId: string }>
   /** Report download URL for a given format. */
   reportUrl(id: string, format: 'json' | 'html' | 'pdf'): string
+  /** Accepted-risk suppressions. */
+  listSuppressions?(status?: string): Promise<Suppression[]>
+  createSuppression?(body: { rule_id: string; scope?: Record<string, unknown>; reason: string; expires_days?: number }): Promise<Suppression>
+  updateSuppression?(id: number, body: Partial<Suppression>): Promise<Suppression>
+  deleteSuppression?(id: number): Promise<void>
+  suppressionsExpiring?(days?: number): Promise<Suppression[]>
 }

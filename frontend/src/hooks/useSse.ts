@@ -2,6 +2,24 @@ import { useEffect, useRef, useState } from 'react'
 
 export type SseEvent = { event: string; data: any; ts?: number }
 
+const BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? '/api/v1'
+
+async function fetchSseTicket(): Promise<string | null> {
+  try {
+    const t = localStorage.getItem('cipherpost_token')
+    if (!t) return null
+    const res = await fetch(`${BASE}/live/ticket`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${t}` },
+    })
+    if (!res.ok) return null
+    const body = (await res.json()) as { ticket?: string }
+    return body.ticket ?? null
+  } catch {
+    return null
+  }
+}
+
 export function useSse(url: string | null, enabled = true) {
   const [events, setEvents] = useState<SseEvent[]>([])
   const [connected, setConnected] = useState(false)

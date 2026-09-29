@@ -62,7 +62,35 @@ async def on_startup():
 
 @app.get("/api/v1/health")
 async def health():
+    """Health reflecting real state: DB, Redis, lag, DLQ, drops, migrations.
+
+    status is ok/degraded/down. Cheap enough for load balancers (2s caps).
+    """
+    from app.live.health import collect_health
+    try:
+        return await collect_health()
+    except Exception as e:
+        return {"status": "down", "version": settings.APP_VERSION, "error": str(e)[:200]}
+
+
+@app.get("/api/v1/health/live")
+async def health_live():
+    """Kubernetes liveness: the process is alive (no dependency checks)."""
     return {"status": "ok", "version": settings.APP_VERSION}
+
+
+@app.get("/api/v1/health/ready")
+async def health_ready():
+    """Kubernetes readiness: DB + Redis + migrations at head."""
+    from app.live.health import readiness
+    try:
+        ready, detail = await readiness()
+        if not ready:
+            return JSONResponse({"status": "not-ready", **detail}, status_code=503)
+        return {"status": "ready", **detail}
+    except Exception as e:
+        return JSONResponse({"status": "not-ready", "error": str(e)[:200]},
+                            status_code=503)
 
 
 # --- auth / users / api keys / audit (track 1) -------------------------------

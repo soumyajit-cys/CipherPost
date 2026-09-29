@@ -392,13 +392,21 @@ class AlertDispatcher:
                     self.consumer.ack(entry_id)
                     _bus.clear_attempts(self.r, self.consumer.stream, entry_id)
                     return
-                self._dispatch(finding)
             else:
                 if not self._should_alert(finding):
                     self.consumer.ack(entry_id)
                     _bus.clear_attempts(self.r, self.consumer.stream, entry_id)
                     return
-                self._dispatch(finding)
+            # Group by root cause; dispatch any groups whose hold expired.
+            self.groups.add(finding)
+            for grouped in self.groups.flush_expired():
+                merged = dict(finding)
+                merged.update({k: grouped[k] for k in (
+                    "rule_id", "severity", "title", "description", "protocol",
+                    "org_id", "risk_score", "occurrence_count",
+                    "first_seen", "last_seen") if k in grouped})
+                merged["server"] = grouped.get("server")
+                self._dispatch(merged)
         except Exception as e:
             attempts = _bus.note_attempt(self.r, self.consumer.stream, entry_id)
             if attempts >= settings.STREAM_MAX_ATTEMPTS:
@@ -431,6 +439,12 @@ class AlertDispatcher:
                 last_expiry = time.time()
                 self._expiry_sweep()
             items = self.consumer.poll_raw(timeout_ms=800)
+            # Flush grouped alerts whose hold window expired, even on idle polls.
+            try:
+                for grouped in self.groups.flush_expired():
+                    self._dispatch(grouped)
+            except Exception as e:
+                log.debug("group flush failed: %s", e)
             if not items:
                 for eid, payload in self.consumer.reclaim():
                     if self._stop.is_set():

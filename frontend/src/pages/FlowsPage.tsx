@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { api } from '@/api'
 import { Panel, LoadingState, ErrorState, EmptyState } from '@/components/ui/State'
 
 interface Flow {

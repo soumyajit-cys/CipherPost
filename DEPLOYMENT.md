@@ -5,16 +5,27 @@ Three supported shapes, in order of operational weight.
 ## Shape A — Single host, docker-compose (demo / small deployment)
 
 ```bash
-cp .env.example .env   # fill in secrets first
-docker compose -f docker/docker-compose.yml up --build
+cp .env.example .env   # fill in secrets first (POSTGRES_PASSWORD, JWT_SECRET, ADMIN_PASSWORD)
+POSTGRES_PASSWORD=strong-dev-only docker compose -f docker/docker-compose.yml up --build
 # replay demo (no capture privileges needed):
 docker compose -f docker/docker-compose.yml --profile replay up --build
 ```
 
 - Dashboard http://host:3000 (`/` landing, `/app` console, `/app/live` feed).
-- API http://host:8000/docs. Postgres/Redis on 5432/6379.
+- API http://host:8000/docs. Postgres/Redis are **internal only** (no published
+  ports). For local debugging use `docker compose run --rm db psql -U cipherpost`
+  or temporarily add `127.0.0.1:5432:5432`.
+- DB password comes from `POSTGRES_PASSWORD` env (`.env`), never hardcoded;
+  all `CIPHERPOST_DATABASE_URL*` values template from it.
+- `migrate` service runs `python -m app.migrate` (Alembic to head) before `api`
+  starts (`service_completed_successfully`); API also runs migrations on startup
+  with `create_all` fallback for SQLite/tests.
+- All Python containers run as non-root `appuser (10001)`; `capture` adds only
+  `NET_RAW, NET_ADMIN` via `cap_add`, never `privileged` / root.
 - Good for: evaluation, single mail gateway, archived-PCAP forensics.
 - Limits: one capture worker, one interface, in-host Postgres/Redis.
+- Local compose sets `CIPHERPOST_ENV=dev` (ephemeral JWT + warning). Production
+  must use `production` (default) with strong secrets or the API refuses to start.
 
 ## Shape B — SPAN/TAP distributed capture (enterprise)
 

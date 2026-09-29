@@ -6,6 +6,7 @@ metadata:
   name: cipherpost-config
   namespace: cipherpost
 data:
+  CIPHERPOST_ENV: "production"
   CIPHERPOST_REDIS_URL: "redis://redis:6379/0"
   CIPHERPOST_CELERY_BROKER_URL: "redis://redis:6379/0"
   CIPHERPOST_CELERY_RESULT_BACKEND: "redis://redis:6379/0"

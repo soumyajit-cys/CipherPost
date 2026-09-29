@@ -42,6 +42,11 @@ read via `GET /api/v1/audit`.
 
 ## Production checklist
 
-1. Set `CIPHERPOST_JWT_SECRET` (long random), `CIPHERPOST_ADMIN_PASSWORD`.
-2. Create per-operator accounts; disable or rotate the bootstrap admin.
-3. Issue scoped API keys per integration (name them, set `expires_days`).
+1. Set `CIPHERPOST_ENV=production` (default). The API refuses to start unless
+   `CIPHERPOST_JWT_SECRET` is >= 32 random bytes (e.g. `openssl rand -hex 32`)
+   and `CIPHERPOST_ADMIN_PASSWORD` is >= 12 chars, neither a `change-me` /
+   `CHANGEME` placeholder.
+2. Use `CIPHERPOST_ENV=dev` for local compose/tests only: the server uses an
+   ephemeral per-process JWT secret and logs a warning (logins die on restart).
+3. Create per-operator accounts; disable or rotate the bootstrap admin.
+4. Issue scoped API keys per integration (name them, set `expires_days`).

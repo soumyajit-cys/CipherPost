@@ -1,6 +1,8 @@
 version: "3.9"
 
 services:
+  # NOTE: local compose only — CIPHERPOST_ENV=dev relaxes secret checks.
+  # Never use dev in production; production defaults to refusing weak secrets.
   db:
     image: postgres:16-alpine
     environment:
@@ -40,6 +42,7 @@ services:
       CIPHERPOST_CELERY_BROKER_URL: redis://redis:6379/0
       CIPHERPOST_CELERY_RESULT_BACKEND: redis://redis:6379/0
       CIPHERPOST_TRUSTED_CA_BUNDLE_PATH: /app/tests/fixtures/trusted_root.pem
+      CIPHERPOST_ENV: dev
       CIPHERPOST_LOG_LEVEL: INFO
     depends_on:
       db:
@@ -67,6 +70,7 @@ services:
       CIPHERPOST_CELERY_BROKER_URL: redis://redis:6379/0
       CIPHERPOST_CELERY_RESULT_BACKEND: redis://redis:6379/0
       CIPHERPOST_TRUSTED_CA_BUNDLE_PATH: /app/tests/fixtures/trusted_root.pem
+      CIPHERPOST_ENV: dev
       CIPHERPOST_LOG_LEVEL: INFO
     depends_on:
       db:
@@ -95,6 +99,7 @@ services:
       CIPHERPOST_RAW_CAPTURE_DIR: /data/capture
       CIPHERPOST_RAW_RETENTION_SECONDS: 21600
       CIPHERPOST_TRUSTED_CA_BUNDLE_PATH: /app/tests/fixtures/trusted_root.pem
+      CIPHERPOST_ENV: dev
       CIPHERPOST_LOG_LEVEL: INFO
     depends_on:
       db:
@@ -115,6 +120,7 @@ services:
       CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
       CIPHERPOST_REDIS_URL: redis://redis:6379/0
       CIPHERPOST_TRUSTED_CA_BUNDLE_PATH: /app/tests/fixtures/trusted_root.pem
+      CIPHERPOST_ENV: dev
       CIPHERPOST_LOG_LEVEL: INFO
     depends_on:
       db:
@@ -132,6 +138,7 @@ services:
       CIPHERPOST_REDIS_URL: redis://redis:6379/0
       CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
       CIPHERPOST_ALERT_MIN_SEVERITY: high
+      CIPHERPOST_ENV: dev
       CIPHERPOST_ALERT_WEBHOOK_URL: ${CIPHERPOST_ALERT_WEBHOOK_URL:-}
     depends_on:
       redis:
@@ -150,6 +157,7 @@ services:
     environment:
       CIPHERPOST_REDIS_URL: redis://redis:6379/0
       CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_ENV: dev
     depends_on:
       redis:
         condition: service_healthy

@@ -331,12 +331,12 @@ def _fetch_tlsa(mx_host: str) -> dict:
 def _validate_rrsig(name: str, rrs, rrsigs, anchor) -> bool:
     import dns.dnssec
     import dns.name
-    import dns.rdataclass
-    import dns.rdatatype
+    import dns.rrset
     try:
         res = _resolver()
         keyname = dns.name.from_text(name)
         # Walk up to find the DNSKEY rrset (apex of the test/real zone).
+        keys = None
         for _ in range(5):
             try:
                 keyans = res.resolve(keyname, "DNSKEY", want_dnssec=False)
@@ -347,15 +347,16 @@ def _validate_rrsig(name: str, rrs, rrsigs, anchor) -> bool:
                     keyname = keyname.parent()
                 except Exception:
                     return False
-        else:
+        if not keys:
             return False
         # The anchor must match a zone key (pinning = trust).
         anchored = any(
             k.to_digestable() == anchor.to_digestable() for k in keys)
         if not anchored:
             return False
-        keyring = {keyname: keys}
-        dns.dnssec.validate(rrs[0].to_digestable() and rrs, rrsigs, keyring)
+        rrset = dns.rrset.from_rdata(dns.name.from_text(name), 300, rrs)
+        sigset = dns.rrset.from_rdata(dns.name.from_text(name), 300, rrsigs)
+        dns.dnssec.validate(rrset, sigset, {keyname: keys})
         return True
     except Exception as e:
         log.debug("RRSIG validation failed: %s", e)

@@ -407,6 +407,55 @@ class AlertDispatcher:
         except Exception as e:
             log.debug("expiry sweep skipped: %s", e)
 
+    def _transport_sweep(self):
+        """Scheduled MTA-STS/DANE re-checks (phase 2 task 5).
+
+        Re-checks a bounded set of domains seen in the cert inventory.
+        Dispatches alerts ONLY for proven `misconfigured` policies (never for
+        dns-error/insecure — those are informational). DNS failures never raise.
+        """
+        try:
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+            from app.models.entities import TrackedCert
+            from app.proactive.mta_sts import check_domain
+            engine = create_engine(settings.DATABASE_URL_SYNC)
+            db = sessionmaker(bind=engine)()
+            try:
+                rows = db.query(TrackedCert.subject_cn).limit(25).all()
+            finally:
+                db.close()
+            domains = sorted({(r[0] or "").strip().lower().lstrip("*.")
+                              for r in rows if r[0]})
+            for dom in domains:
+                if not dom or "." not in dom:
+                    continue
+                try:
+                    posture = check_domain(dom)
+                except Exception as e:
+                    log.debug("transport recheck %s skipped: %s", dom, e)
+                    continue
+                if posture.get("status") == "misconfigured":
+                    try:
+                        self.gossip.counters.inc("transport_misconfigured")
+                    except Exception:
+                        pass
+                    self._dispatch({
+                        "rule_id": "transport-misconfigured",
+                        "severity": "medium",
+                        "title": f"Transport security misconfigured for {dom}",
+                        "description": (
+                            f"MTA-STS/DANE check for {dom}: "
+                            f"{(posture.get('mta_sts') or {}).get('error') or 'policy invalid'}"),
+                        "five_tuple": dom,
+                        "protocol": "",
+                        "org_id": None,
+                        "risk_score": None,
+                        "findings": [],
+                    })
+        except Exception as e:
+            log.debug("transport sweep skipped: %s", e)
+
     def _handle_entry(self, entry_id: str, payload) -> None:
         """At-least-once handling: dispatch, then ACK; failures retry/DLQ."""
         from app.live import streams as _bus

@@ -301,3 +301,33 @@ class Suppression(Base):
     status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class MailFlow(Base):
+    """Per-mail-flow posture (phase 2 task 6: the differentiator).
+
+    One row per (org, client, server, protocol, port) pair observed on the
+    wire. Aggregates encrypted vs plaintext share, TLS version/cipher
+    histograms, first/last seen. Regression detection compares each new
+    session against the flow's best-seen state.
+    """
+
+    __tablename__ = "mail_flows"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    org_id: Mapped[str] = mapped_column(String(64), ForeignKey("organizations.id"), index=True)
+    client_host: Mapped[str] = mapped_column(String(256))
+    server_host: Mapped[str] = mapped_column(String(256))
+    protocol: Mapped[str] = mapped_column(String(16))
+    port: Mapped[int] = mapped_column(Integer)
+    total_sessions: Mapped[int] = mapped_column(Integer, default=0)
+    encrypted_sessions: Mapped[int] = mapped_column(Integer, default=0)
+    plaintext_sessions: Mapped[int] = mapped_column(Integer, default=0)
+    versions: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
+    ciphers: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
+    best_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    first_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (Index("ix_mail_flows_org_seen", "org_id", "last_seen"),
+                      Index("ix_mail_flows_org_server", "org_id", "server_host"))

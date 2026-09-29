@@ -56,15 +56,17 @@ def verify_password(password: str, stored: str) -> bool:
 
 
 # --------------------------------------------------------------------------
-# Minimal HS256 JWT (stdlib only)
+# HS256 JWT via PyJWT (pinned alg, exp validated, alg=none rejected)
 # --------------------------------------------------------------------------
 
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+_JWT_ALG = "HS256"
 
 
-def _b64url_decode(data: str) -> bytes:
-    return base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
+def _jwt_secret_str() -> str:
+    raw = _jwt_secret()
+    if isinstance(raw, bytes):
+        return raw.decode("utf-8", errors="surrogateescape")
+    return raw
 
 
 def _jwt_secret() -> bytes:

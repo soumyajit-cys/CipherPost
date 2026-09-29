@@ -20,9 +20,13 @@ load-balancers and Prometheus don't need credentials.
   `POST /api/v1/api-keys`; the raw key is shown **once**). Send as
   `X-API-Key` header. Only the SHA-256 hash is stored.
 
-No third-party auth deps: JWT is HMAC-SHA256 and passwords are
-PBKDF2-HMAC-SHA256 (200k iterations) in `backend/app/core/auth.py` —
-~150 auditable stdlib lines.
+Passwords are PBKDF2-HMAC-SHA256 (200k iterations) in
+`backend/app/core/auth.py`. JWT uses PyJWT (`PyJWT>=2.8`).
+
+## CORS
+
+`CIPHERPOST_CORS_ORIGINS` (comma-separated allowlist, default empty =
+same-origin only). Never use `*` with credentials.
 
 ## Roles
 

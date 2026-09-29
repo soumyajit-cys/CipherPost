@@ -16,6 +16,16 @@ spec:
     metadata:
       labels: { app: api }
     spec:
+      initContainers:
+        - name: migrate
+          image: cipherpost/worker:latest
+          command: ["python", "-m", "app.migrate"]
+          envFrom:
+            - configMapRef: { name: cipherpost-config }
+            - secretRef: { name: cipherpost-secrets }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 512Mi }
       containers:
         - name: api
           image: cipherpost/api:latest

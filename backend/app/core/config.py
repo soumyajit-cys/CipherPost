@@ -118,6 +118,96 @@ class Settings(BaseSettings):
         env_prefix = "CIPHERPOST_"
         env_file = ".env"
 
+    def is_dev(self) -> bool:
+        return (self.ENV or "").strip().lower() == "dev"
+
+    def cors_origins_list(self) -> list[str]:
+        raw = (self.CORS_ORIGINS or "").strip()
+        if not raw:
+            return []
+        return [o.strip().rstrip("/") for o in raw.split(",") if o.strip()]
+
+
+# Known placeholder / default secrets that must never be used in production.
+_KNOWN_JWT_DEFAULTS = {
+    "",
+    "change-me-in-production",
+    "changeme-long-random-64-chars-minimum",
+    "changeme-long-random-64-chars",
+    "changeme",
+    "change-me-on-first-login",
+    "cipherpost-dev-only-secret",
+}
+
+
+def _norm(v: str | None) -> str:
+    return (v or "").strip()
+
+
+def is_default_jwt_secret(secret: str | None) -> bool:
+    s = _norm(secret)
+    if not s:
+        return True
+    low = s.lower()
+    if low in _KNOWN_JWT_DEFAULTS:
+        return True
+    if "changeme" in low or "change-me" in low:
+        return True
+    return False
+
+
+def is_default_admin_password(pw: str | None) -> bool:
+    s = _norm(pw)
+    if not s:
+        return True
+    low = s.lower()
+    if low in {"", "change-me-on-first-login", "changeme-on-first-login", "changeme"}:
+        return True
+    if "changeme" in low or "change-me" in low:
+        return True
+    return False
+
+
+def validate_startup_secrets(cfg: "Settings | None" = None) -> None:
+    """Refuse to start in production with weak/missing secrets.
+
+    Raises RuntimeError with a clear message. In dev mode returns silently
+    (auth uses an ephemeral random secret + loud warning instead).
+    """
+    s = cfg or settings
+    if s.is_dev():
+        return
+    problems: list[str] = []
+    jwt_secret = _norm(s.JWT_SECRET)
+    if is_default_jwt_secret(jwt_secret):
+        problems.append(
+            "CIPHERPOST_JWT_SECRET is missing or a known default "
+            "(unset / change-me / CHANGEME). Set a long random value."
+        )
+    elif len(jwt_secret.encode()) < 32:
+        problems.append(
+            "CIPHERPOST_JWT_SECRET must be at least 32 bytes "
+            f"(got {len(jwt_secret.encode())}). Generate with e.g. "
+            "`openssl rand -hex 32`."
+        )
+    admin_pw = _norm(s.ADMIN_PASSWORD)
+    if is_default_admin_password(admin_pw):
+        problems.append(
+            "CIPHERPOST_ADMIN_PASSWORD is a known default "
+            "(change-me / CHANGEME). Set a strong bootstrap password."
+        )
+    elif len(admin_pw) < 12:
+        problems.append(
+            "CIPHERPOST_ADMIN_PASSWORD must be at least 12 characters "
+            f"(got {len(admin_pw)})."
+        )
+    if (s.ENV or "").strip().lower() not in ("dev", "production"):
+        problems.append(
+            f"CIPHERPOST_ENV must be 'dev' or 'production' (got {s.ENV!r})."
+        )
+    if problems:
+        raise RuntimeError("Refusing to start in production: " + " ".join(problems))
+
 
 settings = Settings()
 

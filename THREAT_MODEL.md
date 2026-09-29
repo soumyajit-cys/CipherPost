@@ -42,7 +42,7 @@ Treat every packet, handshake field, and certificate as attacker-controlled.
 | Redis streams / Postgres | injection via crafted fields | ORM + parameterized queries everywhere; no string-built SQL except static DDL |
 | Alert webhooks / syslog / tickets | SSRF-ish exfil via alert content | adapters POST fixed schemas to operator-configured URLs only |
 | Dashboard/API | unauthenticated access, session hijack, token leak in URLs/logs | PyJWT HS256 pinned (exp required, alg=none rejected) + API keys, RBAC, audit log incl. `auth.login.failed` (`docs/auth.md`); login lockout (5/5min acct, 20/5min IP, generic 401); CORS allowlist `CIPHERPOST_CORS_ORIGINS` (default same-origin); SSE via `POST /api/v1/live/ticket` (60s single-use `live:read`) — main tokens in URLs rejected; use TLS in front |
-| Secrets | committed credentials | `.env` untracked (was committed historically — rotated guidance in DEPLOYMENT.md); `.env.example`, pre-commit gitleaks, CI secret scan |
+| Secrets | committed credentials, weak defaults | `CIPHERPOST_ENV=production` (default) refuses weak `JWT_SECRET` (<32B/default) and admin password (<12ch/default) at startup; `dev` uses ephemeral secret + warning; `.env` untracked (rotated guidance in DEPLOYMENT.md); `.env.example`, DB password via env/secret only, pre-commit gitleaks, CI secret scan |
 | Supply chain | vulnerable deps/images | CI `pip-audit`, `npm audit`, Trivy image scan |
 
 ## 4. Robustness test mapping

@@ -295,8 +295,12 @@ def _fetch_tlsa(mx_host: str) -> dict:
         rrs = list(ans)
         rrsigs = []
         try:
+            import dns.name
+            import dns.rdataclass
+            import dns.rdatatype
+            qname = dns.name.from_text(name)
             rrsigs = list(ans.response.find_rrset(
-                ans.response.answer, name, dns.rdataclass.IN,
+                ans.response.answer, qname, dns.rdataclass.IN,
                 dns.rdatatype.RRSIG, dns.rdatatype.TLSA))
         except Exception:
             rrsigs = []

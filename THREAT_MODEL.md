@@ -55,12 +55,23 @@ Treat every packet, handshake field, and certificate as attacker-controlled.
 - `test_track3_agents.py` — stream consumer-group exactly-once semantics.
 - CI (`.github/workflows/ci.yml`) runs all of the above plus synthetic-corpus
   rules-eval and ML-eval gates (explicitly labelled synthetic, not real-world)
-  plus `scripts/eval_real.py` (empty manifest, informational) and
-  `migrate-check` (empty Postgres → head + `alembic check` no-drift) on every PR.
+  plus `scripts/eval_real.py` (empty manifest, informational),
+  `migrate-check` (empty Postgres → head + `alembic check` no-drift), and
+  `restore-check` (backup → wipe → restore → row counts + head) on every PR.
+  Nightly (`.github/workflows/nightly-chaos.yml`) runs the full suite incl.
+  slow failure-injection against real Redis/Postgres.
 - Phase 1 additions: `test_phase1_config.py` (startup refusal), `test_phase1_auth.py`
   (PyJWT alg-none/expiry/tamper, SSE single-use, lockout, CORS),
   `test_phase1_migrate.py` (raw tables in metadata/migration), `test_phase1_eval.py`
   (real-harness miss/false-positive reporting, tshark diff runner).
+- Phase 2 additions: `test_phase2_streams.py` (redelivery/DLQ/outage/drops),
+  `test_phase2_alerts.py` (restart dedup, shared budget, channel isolation,
+  grouping), `test_phase2_suppressions{,_api}.py` (scope/expiry/isolation/RBAC/audit),
+  `test_phase2_retention.py` (batch purge, legal hold), `test_phase2_mta_sts.py`
+  (fake-DNS statuses, DNSSEC secure/insecure, SSRF, matching vectors),
+  `test_phase2_flows.py` (aggregation/regression/isolation),
+  `test_phase2_health.py` (degraded health, liveness), `test_phase2_chaos.py`
+  (slow: redis/db kill, disk pressure, malformed recovery, burst bounds).
 
 ## 5. Residual risks (accepted, documented)
 

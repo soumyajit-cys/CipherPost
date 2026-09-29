@@ -64,7 +64,13 @@ class CaptureWorker:
         self.gossip = Gossiper(self.r, "capture", interval=5)
         self._packets_seen = 0
         self._sessions_emitted = 0
+        self._sessions_dropped = 0
         self._lock = threading.Lock()
+        # Bounded publish buffer: never block the sniff loop or grow memory.
+        # When Redis is down, sessions queue here; when full, oldest drops.
+        self.publisher = bus.ResilientPublisher(
+            lambda: self.r, settings.SESSION_STREAM,
+            counter=lambda name, by=1: self.gossip.counters.inc(name, by))
         from app.live.agents import AgentHeartbeat, default_agent_id
         self.agent_id = settings.AGENT_ID or default_agent_id(self.iface)
         self.heartbeat = AgentHeartbeat(

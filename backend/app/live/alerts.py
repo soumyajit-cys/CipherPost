@@ -194,7 +194,30 @@ class AlertDispatcher:
         return True
 
     def _dispatch(self, finding: dict):
-        # build alert object
+        """Dispatch one finding. Dedup + rate budget are shared via Redis so a
+        restart or a second replica cannot double-alert. Each channel is tried
+        independently with one retry; per-channel status is recorded in
+        Postgres (alert_deliveries) and failures never block other channels."""
+        from app.live.alert_state import group_key_of
+        # Severity gate only; grouping/dedup handled below via shared state.
+        sev = finding.get("max_severity") or finding.get("severity") or "info"
+        if SEV_ORDER.get(sev, 0) < self.min_sev:
+            return
+        dedup_key = group_key_of(finding)
+        if not self.state.check_and_set_dedup(dedup_key):
+            try:
+                self.gossip.counters.inc("alerts_deduped")
+            except Exception:
+                pass
+            return
+        if not self.state.check_rate():
+            try:
+                self.gossip.counters.inc("alerts_rate_limited")
+            except Exception:
+                pass
+            return
+        # build alert object (grouped fields default to single occurrence;
+        # GroupBuffer flush path fills occurrence_count/first/last_seen)
         alert = {
             "id": uuid.uuid4().hex,
             "ts": time.time(),
@@ -207,18 +230,21 @@ class AlertDispatcher:
             "risk_score": finding.get("risk_score"),
             "findings": finding.get("findings", []),
             "org_id": finding.get("org_id"),
+            "occurrence_count": finding.get("occurrence_count", 1),
+            "first_seen": finding.get("first_seen"),
+            "last_seen": finding.get("last_seen", time.time()),
         }
         ok_any = False
         start = time.time()
+        results: list[tuple[str, bool, str]] = []
         for ad in self.adapters:
-            try:
-                if ad.send(alert):
-                    ok_any = True
-            except Exception as e:
-                log.warning("adapter %s failed: %s", ad.name, e)
+            sent, err = self._send_one(ad, alert)
+            results.append((ad.name, sent, err))
+            ok_any = ok_any or sent
         latency = time.time() - start
         self.gossip.counters.inc("alerts_dispatched" if ok_any else "alerts_failed")
         self.gossip.counters.set("alert_latency_ms", latency*1000)
+        self._record_deliveries(alert, results)
         # ticketing (track 4): best-effort, deduped per rule+target like alerts
         try:
             from app.live.ticketing import load_ticket_backend, should_ticket
@@ -227,11 +253,10 @@ class AlertDispatcher:
                 self._ticketing = load_ticket_backend()
             if self._ticketing is not None and should_ticket(alert):
                 tkey = f"ticket:{alert['rule_id']}:{alert['five_tuple']}"
-                if time.time() - self._dedup.get(tkey, 0) > settings.ALERT_DEDUP_WINDOW_SECONDS:
+                if self.state.check_and_set_dedup(tkey):
                     url = self._ticketing.create(alert)
                     if url:
                         alert["ticket_url"] = url
-                        self._dedup[tkey] = time.time()
                         self.gossip.counters.inc("tickets_created")
         except Exception as e:
             log.debug("ticketing skipped: %s", e)
@@ -243,10 +268,42 @@ class AlertDispatcher:
             self._persist_alert(alert)
         except Exception as e:
             log.debug("alert publish failed: %s", e)
-        if ok_any:
-            key = f"{alert['rule_id']}:{alert['five_tuple']}"
-            self._dedup[key] = time.time()
-            self._rate_window.append(time.time())
+
+    def _send_one(self, adapter, alert: dict, retries: int = 1) -> tuple[bool, str]:
+        """Send via one channel with a single retry; never raises."""
+        import time as _t
+        last_err = ""
+        for attempt in range(retries + 1):
+            try:
+                if adapter.send(alert):
+                    return True, ""
+                last_err = "adapter returned false"
+            except Exception as e:
+                last_err = str(e)[:300]
+                log.warning("adapter %s failed (attempt %d): %s",
+                            adapter.name, attempt + 1, last_err)
+            if attempt < retries:
+                _t.sleep(0.2 * (2 ** attempt))
+        return False, last_err
+
+    def _record_deliveries(self, alert: dict, results: list[tuple[str, bool, str]]) -> None:
+        """Best-effort per-channel delivery rows; never breaks dispatch."""
+        try:
+            from sqlalchemy import create_engine, text
+            engine = create_engine(settings.DATABASE_URL_SYNC)
+            with engine.connect() as conn:
+                for channel, sent, err in results:
+                    conn.execute(text(
+                        "INSERT INTO alert_deliveries (alert_id, channel, status,"
+                        " attempts, last_error, org_id) VALUES"
+                        " (:aid,:ch,:st,:att,:err,:org)"),
+                        {"aid": alert["id"], "ch": channel,
+                         "st": "sent" if sent else "failed",
+                         "att": 2 if err else 1,
+                         "err": err or None, "org": alert.get("org_id")})
+                conn.commit()
+        except Exception as e:
+            log.debug("delivery record skipped: %s", e)
 
     def _persist_alert(self, alert: dict):
         try:

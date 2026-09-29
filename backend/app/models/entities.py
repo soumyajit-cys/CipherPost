@@ -264,3 +264,27 @@ class AlertDelivery(Base):
                                                 server_default=_sa_text("NOW()"),
                                                 nullable=True)
     org_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class Suppression(Base):
+    """Accepted-risk exception for legacy systems (phase 2 task 3).
+
+    Scope is a JSON object with any combination of:
+      hosts: [ip/hostname], cidrs: [CIDR], domains: [wildcard, e.g. *.legacy.example],
+      ports: [int]
+    A finding matches when its rule_id matches AND every specified scope
+    dimension matches (unspecified dimensions are wildcards).
+    Findings stay stored/visible (marked suppressed); alerts/tickets skip them.
+    """
+
+    __tablename__ = "suppressions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_id: Mapped[str] = mapped_column(String(64), ForeignKey("organizations.id"), index=True)
+    rule_id: Mapped[str] = mapped_column(String(128), index=True)
+    scope: Mapped[dict] = mapped_column(JSONBType, default=dict)
+    reason: Mapped[str] = mapped_column(Text)
+    created_by: Mapped[str] = mapped_column(String(256))
+    status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

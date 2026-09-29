@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "CipherPost"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
+    # Deployment environment: "dev" relaxes secret checks (ephemeral secret +
+    # loud warning); "production" (default) refuses to start with weak secrets.
+    ENV: str = "production"
 
     DATABASE_URL: str = "postgresql+asyncpg://cipherpost:cipherpost@db:5432/cipherpost"
     DATABASE_URL_SYNC: str = "postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost"

@@ -47,27 +47,25 @@ def test_rolling_store_write_and_purge():
         assert removed >= 1
 
 def test_alert_dedup_and_rate_limit():
+    """Phase 2: dedup/rate budgets live in shared Redis state (not _dedup).
+
+    _should_alert is now the severity gate only; duplicate suppression happens
+    in RedisAlertState at dispatch time so restarts and replicas share it.
+    """
     from app.live.alerts import AlertDispatcher
-    class FakeRedis:
-        def __init__(self): self.store={}
-        def xgroup_create(self, *a, **k): pass
-        def xinfo_groups(self, *a, **k): return []
-        def xinfo_stream(self, *a, **k): return {}
-        def setex(self, *a, **k): pass
-        def get(self, *a, **k): return None
-        def keys(self, *a, **k): return []
-        def hgetall(self, *a, **k): return {}
-        def xadd(self, *a, **k): return "0-1"
-        def xreadgroup(self, *a, **k): return []
-        def xack(self, *a, **k): return 1
-        def publish(self, *a, **k): return 1
-    r = FakeRedis()
+    import fakeredis
+    r = fakeredis.FakeRedis(decode_responses=False)
     disp = AlertDispatcher(redis_client=r, adapters=[])
     disp.min_sev = 0  # alert everything
-    f = {"max_severity":"high","five_tuple":"1.1.1.1:123->2.2.2.2:25","rule_id":"test-rule","severity":"high"}
+    f = {"max_severity": "high", "five_tuple": "1.1.1.1:123-2.2.2.2:25",
+         "rule_id": "test-rule", "severity": "high"}
     assert disp._should_alert(f) is True
-    disp._dedup["test-rule:1.1.1.1:123->2.2.2.2:25"] = __import__("time").time()
-    assert disp._should_alert(f) is False  # deduped
+    # First dispatch claim wins; second is a shared duplicate (survives restart).
+    from app.live.alert_state import group_key_of
+    assert disp.state.check_and_set_dedup(group_key_of(f)) is True
+    assert disp.state.check_and_set_dedup(group_key_of(f)) is False
+    disp2 = AlertDispatcher(redis_client=r, adapters=[])
+    assert disp2.state.check_and_set_dedup(group_key_of(f)) is False
 
 def test_fuzz_live_packets_no_crash():
     from app.live.packets import Packet

@@ -1,26 +1,33 @@
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-celery[redis]>=5.3.0
-redis>=5.0.0
-sqlalchemy>=2.0.23
-asyncpg>=0.29.0
-psycopg2-binary>=2.9.0
-scapy>=2.5.0
-dpkt>=1.9.8
-pyOpenSSL>=23.3.0
-cryptography>=41.0.0
-scikit-learn>=1.3.0
-shap>=0.44.0
-jinja2>=3.1.0
-weasyprint>=60.0
-python-multipart>=0.0.6
-pydantic>=2.5.0
-pydantic-settings>=2.1.0
-prometheus-client>=0.19.0
-structlog>=23.2.0
-PyJWT>=2.8.0
-httpx>=0.25.0
-numpy>=2.0.0
-pandas>=2.1.0
-joblib>=1.3.0
-aiofiles>=23.0
+# Pinned reproducible install for CipherPost backend.
+# Generated from backend/requirements.in via pip freeze on Python 3.13 (known-good CI venv).
+# Regenerate: pip install -r backend/requirements.in && pip freeze | grep -v -E "^(pip|setuptools|wheel)" > backend/requirements.txt
+# For hash-pinned builds use `uv lock` / `pip-compile --generate-hashes` (see docs).
+aiofiles==25.1.0
+asyncpg==0.31.0
+celery==5.6.3
+cryptography==50.0.1
+dpkt==1.9.8
+fastapi==0.141.1
+greenlet==3.5.5
+httpx==0.28.1
+Jinja2==3.1.6
+joblib==1.6.0
+numpy==2.5.2
+pandas==3.0.5
+prometheus_client==0.26.0
+psycopg2-binary==2.9.12
+pydantic==2.13.5
+pydantic-settings==2.15.0
+PyJWT==2.15.1
+pyOpenSSL==26.4.0
+python-multipart==0.0.32
+redis==6.4.0
+scapy==2.7.0
+scikit-learn==1.9.0
+shap==0.52.0
+SQLAlchemy==2.0.52
+structlog==26.1.0
+uvicorn==0.52.4
+weasyprint==70.0
+# asyncio extras (SQLAlchemy asyncio needs greenlet + asyncpg, both pinned above)
+# sqlalchemy[asyncio] met via SQLAlchemy==2.0.52 + greenlet==3.5.5 + asyncpg==0.31.0

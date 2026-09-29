@@ -82,4 +82,8 @@ export class CipherPostClient {
   certsExpiring = (days = 30): Promise<unknown[]> => this.get('/api/v1/certs/expiring', { days });
   complianceSummary = (framework?: string): Promise<unknown> => this.get('/api/v1/compliance/summary', { framework });
   audit = (limit = 100): Promise<unknown[]> => this.get('/api/v1/audit', { limit });
+  flows = (unencryptedWithinDays?: number): Promise<unknown[]> =>
+    this.get('/api/v1/flows', { unencrypted_within_days: unencryptedWithinDays });
+  suppressions = (status?: string): Promise<unknown[]> =>
+    this.get('/api/v1/suppressions', { status });
 }

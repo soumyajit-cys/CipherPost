@@ -6,7 +6,7 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 from sqlalchemy import (
     String, Integer, Float, Boolean, DateTime, Text, Enum, ForeignKey,
-    UniqueConstraint, Index, JSON,
+    UniqueConstraint, Index, JSON, text as _sa_text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base, JSONBType
@@ -214,3 +214,35 @@ class AuditLog(Base):
     resource: Mapped[str] = mapped_column(String(512), default="")
     detail: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class Alert(Base):
+    """Dispatched alert history (mirrors raw DDL in live/alerts + database).
+
+    Kept as ORM so Alembic tracks it; live code still uses raw SQL for
+    backward compat with pre-migration databases.
+    """
+
+    __tablename__ = "alerts"
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                server_default=__import__("sqlalchemy").text("NOW()"),
+                                                nullable=True)
+    severity: Mapped[str | None] = mapped_column(Text, nullable=True)
+    title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    five_tuple: Mapped[str | None] = mapped_column(Text, nullable=True)
+    payload: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
+    org_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class BaselineFeature(Base):
+    """Rolling baseline store (mirrors raw DDL in live/baseline)."""
+
+    __tablename__ = "baseline_features"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                server_default=__import__("sqlalchemy").text("NOW()"),
+                                                nullable=True)
+    features: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)

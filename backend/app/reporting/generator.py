@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from jinja2 import Template
@@ -125,7 +125,7 @@ def build_report_data(analyses: list[SessionAnalysis],
             })
     fleet_score = sum(r["posture"] for r in session_rows) / max(1, len(session_rows))
     return {
-        "generated_at": datetime.utcnow().isoformat(),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "filename": filename,
         "total_sessions": len(analyses),
         "total_findings": len(all_findings),

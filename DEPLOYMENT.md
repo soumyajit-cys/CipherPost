@@ -61,7 +61,11 @@ kubectl label node <span-node> cipherpost/capture=true
 kubectl apply -f k8s/capture-daemonset.yaml
 ```
 
-- Images `cipherpost/{api,worker,frontend}:latest` built from `docker/`.
+- Images `cipherpost/{api,worker,frontend}:latest` built from `docker/`
+  (Python images run as `appuser 10001`; capture DaemonSet adds only
+  `NET_RAW, NET_ADMIN`, `runAsNonRoot: true`, never privileged).
+- API Deployments use a `migrate` initContainer (`python -m app.migrate`) so
+  Postgres is at Alembic head before the server starts.
 - Analyzer HPA (2–10 replicas) on CPU; also watch `queues.sessions`.
 - Small clusters may keep in-cluster Postgres/Redis; production should use
   managed database/cache and point the Secret at them.

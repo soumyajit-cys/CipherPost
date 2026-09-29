@@ -162,20 +162,22 @@ class AnalysisWorker:
             except Exception:
                 pass
             Session.commit()
-            return sess_id
+            return sess_id, True
         except Exception as e:
             Session.rollback()
             log.warning("persist failed: %s", e)
-            return None
+            raise
         finally:
             Session.close()
 
     def _process_one(self, sess_payload: dict):
+        """Process one session payload. Raises on failure (caller decides
+        retry vs dead-letter). Returns (sess_id, created)."""
         try:
             sess = session_from_payload(sess_payload)
         except Exception as e:
             log.warning("session decode failed: %s", e)
-            return
+            raise
         raw_refs = getattr(sess, "raw_refs", None)
         # analyze
         try:

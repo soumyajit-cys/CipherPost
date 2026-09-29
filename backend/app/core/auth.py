@@ -2,9 +2,8 @@
 Track 1: Authentication, RBAC, API keys.
 
 Design notes:
-- No third-party auth deps (no PyJWT/bcrypt in requirements): JWT is minimal
-  HS256 implemented with stdlib hmac/base64, passwords use PBKDF2-HMAC-SHA256
-  (200k iterations, per-user 16-byte salt). Both are auditable in ~100 lines.
+- JWT is HS256 via PyJWT (pinned algorithm, exp validated, alg=none rejected);
+  passwords use PBKDF2-HMAC-SHA256 (200k iterations, per-user 16-byte salt).
 - Two credential kinds: user login sessions (short-lived JWT) and long-lived
   API keys (`cp_<hex>`, SHA-256 hash stored, prefix indexed) for SIEM/scripts.
 - Roles: admin (full + config/user mgmt), analyst (view + upload), auditor
@@ -15,10 +14,8 @@ Design notes:
 """
 from __future__ import annotations
 
-import base64
 import hashlib
 import hmac
-import json
 import secrets
 import time
 from dataclasses import dataclass

@@ -83,6 +83,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.worker
+    user: "10001:10001"
     environment:
       CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost
       CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost

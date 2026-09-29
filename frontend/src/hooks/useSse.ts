@@ -27,18 +27,20 @@ export function useSse(url: string | null, enabled = true) {
 
   useEffect(() => {
     if (!url || !enabled) return
-    // EventSource can't send headers: attach JWT as ?token= (backend accepts it)
-    let finalUrl = url
-    try {
-      const t = localStorage.getItem('cipherpost_token')
-      if (t && !url.includes('token=')) {
-        finalUrl = url + (url.includes('?') ? '&' : '?') + `token=${encodeURIComponent(t)}`
+    let cancelled = false
+    let es: EventSource | null = null
+    // EventSource can't send headers: fetch a short-lived single-use ticket
+    // with the Bearer token, then open the stream with ?ticket= (never ?token=).
+    fetchSseTicket().then((ticket) => {
+      if (cancelled) return
+      let finalUrl = url
+      if (ticket && !url.includes('ticket=') && !url.includes('token=')) {
+        finalUrl = url + (url.includes('?') ? '&' : '?') + `ticket=${encodeURIComponent(ticket)}`
       }
-    } catch { /* private mode */ }
-    const es = new EventSource(finalUrl)
-    esRef.current = es
-    es.onopen = () => setConnected(true)
-    es.onerror = () => setConnected(false)
+      es = new EventSource(finalUrl)
+      esRef.current = es
+      es.onopen = () => setConnected(true)
+      es.onerror = () => setConnected(false)
     const handler = (e: MessageEvent) => {
       try {
         const data = JSON.parse(e.data)

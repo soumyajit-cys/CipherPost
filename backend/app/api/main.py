@@ -413,13 +413,19 @@ async def live_status(ctx: AuthContext = Depends(get_current_user)):
                     out["metrics"][k] = _j.loads(v)
             except Exception:
                 pass
-        # queue depths
+        # queue depths + dead-letter depths
         for name, stream in [("sessions", settings.SESSION_STREAM), ("findings", settings.FINDINGS_STREAM), ("alerts", settings.ALERT_STREAM)]:
             try:
                 info = r.xinfo_stream(stream)
                 out["queues"][name] = int(info.get("length", 0)) if isinstance(info, dict) else 0
             except Exception:
                 out["queues"][name] = 0
+            try:
+                from app.live.streams import dlq_name as _dlq
+                dinfo = r.xinfo_stream(_dlq(stream))
+                out["dlq"][name] = int(dinfo.get("length", 0)) if isinstance(dinfo, dict) else 0
+            except Exception:
+                out["dlq"][name] = 0
     except Exception as e:
         out["error"] = str(e)
     return out

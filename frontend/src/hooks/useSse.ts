@@ -37,10 +37,11 @@ export function useSse(url: string | null, enabled = true) {
       if (ticket && !url.includes('ticket=') && !url.includes('token=')) {
         finalUrl = url + (url.includes('?') ? '&' : '?') + `ticket=${encodeURIComponent(ticket)}`
       }
-      es = new EventSource(finalUrl)
-      esRef.current = es
-      es.onopen = () => setConnected(true)
-      es.onerror = () => setConnected(false)
+      const source = new EventSource(finalUrl)
+      es = source
+      esRef.current = source
+      source.onopen = () => setConnected(true)
+      source.onerror = () => setConnected(false)
       const handler = (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data)
@@ -50,8 +51,8 @@ export function useSse(url: string | null, enabled = true) {
         }
       }
       // listen to all event types used by backend
-      ;["sessions","findings","alerts","status","heartbeat","message"].forEach((ev) => es.addEventListener(ev, handler as any))
-      es.onmessage = handler as any
+      ;["sessions","findings","alerts","status","heartbeat","message"].forEach((ev) => source.addEventListener(ev, handler as any))
+      source.onmessage = handler as any
     })
     return () => {
       cancelled = true

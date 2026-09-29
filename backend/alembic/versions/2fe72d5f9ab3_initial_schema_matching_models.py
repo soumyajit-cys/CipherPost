@@ -178,6 +178,25 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_shap_rows_session_id'), 'shap_rows', ['session_id'], unique=False)
+    # Raw-DDL tables (created lazily via text() in app code; folded in here):
+    # - alerts (live dispatcher + API history)
+    # - baseline_features (rolling ML baseline store)
+    op.create_table('alerts',
+    sa.Column('id', sa.Text(), nullable=False),
+    sa.Column('ts', sa.DateTime(timezone=True), server_default=sa.text('NOW()'), nullable=True),
+    sa.Column('severity', sa.Text(), nullable=True),
+    sa.Column('title', sa.Text(), nullable=True),
+    sa.Column('five_tuple', sa.Text(), nullable=True),
+    sa.Column('payload', _JSONBType(), nullable=True),
+    sa.Column('org_id', sa.Text(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('baseline_features',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('ts', sa.DateTime(timezone=True), server_default=sa.text('NOW()'), nullable=True),
+    sa.Column('features', _JSONBType(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
     # ### end Alembic commands ###
 
 

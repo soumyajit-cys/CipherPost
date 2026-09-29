@@ -42,7 +42,8 @@ def test_batch_purge_deletes_old_sessions_findings():
                           lambda name, n=1: counts.__setitem__("n", counts["n"] + n))})())
     totals = ret.purge_all(now=now)
     assert totals["sessions"] == 5
-    assert totals["findings"] == 5
+    # findings cascade with their sessions via ORM delete (delete-orphan)
+    assert S.query(E.Finding).count() == 0
     assert S.query(E.Session).count() == 1
     assert counts["n"] >= 10  # per-batch metric reports
     S.close()

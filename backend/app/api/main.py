@@ -598,7 +598,28 @@ async def list_findings(
         q = q.where(Session.protocol==protocol)
     rows = (await db.execute(q)).scalars().all()
     from app.proactive.compliance import compliance_for
-    return [{"id": f.id, "session_id": f.session_id, "rule_id": f.rule_id, "severity": f.severity.value, "title": f.title, "description": f.description, "compliance": compliance_for(f.rule_id)} for f in rows]
+    from app.proactive.suppressions import match_suppression
+    sups = await _active_suppressions(db, ctx.org_id)
+    # five_tuples for suppression scope matching (avoid lazy loads)
+    sess_ids = list({f.session_id for f in rows})
+    ft_map: dict[str, str] = {}
+    if sess_ids:
+        srows = (await db.execute(
+            select(Session.id, Session.five_tuple).where(Session.id.in_(sess_ids)))).all()
+        ft_map = {r[0]: r[1] for r in srows}
+    out = []
+    for f in rows:
+        m = match_suppression(f.rule_id,
+                              {"five_tuple": ft_map.get(f.session_id, "")},
+                              sups)
+        out.append({"id": f.id, "session_id": f.session_id, "rule_id": f.rule_id,
+                    "severity": f.severity.value, "title": f.title,
+                    "description": f.description, "compliance": compliance_for(f.rule_id),
+                    "suppressed": m is not None,
+                    "suppression_id": getattr(m, "id", None)})
+    return out
+
+@app.get("/api/v1/alerts")
 
 @app.get("/api/v1/alerts")
 async def list_alerts(limit: int = Query(50, ge=1, le=200),

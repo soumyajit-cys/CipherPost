@@ -98,7 +98,7 @@ def test_task_processing_direct(trust, corpus_index):
     from app.parsing.analysis import analyze_pcap
     from app.ml.ml_engine import SessionScorer
     from app.reporting.generator import generate_json, generate_html
-    from datetime import datetime
+    from datetime import datetime, timezone
     import uuid
 
     # In-memory SQLite
@@ -154,7 +154,7 @@ def test_task_processing_direct(trust, corpus_index):
 
         db.add(SessionSummary(job_id=job_id, key="fleet_score", value=sum(s.risk.posture_score for s in scores)/max(1,len(scores))))
         job.status = JobStatus.COMPLETED
-        job.completed_at = datetime.utcnow()
+        job.completed_at = datetime.now(timezone.utc)
         job.progress = 1.0
         db.commit()
 

@@ -21,8 +21,8 @@ jobs:
           pip install -r backend/requirements.txt
           pip install pip-audit
           pip check
-      - name: Backend test suite
-        run: PYTHONPATH=backend/. python -m pytest backend/tests -q
+      - name: Backend test suite (fast; chaos runs nightly)
+        run: PYTHONPATH=backend/. python -m pytest backend/tests -q -m "not slow"
       - name: Rules eval — synthetic corpus only (not real-world)
         run: PYTHONPATH=backend/. python -m app.parsing.eval_rules tests/fixtures
       - name: ML eval — synthetic corpus only

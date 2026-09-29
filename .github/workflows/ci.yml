@@ -62,6 +62,64 @@ jobs:
           CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@localhost:5432/cipherpost
         run: PYTHONPATH=backend alembic -c backend/alembic.ini check
 
+  restore-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: cipherpost
+          POSTGRES_USER: cipherpost
+          POSTGRES_PASSWORD: cipherpost
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U cipherpost"
+          --health-interval=5s --health-timeout=3s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install backend deps (pinned)
+        run: pip install -r backend/requirements.txt
+      - name: Migrate, seed one row, backup, wipe, restore, verify
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: cipherpost
+          PGPASSWORD: cipherpost
+          PGDATABASE: cipherpost
+          CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@localhost:5432/cipherpost
+        run: |
+          PYTHONPATH=backend python -m app.migrate
+          PYTHONPATH=backend python -c "
+          from sqlalchemy import create_engine, text
+          e = create_engine('postgresql+psycopg2://cipherpost:cipherpost@localhost:5432/cipherpost')
+          import uuid
+          oid = 'org-' + uuid.uuid4().hex[:12]
+          with e.begin() as c:
+              c.execute(text(\"INSERT INTO organizations (id, name) VALUES (:i, 'default') ON CONFLICT DO NOTHING\"), {'i': oid})
+              n = c.execute(text('SELECT COUNT(*) FROM organizations')).scalar()
+              print('orgs before backup:', n)
+              assert n >= 1
+          "
+          bash scripts/backup_postgres.sh /tmp/restore-ci
+          ls -la /tmp/restore-ci
+          DUMP=$(ls -1t /tmp/restore-ci/cipherpost-*.dump | head -n 1)
+          psql -h localhost -U cipherpost -d cipherpost -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+          bash scripts/restore_postgres.sh --yes "$DUMP"
+          PYTHONPATH=backend python -c "
+          from sqlalchemy import create_engine, text
+          e = create_engine('postgresql+psycopg2://cipherpost:cipherpost@localhost:5432/cipherpost')
+          with e.connect() as c:
+              n = c.execute(text('SELECT COUNT(*) FROM organizations')).scalar()
+              print('orgs after restore:', n)
+              assert n >= 1, 'row counts did not survive restore'
+          "
+          PYTHONPATH=backend python -m app.migrate
+          PYTHONPATH=backend alembic -c backend/alembic.ini check
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

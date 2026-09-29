@@ -41,6 +41,7 @@ class AnalysisJob(Base):
     org_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("organizations.id"), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    legal_hold: Mapped[bool] = mapped_column(Boolean, default=False)  # phase 2: survives retention
 
     sessions: Mapped[list["Session"]] = relationship(back_populates="job", cascade="all, delete-orphan")
     summary: Mapped[list["SessionSummary"]] = relationship(back_populates="job", cascade="all, delete-orphan")

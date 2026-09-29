@@ -227,7 +227,7 @@ class Alert(Base):
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
-                                                server_default=__import__("sqlalchemy").text("NOW()"),
+                                                server_default=_sa_text("NOW()"),
                                                 nullable=True)
     severity: Mapped[str | None] = mapped_column(Text, nullable=True)
     title: Mapped[str | None] = mapped_column(Text, nullable=True)

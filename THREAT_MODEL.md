@@ -43,7 +43,7 @@ Treat every packet, handshake field, and certificate as attacker-controlled.
 | Alert webhooks / syslog / tickets | SSRF-ish exfil via alert content | adapters POST fixed schemas to operator-configured URLs only |
 | Dashboard/API | unauthenticated access, session hijack, token leak in URLs/logs | PyJWT HS256 pinned (exp required, alg=none rejected) + API keys, RBAC, audit log incl. `auth.login.failed` (`docs/auth.md`); login lockout (5/5min acct, 20/5min IP, generic 401); CORS allowlist `CIPHERPOST_CORS_ORIGINS` (default same-origin); SSE via `POST /api/v1/live/ticket` (60s single-use `live:read`) — main tokens in URLs rejected; use TLS in front |
 | Secrets | committed credentials, weak defaults | `CIPHERPOST_ENV=production` (default) refuses weak `JWT_SECRET` (<32B/default) and admin password (<12ch/default) at startup; `dev` uses ephemeral secret + warning; `.env` untracked (rotated guidance in DEPLOYMENT.md); `.env.example`, DB password via env/secret only, pre-commit gitleaks, CI secret scan |
-| Supply chain | vulnerable deps/images | CI `pip-audit`, `npm audit`, Trivy image scan |
+| Supply chain | vulnerable deps/images | Pinned `backend/requirements.txt` from `requirements.in` (+ `greenlet`, `PyJWT`, `alembic`), Dependabot (pip/npm/docker/actions), CI `pip-audit`, `npm audit`, Trivy image scan |
 
 ## 4. Robustness test mapping
 

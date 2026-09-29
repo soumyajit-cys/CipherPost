@@ -41,7 +41,7 @@ Treat every packet, handshake field, and certificate as attacker-controlled.
 | PCAP upload | malicious/zip-bomb captures | 500 MB cap, `.pcap` gate, per-packet exception isolation |
 | Redis streams / Postgres | injection via crafted fields | ORM + parameterized queries everywhere; no string-built SQL except static DDL |
 | Alert webhooks / syslog / tickets | SSRF-ish exfil via alert content | adapters POST fixed schemas to operator-configured URLs only |
-| Dashboard/API | unauthenticated access, session hijack | JWT + API keys, RBAC, audit log (`docs/auth.md`); SSE accepts `?token=` — tokens are bearer secrets, use TLS in front |
+| Dashboard/API | unauthenticated access, session hijack, token leak in URLs/logs | PyJWT HS256 pinned (exp required, alg=none rejected) + API keys, RBAC, audit log incl. `auth.login.failed` (`docs/auth.md`); login lockout (5/5min acct, 20/5min IP, generic 401); CORS allowlist `CIPHERPOST_CORS_ORIGINS` (default same-origin); SSE via `POST /api/v1/live/ticket` (60s single-use `live:read`) — main tokens in URLs rejected; use TLS in front |
 | Secrets | committed credentials | `.env` untracked (was committed historically — rotated guidance in DEPLOYMENT.md); `.env.example`, pre-commit gitleaks, CI secret scan |
 | Supply chain | vulnerable deps/images | CI `pip-audit`, `npm audit`, Trivy image scan |
 

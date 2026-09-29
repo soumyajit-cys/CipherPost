@@ -13,6 +13,10 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY backend/ /app/
 COPY tests/fixtures /app/tests/fixtures
 
+# Run as non-root where possible (capture uses cap_add, never privileged).
+RUN useradd -u 10001 -m appuser && mkdir -p /data/uploads /data/reports /data/capture /data/blobs /data/models && chown -R appuser:appuser /app /data
+USER appuser
+
 ENV PYTHONPATH=/app
 ENV CIPHERPOST_TRUSTED_CA_BUNDLE_PATH=/app/tests/fixtures/trusted_root.pem
 

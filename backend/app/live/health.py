@@ -14,11 +14,18 @@ import time
 
 
 async def _db_ok(timeout: float = 2.0) -> tuple[bool, str]:
+    """Check the configured DATABASE_URL (fresh short-lived engine, so health
+    honors current settings and never borrows the app pool)."""
     try:
         from sqlalchemy import text
-        from app.core.database import async_session
-        async with async_session() as s:
-            await asyncio.wait_for(s.execute(text("SELECT 1")), timeout)
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from app.core.config import settings as _s
+        eng = create_async_engine(_s.DATABASE_URL, poolclass=None)
+        try:
+            async with eng.connect() as conn:
+                await asyncio.wait_for(conn.execute(text("SELECT 1")), timeout)
+        finally:
+            await eng.dispose()
         return True, ""
     except Exception as e:
         return False, str(e)[:200]

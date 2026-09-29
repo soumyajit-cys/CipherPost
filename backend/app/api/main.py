@@ -768,11 +768,17 @@ async def compliance_summary(framework: str | None = Query(None),
 
 
 @app.get("/api/v1/domains/{domain}/transport-security")
-async def domain_transport_security(domain: str,
+async def domain_transport_security(domain: str, refresh: bool = Query(False),
                                     ctx: AuthContext = Depends(get_current_user)):
-    """MTA-STS/DANE posture for a domain (track 2; honest stub without DNS)."""
+    """MTA-STS/DANE posture for a domain (phase 2: real dnspython checks).
+
+    Backward compatible with the Phase 1 stub contract (same top-level keys);
+    `status` is now one of ok/not-published/misconfigured/dns-error/
+    dnssec-failed. Pass refresh=true to bypass the TTL cache (on-demand
+    re-check); periodic re-checks run via TRANSPORT_RECHECK_INTERVAL_SECONDS.
+    """
     from app.proactive.mta_sts import check_domain
-    return check_domain(domain)
+    return check_domain(domain, refresh=refresh)
 
 
 @app.get("/api/v1/ml/versions")

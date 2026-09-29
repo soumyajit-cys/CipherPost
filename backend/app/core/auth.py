@@ -133,6 +133,102 @@ def decode_token(token: str) -> dict:
 
 
 # --------------------------------------------------------------------------
+# Login rate limiting / temporary lockout (Redis-backed, in-memory fallback)
+# --------------------------------------------------------------------------
+
+_LOGIN_MAX_ATTEMPTS = 5        # failures before account lock
+_LOGIN_WINDOW_SECONDS = 300    # sliding window for counting failures
+_LOGIN_LOCK_SECONDS = 900      # lockout duration after threshold
+_LOGIN_IP_MAX_ATTEMPTS = 20    # per-IP threshold (same window)
+
+_mem_failures: dict[str, list[float]] = {}
+_mem_locks: dict[str, float] = {}
+
+
+def _login_redis():
+    try:
+        import redis as _redis
+        from app.core import config as _cfg
+        return _redis.Redis.from_url(_cfg.settings.REDIS_URL, decode_responses=True,
+                                     socket_connect_timeout=1, socket_timeout=1)
+    except Exception:
+        return None
+
+
+def _mem_prune(key: str, now: float) -> list[float]:
+    hits = [t for t in _mem_failures.get(key, []) if now - t < _LOGIN_WINDOW_SECONDS]
+    _mem_failures[key] = hits
+    return hits
+
+
+def is_login_locked(account_key: str, ip_key: str) -> bool:
+    now = time.time()
+    # Redis path (best effort)
+    r = _login_redis()
+    if r is not None:
+        try:
+            for k in (account_key, ip_key):
+                if r.get(k + ":lock"):
+                    return True
+            return False
+        except Exception:
+            pass  # fall through to memory
+    for k in (account_key, ip_key):
+        until = _mem_locks.get(k, 0)
+        if until and now < until:
+            return True
+    return False
+
+
+def record_login_failure(account_key: str, ip_key: str) -> None:
+    now = time.time()
+    r = _login_redis()
+    if r is not None:
+        try:
+            for k, limit in ((account_key, _LOGIN_MAX_ATTEMPTS),
+                             (ip_key, _LOGIN_IP_MAX_ATTEMPTS)):
+                n = r.incr(k)
+                if n == 1:
+                    r.expire(k, _LOGIN_WINDOW_SECONDS)
+                if n >= limit:
+                    r.setex(k + ":lock", _LOGIN_LOCK_SECONDS, "1")
+            return
+        except Exception:
+            pass
+    for k, limit in ((account_key, _LOGIN_MAX_ATTEMPTS),
+                     (ip_key, _LOGIN_IP_MAX_ATTEMPTS)):
+        hits = _mem_prune(k, now)
+        hits.append(now)
+        if len(hits) >= limit:
+            _mem_locks[k] = now + _LOGIN_LOCK_SECONDS
+
+
+def record_login_success(account_key: str, ip_key: str) -> None:
+    r = _login_redis()
+    if r is not None:
+        try:
+            r.delete(account_key, ip_key)
+            return
+        except Exception:
+            pass
+    _mem_failures.pop(account_key, None)
+    # NOTE: do not clear IP bucket on success (prevents credential-spray reset).
+
+
+def _reset_login_state() -> None:
+    """Test-only: clear in-memory buckets and best-effort Redis keys."""
+    _mem_failures.clear()
+    _mem_locks.clear()
+    r = _login_redis()
+    if r is not None:
+        try:
+            for k in r.keys("login:*"):
+                r.delete(k)
+        except Exception:
+            pass
+
+
+# --------------------------------------------------------------------------
 # API keys: `cp_<32 hex>`, only SHA-256 hash stored
 # --------------------------------------------------------------------------
 

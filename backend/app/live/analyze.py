@@ -37,6 +37,27 @@ def _get_sync_session():
     engine = create_engine(settings.DATABASE_URL_SYNC, pool_size=5)
     return sessionmaker(bind=engine)()
 
+
+def deterministic_session_id(payload: dict) -> str:
+    """Stable id for (five_tuple, start_ts, end_ts, endpoints) so redelivery
+    cannot create duplicates. Falls back to uuid4 only when keys are missing."""
+    import hashlib
+    try:
+        key = "|".join([
+            str(payload.get("five_tuple", "")),
+            str(payload.get("start_ts", "")),
+            str(payload.get("end_ts", "")),
+            str(payload.get("client_ip", "")),
+            str(payload.get("server_ip", "")),
+            str(payload.get("client_port", "")),
+            str(payload.get("server_port", "")),
+        ])
+        if key.strip("|"):
+            return "sess-" + hashlib.sha256(key.encode()).hexdigest()[:32]
+    except Exception:
+        pass
+    return "sess-" + uuid.uuid4().hex[:32]
+
 class AnalysisWorker:
     def __init__(self, redis_client=None, scorer=None):
         self.r = redis_client or redis.Redis.from_url(settings.REDIS_URL, decode_responses=False)
@@ -75,12 +96,20 @@ class AnalysisWorker:
             self._org_cache = None
         return self._org_cache
 
-    def _persist(self, sa, scoring_result, raw_refs, session_raw_ts):
-        """Persist session+findings+shap to Postgres using sync session."""
+    def _persist(self, sa, scoring_result, raw_refs, session_raw_ts,
+                 session_id: str | None = None):
+        """Persist session+findings+shap to Postgres using sync session.
+
+        Idempotent: if `session_id` already exists, returns (id, False) without
+        inserting duplicates. Returns (sess_id, created).
+        """
         Session = _get_sync_session()
         try:
             from app.models.entities import Session as SessionModel, Finding, ShaPRow, Severity
-            sess_id = uuid.uuid4().hex
+            sess_id = session_id or uuid.uuid4().hex
+            existing = Session.get(SessionModel, sess_id)
+            if existing is not None:
+                return sess_id, False
             # derive job: use LIVE_JOB_TAG as a synthetic job id (ensure exists)
             from app.models.entities import AnalysisJob, JobStatus
             job_id = settings.LIVE_JOB_TAG
@@ -133,27 +162,29 @@ class AnalysisWorker:
             except Exception:
                 pass
             Session.commit()
-            return sess_id
+            return sess_id, True
         except Exception as e:
             Session.rollback()
             log.warning("persist failed: %s", e)
-            return None
+            raise
         finally:
             Session.close()
 
     def _process_one(self, sess_payload: dict):
+        """Process one session payload. Raises on failure (caller decides
+        retry vs dead-letter). Returns (sess_id, created)."""
         try:
             sess = session_from_payload(sess_payload)
         except Exception as e:
             log.warning("session decode failed: %s", e)
-            return
+            raise
         raw_refs = getattr(sess, "raw_refs", None)
         # analyze
         try:
             sa = _analyze_session(sess, trust_store=settings.TRUSTED_CA_BUNDLE_PATH)
         except Exception as e:
             log.warning("analyze_session failed %s: %s", sess.five_tuple, e)
-            return
+            raise
         # score
         scoring = None
         try:
@@ -161,8 +192,15 @@ class AnalysisWorker:
             scoring = self.scorer.score(sa) if hasattr(self.scorer, "score") else None
         except Exception as e:
             log.debug("scoring failed: %s", e)
-        # persist
-        sess_id = self._persist(sa, scoring, raw_refs, sess.start_ts)
+        # persist (idempotent on deterministic session id)
+        sess_id, created = self._persist(
+            sa, scoring, raw_refs, sess.start_ts,
+            session_id=deterministic_session_id(sess_payload if isinstance(sess_payload, dict) else {}),
+        )
+        if not created:
+            # Redelivery: already stored, ack without republishing findings.
+            self.gossip.counters.inc("sessions_duplicate_skipped")
+            return sess_id, False
         # publish findings
         findings_payload = {
             "session_id": sess_id or sess.five_tuple,
@@ -189,6 +227,11 @@ class AnalysisWorker:
             self.gossip.counters.set("queue_depth", self.consumer.queue_depth())
         except Exception:
             pass
+        try:
+            self.gossip.counters.set("dlq_depth", self.consumer.dlq_depth())
+        except Exception:
+            pass
+        return sess_id, True
 
     def run(self):
         log.info("analysis worker starting, stream=%s group=%s", settings.SESSION_STREAM, settings.ANALYSIS_CONSUMER_GROUP)

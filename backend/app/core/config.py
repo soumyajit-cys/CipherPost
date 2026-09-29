@@ -65,6 +65,17 @@ class Settings(BaseSettings):
     ANALYSIS_CONSUMER_GROUP: str = "analysis-workers"
     ALERT_CONSUMER_GROUP: str = "alert-workers"
 
+    # --- reliable streams (phase 2) -----------------------------------------
+    STREAM_MAX_ATTEMPTS: int = 5  # deliveries before dead-letter
+    STREAM_IDLE_RECLAIM_MS: int = 60_000  # XAUTOCLAIM idle threshold
+    STREAM_DLQ_SUFFIX: str = ":dlq"  # dead-letter stream suffix
+    STREAM_RECLAIM_BATCH: int = 16
+    # Capture publisher resilience: bounded buffer + backoff, never block sniff.
+    CAPTURE_PUBLISH_BUFFER: int = 512  # max queued sessions when Redis down
+    CAPTURE_PUBLISH_RETRIES: int = 5
+    CAPTURE_PUBLISH_BACKOFF_MS: int = 200  # base, exponential + jitter
+    CAPTURE_PUBLISH_BACKOFF_MAX_MS: int = 5_000
+
     # --- alerting (stage 5) ---------------------------------------------------
     ALERT_MIN_SEVERITY: str = "high"           # findings below this are not dispatched
     ALERT_DEDUP_WINDOW_SECONDS: int = 300      # per-rule-id dedup window

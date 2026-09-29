@@ -38,9 +38,11 @@ def upgrade() -> None:
     )
     op.create_index('ix_mail_flows_org_seen', 'mail_flows', ['org_id', 'last_seen'], unique=False)
     op.create_index('ix_mail_flows_org_server', 'mail_flows', ['org_id', 'server_host'], unique=False)
+    op.create_index(op.f('ix_mail_flows_org_id'), 'mail_flows', ['org_id'], unique=False)
 
 
 def downgrade() -> None:
+    op.drop_index(op.f('ix_mail_flows_org_id'), table_name='mail_flows')
     op.drop_index('ix_mail_flows_org_server', table_name='mail_flows')
     op.drop_index('ix_mail_flows_org_seen', table_name='mail_flows')
     op.drop_table('mail_flows')

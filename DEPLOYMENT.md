@@ -30,10 +30,11 @@ docker compose -f docker/docker-compose.yml --profile replay up --build
 ## Shape B — SPAN/TAP distributed capture (enterprise)
 
 1. Mirror the mail VLAN(s) to sensor NICs (SPAN session or TAP aggregator).
-2. On each sensor host, run the capture agent with host networking:
+2. On each sensor host, run the capture agent with host networking as non-root:
    ```yaml
    # docker-compose override
    capture:
+     user: "10001:10001"
      network_mode: host
      cap_add: [NET_RAW, NET_ADMIN]   # never privileged:true / root
      environment:

@@ -29,6 +29,19 @@ services:
       timeout: 3s
       retries: 10
 
+  migrate:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    command: ["python", "-m", "app.migrate"]
+    environment:
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_ENV: dev
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build:
       context: ..

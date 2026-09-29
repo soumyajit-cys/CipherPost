@@ -19,7 +19,7 @@ import argparse
 import json
 import sys
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -54,7 +54,7 @@ def build_report(db_url: str | None = None) -> dict:
                                     "max_severity": sev, "model_version": ver})
     total = sum(counts.values())
     return {
-        "generated_at": datetime.utcnow().isoformat(),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "total_scored_sessions": total,
         "agreement": dict(counts),
         "agreement_rate": round(counts["agrees"] / total, 4) if total else None,
@@ -74,7 +74,7 @@ def main(argv=None) -> int:
     report = build_report(args.db_url)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     (out / f"disagreement-{stamp}.json").write_text(json.dumps(report, indent=2))
     lines = ["# Rule-vs-ML disagreement report", "",
              f"Generated {report.get('generated_at')}",

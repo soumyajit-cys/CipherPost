@@ -243,6 +243,9 @@ class Alert(Base):
     payload: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
     org_id: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    __table_args__ = (Index("ix_alerts_ts", "ts"),
+                      Index("ix_alerts_org_ts", "org_id", "ts"))
+
 
 class BaselineFeature(Base):
     """Rolling baseline store (mirrors raw DDL in live/baseline)."""

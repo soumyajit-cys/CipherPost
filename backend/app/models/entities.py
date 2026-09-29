@@ -102,6 +102,8 @@ class Finding(Base):
     legal_hold: Mapped[bool] = mapped_column(Boolean, default=False)  # phase 2: survives retention
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    __table_args__ = (Index("ix_findings_created_at", "created_at"),)
+
     session: Mapped[Session] = relationship(back_populates="findings")
 
 

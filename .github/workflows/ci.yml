@@ -23,10 +23,12 @@ jobs:
           pip check
       - name: Backend test suite
         run: PYTHONPATH=backend/. python -m pytest backend/tests -q
-      - name: Rules eval (precision/recall gate)
+      - name: Rules eval — synthetic corpus only (not real-world)
         run: PYTHONPATH=backend/. python -m app.parsing.eval_rules tests/fixtures
-      - name: ML eval
+      - name: ML eval — synthetic corpus only
         run: PYTHONPATH=backend/. python -m app.ml.eval_ml tests/fixtures
+      - name: Real-data eval harness (empty manifest, informational)
+        run: PYTHONPATH=backend python scripts/eval_real.py tests/real/manifest.json
       - name: Dependency vulnerability scan
         run: pip-audit -r backend/requirements.txt
 

@@ -53,3 +53,47 @@ def test_roundtrip_claims():
     assert claims["sub"] == "user-1"
     assert claims["org"] == "org-1"
     assert claims["role"] == "analyst"
+
+
+def test_sse_ticket_single_use_and_scope():
+    from app.core.auth import create_access_token, create_sse_ticket, consume_sse_ticket
+    import pytest
+    t1 = create_sse_ticket("u1", "o1", "analyst")
+    claims = consume_sse_ticket(t1)
+    assert claims["scope"] == "live:read"
+    with pytest.raises(ValueError, match="already used"):
+        consume_sse_ticket(t1)
+    # main token (no scope) must not pass as ticket
+    main = create_access_token("u1", "o1", "analyst", expires_in=60)
+    with pytest.raises(ValueError):
+        consume_sse_ticket(main)
+
+
+def test_login_lockout_in_memory():
+    from app.core.auth import (
+        is_login_locked, record_login_failure, record_login_success, _reset_login_state,
+    )
+    _reset_login_state()
+    acct, ip = "login:acct:test-lock@example.com", "login:ip:127.0.0.99"
+    assert not is_login_locked(acct, ip)
+    for _ in range(5):
+        record_login_failure(acct, ip)
+    assert is_login_locked(acct, ip)
+    record_login_success(acct, ip)
+    # account bucket cleared; IP bucket retained (spray protection) but single
+    # account lock lifted only after lock expiry — in-memory keeps lock, so
+    # assert lock still present for acct (safer default) OR cleared? We clear
+    # failures but locks persist until TTL; document behavior:
+    assert is_login_locked(acct, ip)
+    _reset_login_state()
+    assert not is_login_locked(acct, ip)
+
+
+def test_cors_default_same_origin():
+    from app.core.config import Settings
+    s = Settings(ENV="production", JWT_SECRET="x" * 40, ADMIN_PASSWORD="strong-pass-123",
+                 CORS_ORIGINS="")
+    assert s.cors_origins_list() == []
+    s2 = Settings(ENV="production", JWT_SECRET="x" * 40, ADMIN_PASSWORD="strong-pass-123",
+                  CORS_ORIGINS="https://app.example.com, https://soc.example.com")
+    assert s2.cors_origins_list() == ["https://app.example.com", "https://soc.example.com"]

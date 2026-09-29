@@ -213,7 +213,7 @@ export interface ApiClient {
   me(): Promise<AuthUser>
   /** Clear local session. */
   logout(): void
-  /** Current bearer token, if any (used for SSE ?token=). */
+  /** Current bearer token, if any (SSE uses a short-lived ticket, never this in URL). */
   authToken(): string | null
   /** Capture agents with recent heartbeats (track 3). */
   getAgents(): Promise<{ agents: { agent_id: string; mode: string; iface: string; online: boolean; age_seconds: number; stats?: Record<string, number> }[] }>

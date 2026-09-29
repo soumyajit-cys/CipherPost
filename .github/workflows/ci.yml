@@ -16,10 +16,11 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-      - name: Install backend deps
+      - name: Install backend deps (pinned)
         run: |
           pip install -r backend/requirements.txt
           pip install pip-audit
+          pip check
       - name: Backend test suite
         run: PYTHONPATH=backend/. python -m pytest backend/tests -q
       - name: Rules eval (precision/recall gate)

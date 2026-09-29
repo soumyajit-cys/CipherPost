@@ -83,11 +83,21 @@ class CaptureWorker:
         self._stop.set()
 
     def _emit_sessions(self, sessions):
+        # Retry anything buffered from a previous outage first (bounded).
+        try:
+            self.publisher.flush()
+        except Exception as e:
+            log.debug("publish flush failed: %s", e)
         for sess in sessions:
             if sess is None:
                 continue
             try:
-                bus.publish_session(self.r, sess)
+                from app.live.serialize import session_to_payload as _to_payload
+                sent_id = self.publisher.publish(_to_payload(sess))
+                if sent_id is None:
+                    # Buffered for retry; count but don't block the loop.
+                    self.gossip.counters.inc("sessions_buffered")
+                    continue
                 bus.notify(self.r, "sessions", "session", {
                     "five_tuple": sess.five_tuple,
                     "protocol": sess.protocol.value,
@@ -98,7 +108,12 @@ class CaptureWorker:
                 self.gossip.counters.inc("sessions_emitted")
             except Exception as e:
                 log.warning("publish session failed: %s", e)
-                self.gossip.counters.inc("publish_errors")
+                self._sessions_dropped += 1
+                self.gossip.counters.inc("sessions_dropped_total")
+        try:
+            self.gossip.counters.set("publish_buffer_depth", self.publisher.depth())
+        except Exception:
+            pass
 
     def _handle_packet(self, pkt: Packet):
         # port filter at python level (BPF already does, but replay path needs it)

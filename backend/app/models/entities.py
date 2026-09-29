@@ -243,6 +243,6 @@ class BaselineFeature(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
-                                                server_default=__import__("sqlalchemy").text("NOW()"),
+                                                server_default=_sa_text("NOW()"),
                                                 nullable=True)
     features: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)

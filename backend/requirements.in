@@ -6,6 +6,7 @@ uvicorn[standard]
 celery[redis]
 redis
 sqlalchemy[asyncio]
+alembic
 asyncpg
 psycopg2-binary
 greenlet

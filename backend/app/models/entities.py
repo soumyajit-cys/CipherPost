@@ -246,3 +246,21 @@ class BaselineFeature(Base):
                                                 server_default=_sa_text("NOW()"),
                                                 nullable=True)
     features: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
+
+
+class AlertDelivery(Base):
+    """Per-channel delivery status for an alert (phase 2: one failing channel
+    never blocks others)."""
+
+    __tablename__ = "alert_deliveries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    alert_id: Mapped[str] = mapped_column(Text, index=True)
+    channel: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text, default="pending", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                server_default=_sa_text("NOW()"),
+                                                nullable=True)
+    org_id: Mapped[str | None] = mapped_column(Text, nullable=True)

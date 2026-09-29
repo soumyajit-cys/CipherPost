@@ -193,6 +193,37 @@ class AlertDispatcher:
             return False
         return True
 
+    _sup_cache: dict = {}
+
+    def _suppressed(self, finding: dict) -> bool:
+        """True when an active suppression covers this finding (cached 60s)."""
+        try:
+            from app.proactive.suppressions import match_suppression, filter_active
+            org = finding.get("org_id")
+            now = time.time()
+            key = f"sup:{org}"
+            entry = self._sup_cache.get(key)
+            if entry is None or now - entry[0] > 60:
+                from sqlalchemy import create_engine
+                from sqlalchemy.orm import sessionmaker
+                from app.models.entities import Suppression
+                engine = create_engine(settings.DATABASE_URL_SYNC)
+                db = sessionmaker(bind=engine)()
+                try:
+                    rows = db.query(Suppression).filter(
+                        Suppression.org_id == org,
+                        Suppression.status == "approved").all()
+                    entry = (now, filter_active(rows))
+                    self._sup_cache[key] = entry
+                finally:
+                    db.close()
+            _, active = entry
+            rule = finding.get("rule_id") or ""
+            return match_suppression(rule, finding, active) is not None
+        except Exception as e:
+            log.debug("suppression check skipped: %s", e)
+            return False
+
     def _dispatch(self, finding: dict):
         """Dispatch one finding. Dedup + rate budget are shared via Redis so a
         restart or a second replica cannot double-alert. Each channel is tried

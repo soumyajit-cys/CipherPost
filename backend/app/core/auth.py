@@ -281,8 +281,8 @@ async def get_current_user(
         if user is None or not user.is_active:
             raise HTTPException(401, "API key owner inactive")
         try:
-            from datetime import datetime
-            user.last_login = datetime.utcnow()
+            from datetime import datetime, timezone
+            user.last_login = datetime.now(timezone.utc)
             await db.commit()
         except Exception:
             pass

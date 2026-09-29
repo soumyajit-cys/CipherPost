@@ -98,6 +98,7 @@ class Finding(Base):
     source: Mapped[str] = mapped_column(String(32), default="rules-engine")
     evidence: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
     legal_hold: Mapped[bool] = mapped_column(Boolean, default=False)  # phase 2: survives retention
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     session: Mapped[Session] = relationship(back_populates="findings")
 

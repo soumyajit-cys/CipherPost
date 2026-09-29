@@ -384,8 +384,9 @@ async def live_sessions(request: Request, token: str | None = Query(None),
 
 @app.get("/api/v1/live/findings")
 async def live_findings(request: Request, token: str | None = Query(None),
+                        ticket: str | None = Query(None),
                         db: AsyncSession = Depends(get_db)):
-    await _sse_ctx(request, token, db)
+    await _sse_ctx(request, token, ticket, db)
     return StreamingResponse(_pubsub_sse([f"{settings.LIVE_PUBSUB_PREFIX}:findings"], request), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 

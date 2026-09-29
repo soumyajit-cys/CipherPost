@@ -122,8 +122,14 @@ def analyze_certificate(der: bytes) -> CertAnalysis:
     now = datetime.datetime.now(datetime.timezone.utc)
     not_before = cert.not_valid_before_utc if hasattr(cert, "not_valid_before_utc") else cert.not_valid_before
     not_after = cert.not_valid_after_utc if hasattr(cert, "not_valid_after_utc") else cert.not_valid_after
-    not_before = not_before.replace(tzinfo=None)
-    not_after = not_after.replace(tzinfo=None)
+    # cryptography returns aware UTC in new API, naive in old; normalize to
+    # naive UTC for storage (DB columns are naive-compatible) while using
+    # tz-aware `now` for the remaining-days math.
+    if not_before.tzinfo is not None:
+        not_before = not_before.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+    if not_after.tzinfo is not None:
+        not_after = not_after.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+    _now_naive = now.replace(tzinfo=None)
     try:
         sig = cert.signature_algorithm_oid._name or "unknown"
     except Exception:

@@ -286,7 +286,7 @@ def _fetch_tlsa(mx_host: str) -> dict:
     out: dict = {"records": [], "dnssec": "unknown", "error": None}
     try:
         res = _resolver()
-        ans = res.resolve(name, "TLSA", want_dnssec=True)
+        ans = res.resolve(name, "TLSA")
     except dns.resolver.NXDOMAIN:
         out["dnssec"] = "not-published"
         return out

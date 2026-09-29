@@ -1,0 +1,61 @@
+# CipherPost Prometheus alert rules (Phase 2 Task 7).
+# See docs/runbook.md for what each alert means and how to fix it.
+groups:
+  - name: cipherpost-pipeline
+    interval: 30s
+    rules:
+      - alert: CipherPostCaptureDropping
+        expr: increase(cipherpost_capture_sessions_dropped_total[5m]) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Capture is dropping sessions (buffer-full or reassembly caps)"
+          runbook: "docs/runbook.md#capture-dropping"
+
+      - alert: CipherPostConsumerLagGrowing
+        expr: cipherpost_analysis_queue_depth > 1000
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Analysis consumer lag growing (sessions stream backing up)"
+          runbook: "docs/runbook.md#consumer-lag"
+
+      - alert: CipherPostDeadLetterNonEmpty
+        expr: max by (stream) (cipherpost_dlq_depth) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Dead-letter stream non-empty (poison messages need triage)"
+          runbook: "docs/runbook.md#dead-letter"
+
+      - alert: CipherPostNoSessions
+        expr: increase(cipherpost_capture_sessions_emitted[15m]) == 0
+        for: 0m
+        labels: { severity: critical }
+        annotations:
+          summary: "No sessions emitted for 15 minutes (capture or sensor down?)"
+          runbook: "docs/runbook.md#no-sessions"
+
+      - alert: CipherPostAlertDeliveryFailures
+        expr: increase(cipherpost_alerts_alerts_failed[10m]) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Alert channel deliveries failing"
+          runbook: "docs/runbook.md#delivery-failures"
+
+      - alert: CipherPostDBDown
+        expr: up{job="cipherpost-api"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "CipherPost API down (check DB/Redis via /api/v1/health)"
+          runbook: "docs/runbook.md#db-redis-down"
+
+      - alert: CipherPostCertExpiryForecast
+        expr: cipherpost_certs_expiring_soon > 0
+        for: 0m
+        labels: { severity: warning }
+        annotations:
+          summary: "Certificates expiring within the forecast window"
+          runbook: "docs/runbook.md#cert-expiry"

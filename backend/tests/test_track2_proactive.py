@@ -3,7 +3,7 @@ Track 2: proactive detection + compliance mapping tests (no DB server).
 """
 import sys
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend")))
 
@@ -20,7 +20,7 @@ def _memdb():
 
 def _fake_cert(der: bytes, cn="mail.example.com", days_left=10, ca=False):
     from types import SimpleNamespace
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return SimpleNamespace(
         der=der, is_ca=ca, subject_cn=cn, issuer_cn="Test CA",
         subject_alt_names=[cn], not_before=now - timedelta(days=10),

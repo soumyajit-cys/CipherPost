@@ -175,6 +175,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.worker
+    user: "10001:10001"
     command: ["python", "scripts/replay_harness.py", "tests/fixtures", "--mode", "capture"]
     volumes:
       - ../tests/fixtures:/app/tests/fixtures:ro

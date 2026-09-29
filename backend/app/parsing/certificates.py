@@ -155,7 +155,7 @@ def analyze_certificate(der: bytes) -> CertAnalysis:
         not_before=not_before,
         not_after=not_after,
         days_valid=(not_after - not_before).days,
-        days_remaining=(not_after - now).days,
+        days_remaining=(not_after - _now_naive).days,
         pubkey_alg=pub_alg,
         pubkey_bits=bits,
         signature_alg=sig,

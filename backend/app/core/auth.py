@@ -336,3 +336,49 @@ async def log_audit(db: AsyncSession, org_id: str, actor: str,
             await db.rollback()
         except Exception:
             pass
+
+
+# --------------------------------------------------------------------------
+# SSE tickets: short-lived (<=60s), single-use, scope-limited (live:read)
+# --------------------------------------------------------------------------
+
+_SSE_TICKET_TTL = 60
+_used_sse_tickets: set[str] = set()
+
+
+def create_sse_ticket(sub: str, org_id: str, role: str) -> str:
+    """Issue a single-use ticket for EventSource streams (scope live:read)."""
+    return create_access_token(sub, org_id, role, expires_in=_SSE_TICKET_TTL,
+                               extra={"scope": "live:read", "typ": "sse-ticket",
+                                      "jti": secrets.token_hex(8)})
+
+
+def consume_sse_ticket(token: str) -> dict:
+    """Validate + burn a ticket. Raises ValueError if invalid/reused/expired."""
+    claims = decode_token(token)
+    if claims.get("scope") != "live:read":
+        raise ValueError("not an SSE ticket (scope)")
+    jti = claims.get("jti") or ""
+    if not jti:
+        raise ValueError("ticket missing jti")
+    # Single-use: Redis SETNX when available, else in-memory set.
+    r = _login_redis()
+    key = f"sse-ticket:{jti}"
+    if r is not None:
+        try:
+            ok = r.set(key, "1", nx=True, ex=_SSE_TICKET_TTL)
+            if not ok:
+                raise ValueError("ticket already used")
+            return claims
+        except ValueError:
+            raise
+        except Exception:
+            pass
+    if jti in _used_sse_tickets:
+        raise ValueError("ticket already used")
+    _used_sse_tickets.add(jti)
+    # Bound memory: keep only recent 10k
+    if len(_used_sse_tickets) > 10_000:
+        _used_sse_tickets.clear()
+        _used_sse_tickets.add(jti)
+    return claims

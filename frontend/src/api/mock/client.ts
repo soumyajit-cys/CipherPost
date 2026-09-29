@@ -198,6 +198,29 @@ export const mockClient: ApiClient = {
     await simulateLatency()
     return { agents: [{ agent_id: 'demo/lo', mode: 'replay', iface: 'lo', online: true, age_seconds: 3, stats: { packets_seen: 1284 } }] }
   },
+
+  async listSuppressions() {
+    await simulateLatency()
+    return []
+  },
+
+  async createSuppression() {
+    await simulateLatency()
+    throw new Error('Suppressions require a live backend (http mode)')
+  },
+
+  async updateSuppression() {
+    throw new Error('Suppressions require a live backend (http mode)')
+  },
+
+  async deleteSuppression() {
+    throw new Error('Suppressions require a live backend (http mode)')
+  },
+
+  async suppressionsExpiring() {
+    await simulateLatency()
+    return []
+  },
 }
 
 export interface FleetShape {

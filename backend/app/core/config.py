@@ -115,6 +115,15 @@ class Settings(BaseSettings):
     CERT_EXPIRY_CHECK_INTERVAL_SECONDS: int = 900  # alerter sweep cadence
     DNS_RESOLVER: Optional[str] = None  # e.g. "8.8.8.8"; unset = MTA-STS/DANE stay stubbed
 
+    # --- MTA-STS / DANE (phase 2 task 5: real checks via dnspython) ---------
+    DNS_TIMEOUT_SECONDS: float = 5.0
+    DNS_CACHE_MAX: int = 512
+    MTASTS_HTTPS_TIMEOUT_SECONDS: float = 8.0
+    MTASTS_MAX_POLICY_BYTES: int = 65536
+    MTASTS_MAX_REDIRECTS: int = 3
+    DNSSEC_TRUST_ANCHOR: str = ""  # base64 DER of a trusted DNSKEY (test/lab); empty = cannot validate
+    TRANSPORT_RECHECK_INTERVAL_SECONDS: int = 3600
+
     # --- rolling fleet baseline (stage 4) --------------------------------------
     FLEET_BASELINE_WINDOW_DAYS: int = 7
     FLEET_BASELINE_MIN_SAMPLES: int = 20

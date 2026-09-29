@@ -157,7 +157,7 @@ def test_signed_tlsa_validates_secure_with_anchor(monkeypatch):
         tlsa, priv, keyname, dnskey,
         inception=now - datetime.timedelta(hours=1),
         expiration=now + datetime.timedelta(days=1))
-    sigset = dns.rrset.from_rdata(tlsa_owner, 60, [sig])
+    sigset = dns.rrset.from_rdata(tlsa_owner, 60, sig)
 
     fake = FakeDNS().start()
     fake.add("mx1.signed.test", "A", "93.184.216.34")

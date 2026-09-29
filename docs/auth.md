@@ -8,9 +8,14 @@ load-balancers and Prometheus don't need credentials.
 ## Credentials
 
 - **Dashboard login** → `POST /api/v1/auth/login` returns a short-lived
-  HS256 JWT (`CIPHERPOST_JWT_EXPIRY_SECONDS`, default 24h). Send as
-  `Authorization: Bearer <token>`. SSE/EventSource can't send headers, so
-  live streams also accept `?token=<jwt>`.
+  HS256 JWT via PyJWT (`CIPHERPOST_JWT_EXPIRY_SECONDS`, default 24h; HS256
+  pinned, `exp` required, `alg=none` rejected). Send as
+  `Authorization: Bearer <token>`. Login is rate-limited (5 failures/5min per
+  account → 15min lock; 20/5min per IP) with generic `401` errors (no user
+  enumeration); failures are audited as `auth.login.failed`.
+  EventSource can't send headers, so fetch `POST /api/v1/live/ticket`
+  (Bearer) for a 60s single-use `live:read` ticket, then open
+  `/live/*?ticket=<ticket>`. Main tokens in URLs are rejected to avoid log leaks.
 - **Programmatic access** → API keys (`cp_<hex>`, created by admins via
   `POST /api/v1/api-keys`; the raw key is shown **once**). Send as
   `X-API-Key` header. Only the SHA-256 hash is stored.

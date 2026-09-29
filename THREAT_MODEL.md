@@ -73,4 +73,11 @@ Treat every packet, handshake field, and certificate as attacker-controlled.
    multiple capture agents (DaemonSet) for coverage; watch `/api/v1/agents`.
 4. **ML label circularity** — initial labels derive from the rules engine
    (documented in README + disagreement reports); treat scores as
-   prioritization, never as ground truth.
+   prioritization, never as ground truth. Synthetic 100% P/R does not imply
+   real-world performance — see `tests/real/` (empty, human-labelled harness
+   + tshark diff, not a gate).
+5. **Deployment hardening verified by code review, not by running containers**
+   (Docker/K8s non-root, unexposed DB/Redis, migrate gating were not
+   executed here — verify with `docker compose config` + staging deploy).
+   Time handling is now tz-aware, but stored DB timestamps may mix naive
+   legacy rows with aware new rows — comparisons normalize to UTC.

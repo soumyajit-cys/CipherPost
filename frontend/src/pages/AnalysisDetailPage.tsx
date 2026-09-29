@@ -263,7 +263,7 @@ function SessionTable({ sessions, onSelect }: { sessions: SessionSummary[]; anal
 
 
 
-function SuppressButton({ ruleId, fiveTuple }: { ruleId: string; fiveTuple: string }) {
+function SuppressButton({ ruleId, fiveTuple: _fiveTuple }: { ruleId: string; fiveTuple: string }) {
   const [done, setDone] = useState(false)
   if (done) return <span className="text-[10px] text-sev-low">suppression requested</span>
   return (

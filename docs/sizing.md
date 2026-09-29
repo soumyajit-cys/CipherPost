@@ -15,6 +15,19 @@ RAM, local SSD, Python 3.13 venv. Command:
 | Packet-to-analysis latency p50 / p95 / p99 | **~8 µs / ~19 µs / ~26 µs** |
 | Peak RSS | **~48 MB** |
 
+## Soak (2026-09-30, `scripts/soak.py --minutes 1`, same machine)
+
+| Metric | Measured |
+|---|---|
+| Loops over corpus | 6,955 in 60.0 s |
+| Packets / sessions / findings | 1,815,152 / 1,550,877 / 1,919,484 |
+| Errors | **0** (6,955 garbage-packet faults injected, all survived) |
+| Peak RSS | **47.6 MB (flat — bounded)** |
+
+Caveat: loops re-feed identical packets, so session counts are stress volume,
+not unique flows. A 24-hour run on live SPAN traffic is still required before
+any production claim (see Task 8 notes in the Phase 2 report).
+
 ## What this does NOT prove (read before sizing production)
 
 - The corpus is tiny (261 packets) and synthetic: per-packet cost is

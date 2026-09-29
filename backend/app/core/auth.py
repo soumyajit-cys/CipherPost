@@ -100,35 +100,36 @@ def _jwt_secret() -> bytes:
 
 
 def create_access_token(sub: str, org_id: str, role: str,
-                        expires_in: int | None = None) -> str:
+                        expires_in: int | None = None,
+                        extra: dict | None = None) -> str:
+    import jwt as _pyjwt
     from app.core import config as _cfgmod2
     if expires_in is None:
         expires_in = int(getattr(_cfgmod2.settings, "JWT_EXPIRY_SECONDS", 86400))
     now = int(time.time())
-    header = _b64url(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
-    payload = _b64url(json.dumps({
+    payload = {
         "sub": sub, "org": org_id, "role": role,
         "iat": now, "exp": now + expires_in,
-    }).encode())
-    sig = _b64url(hmac.new(_jwt_secret(), f"{header}.{payload}".encode(),
-                           hashlib.sha256).digest())
-    return f"{header}.{payload}.{sig}"
+    }
+    if extra:
+        payload.update(extra)
+    return _pyjwt.encode(payload, _jwt_secret_str(), algorithm=_JWT_ALG)
 
 
 def decode_token(token: str) -> dict:
+    import jwt as _pyjwt
     try:
-        header_b, payload_b, sig_b = token.split(".")
-        expected = _b64url(hmac.new(
-            _jwt_secret(), f"{header_b}.{payload_b}".encode(),
-            hashlib.sha256).digest())
-        if not hmac.compare_digest(expected, sig_b):
-            raise ValueError("bad signature")
-        claims = json.loads(_b64url_decode(payload_b))
-        if int(claims.get("exp", 0)) < int(time.time()):
-            raise ValueError("expired")
-        return claims
+        claims = _pyjwt.decode(token, _jwt_secret_str(), algorithms=[_JWT_ALG],
+                               options={"require": ["exp", "iat"]})
+    except _pyjwt.ExpiredSignatureError as e:
+        raise ValueError(f"invalid token: expired ({e})")
+    except _pyjwt.InvalidAlgorithmError as e:
+        raise ValueError(f"invalid token: bad alg ({e})")
+    except _pyjwt.InvalidTokenError as e:
+        raise ValueError(f"invalid token: {e}")
     except Exception as e:
         raise ValueError(f"invalid token: {e}")
+    return claims
 
 
 # --------------------------------------------------------------------------

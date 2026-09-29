@@ -32,8 +32,35 @@ async def get_db() -> AsyncSession:
 async def init_db():
     from app.core.config import validate_startup_secrets
     validate_startup_secrets()  # refuse to start in production with weak secrets
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Prefer Alembic migrations on Postgres; fall back to create_all for
+    # SQLite/tests or when Alembic is unavailable. Migrations are also run
+    # explicitly via `python -m app.migrate` (cipherpost-migrate) in compose/k8s.
+    _migrated = False
+    try:
+        from app.core.config import settings as _s
+        url = getattr(_s, "DATABASE_URL_SYNC", "") or ""
+        if url and not url.startswith("sqlite"):
+            import asyncio as _asyncio
+
+            def _upgrade():
+                from alembic.config import Config as _Cfg
+                from alembic import command as _cmd
+                import os as _os
+                root = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "..", ".."))
+                ini = _os.path.join(root, "backend", "alembic.ini")
+                if not _os.path.exists(ini):
+                    ini = _os.path.abspath("backend/alembic.ini")
+                cfg = _Cfg(ini)
+                _cmd.upgrade(cfg, "head")
+
+            await _asyncio.to_thread(_upgrade)
+            _migrated = True
+    except Exception as e:
+        import logging as _logging
+        _logging.getLogger("cipherpost.db").warning("migration skipped, using create_all: %s", e)
+    if not _migrated:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
     await _seed_auth()
 
 

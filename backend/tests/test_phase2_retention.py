@@ -45,7 +45,7 @@ def test_batch_purge_deletes_old_sessions_findings():
     # findings cascade with their sessions via ORM delete (delete-orphan)
     assert S.query(E.Finding).count() == 0
     assert S.query(E.Session).count() == 1
-    assert counts["n"] >= 10  # per-batch metric reports
+    assert counts["n"] == 5  # per-batch metric reports sum to purged rows
     S.close()
 
 

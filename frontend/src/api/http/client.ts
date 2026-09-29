@@ -353,6 +353,10 @@ export const httpClient: ApiClient = {
     return get(`/suppressions/expiring-soon?days=${days}`)
   },
 
+  async listFlows(unencryptedWithinDays?: number) {
+    return get('/flows' + (unencryptedWithinDays ? `?unencrypted_within_days=${unencryptedWithinDays}` : ''))
+  },
+
   logout() {
     localStorage.removeItem(TOKEN_KEY)
   },

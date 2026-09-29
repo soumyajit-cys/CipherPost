@@ -14,6 +14,9 @@ httpx==0.28.1
 Jinja2==3.1.6
 joblib==1.6.0
 Mako==1.4.1
+dnspython==2.8.0
+fakeredis==2.38.0
+sortedcontainers==2.4.0
 numpy==2.5.2
 pandas==3.0.5
 prometheus_client==0.26.0

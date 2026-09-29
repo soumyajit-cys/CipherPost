@@ -891,10 +891,43 @@ async def get_job(job_id: str,
     return {
         "id": job.id, "filename": job.filename, "status": job.status.value,
         "progress": job.progress, "message": job.message, "error": job.error,
-        "file_size": job.file_size,
+        "file_size": job.file_size, "legal_hold": bool(getattr(job, "legal_hold", False)),
         "created_at": job.created_at.isoformat() if job.created_at else None,
         "completed_at": job.completed_at.isoformat() if job.completed_at else None,
     }
+
+
+@app.post("/api/v1/jobs/{job_id}/legal-hold")
+async def set_job_hold(job_id: str, body: dict,
+                       ctx: AuthContext = Depends(require_roles("analyst")),
+                       db: AsyncSession = Depends(get_db)):
+    """Legal hold: hold=true exempts the job (and its sessions) from retention."""
+    job = await _get_org_job(job_id, ctx, db)
+    job.legal_hold = bool(body.get("hold", True))
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "job.legal_hold", job_id,
+                    {"hold": job.legal_hold})
+    return {"id": job.id, "legal_hold": job.legal_hold}
+
+
+@app.post("/api/v1/findings/{finding_id}/legal-hold")
+async def set_finding_hold(finding_id: int, body: dict,
+                           ctx: AuthContext = Depends(get_current_user),
+                           db: AsyncSession = Depends(get_db)):
+    from app.models.entities import Finding as _F
+    f = await db.get(_F, finding_id)
+    if f is None:
+        raise HTTPException(404, "Finding not found")
+    sess = await db.get(Session, f.session_id)
+    if sess is not None and sess.org_id != ctx.org_id:
+        raise HTTPException(404, "Finding not found")
+    if ctx.role not in ("admin", "analyst"):
+        raise HTTPException(403, "Analysts and admins only")
+    f.legal_hold = bool(body.get("hold", True))
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "finding.legal_hold",
+                    str(finding_id), {"hold": f.legal_hold})
+    return {"id": f.id, "legal_hold": f.legal_hold}
 
 
 @app.get("/api/v1/jobs/{job_id}/sessions")

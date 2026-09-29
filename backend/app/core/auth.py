@@ -92,7 +92,7 @@ def _jwt_secret() -> bytes:
         return _DEV_EPHEMERAL_SECRET
     # Production: refuse weak secrets (defence in depth; startup also checks).
     try:
-        _cfgmod.validate_startup_secrets(settings)
+        _cfgmod.validate_startup_secrets(s)
     except RuntimeError:
         # Re-raise with context pointing at JWT specifically if that is the
         # cause; otherwise propagate the full production refusal.
@@ -102,8 +102,9 @@ def _jwt_secret() -> bytes:
 
 def create_access_token(sub: str, org_id: str, role: str,
                         expires_in: int | None = None) -> str:
+    from app.core import config as _cfgmod2
     if expires_in is None:
-        expires_in = int(getattr(settings, "JWT_EXPIRY_SECONDS", 86400))
+        expires_in = int(getattr(_cfgmod2.settings, "JWT_EXPIRY_SECONDS", 86400))
     now = int(time.time())
     header = _b64url(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
     payload = _b64url(json.dumps({

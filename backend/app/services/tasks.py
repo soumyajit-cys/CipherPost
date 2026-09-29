@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from celery import Celery
@@ -170,7 +170,7 @@ def process_analysis_job(self, job_id: str):
 
         job.progress = 1.0
         job.status = "completed"
-        job.completed_at = datetime.utcnow()
+        job.completed_at = datetime.now(timezone.utc)
         job.message = f"Analysis complete: {len(analyses)} sessions, {sum(len(s.findings) for s in analyses)} findings"
         Session.commit()
 

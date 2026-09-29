@@ -29,6 +29,27 @@ def dlq_name(stream: str) -> str:
     return f"{stream}{settings.STREAM_DLQ_SUFFIX}"
 
 
+def note_attempt(r, stream: str, entry_id: str, ttl: int = 86400) -> int:
+    """Increment delivery-attempt counter for (stream, entry). Returns attempts."""
+    try:
+        key = f"{stream}:attempts"
+        n = r.hincrby(key, entry_id, 1)
+        try:
+            r.expire(key, ttl)
+        except Exception:
+            pass
+        return int(n)
+    except Exception:
+        return 1
+
+
+def clear_attempts(r, stream: str, entry_id: str) -> None:
+    try:
+        r.hdel(f"{stream}:attempts", entry_id)
+    except Exception:
+        pass
+
+
 def publish(r, stream: str, payload: dict | bytes, maxlen: int = 5000) -> str | None:
     """XADD a JSON/bytes value onto a Redis stream. Returns entry id or None."""
     try:

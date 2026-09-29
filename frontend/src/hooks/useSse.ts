@@ -28,7 +28,6 @@ export function useSse(url: string | null, enabled = true) {
   useEffect(() => {
     if (!url || !enabled) return
     let cancelled = false
-    let es: EventSource | null = null
     // EventSource can't send headers: fetch a short-lived single-use ticket
     // with the Bearer token, then open the stream with ?ticket= (never ?token=).
     fetchSseTicket().then((ticket) => {
@@ -38,7 +37,6 @@ export function useSse(url: string | null, enabled = true) {
         finalUrl = url + (url.includes('?') ? '&' : '?') + `ticket=${encodeURIComponent(ticket)}`
       }
       const source = new EventSource(finalUrl)
-      es = source
       esRef.current = source
       source.onopen = () => setConnected(true)
       source.onerror = () => setConnected(false)

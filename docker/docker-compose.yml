@@ -24,8 +24,8 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    # No published ports by default (internal only). For local redis-cli, use:
+    #   docker compose -f docker/docker-compose.yml run --rm redis redis-cli -h redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

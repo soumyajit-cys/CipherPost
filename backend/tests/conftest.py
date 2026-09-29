@@ -13,3 +13,7 @@ os.environ.setdefault(
     "test-only-jwt-secret-0123456789abcdef-0123456789abcdef",
 )
 os.environ.setdefault("CIPHERPOST_ADMIN_PASSWORD", "test-admin-password-123")
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: failure-injection/soak tests (nightly)")

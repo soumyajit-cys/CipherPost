@@ -522,10 +522,14 @@ class AlertDispatcher:
             except ValueError:
                 pass
         last_expiry = 0.0
+        last_transport = 0.0
         while not self._stop.is_set():
             if time.time() - last_expiry > settings.CERT_EXPIRY_CHECK_INTERVAL_SECONDS:
                 last_expiry = time.time()
                 self._expiry_sweep()
+            if time.time() - last_transport > settings.TRANSPORT_RECHECK_INTERVAL_SECONDS:
+                last_transport = time.time()
+                self._transport_sweep()
             items = self.consumer.poll_raw(timeout_ms=800)
             # Flush grouped alerts whose hold window expired, even on idle polls.
             try:

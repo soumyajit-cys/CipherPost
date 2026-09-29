@@ -77,6 +77,15 @@ kubectl apply -f k8s/capture-daemonset.yaml
 - Never commit `.env` (it was tracked historically with dev-only values —
   if you cloned before the fix, **rotate** `POSTGRES_PASSWORD`,
   `JWT_SECRET`, and `ADMIN_PASSWORD`; the old values were local-dev only).
+- Production refuses to start unless `CIPHERPOST_JWT_SECRET` is ≥ 32 random
+  bytes and `CIPHERPOST_ADMIN_PASSWORD` is ≥ 12 chars (no `change-me`/`CHANGEME`).
+  Generate with `openssl rand -hex 32`. `CIPHERPOST_ENV=dev` is local-only.
+- Compose reads `POSTGRES_PASSWORD` from `.env`; K8s reads it from
+  `secret.local.yaml` (gitignored template `secret.yaml`).
+- Auth hardening: PyJWT HS256 pinned, login lockout (5/5min per account,
+  20/5min per IP, generic 401, `auth.login.failed` audited), CORS allowlist
+  via `CIPHERPOST_CORS_ORIGINS` (default same-origin), SSE via
+  `POST /api/v1/live/ticket` (60s single-use) — never put main tokens in URLs.
 - Use `.env.example` / `k8s/secret.local.yaml` as the template.
 - Pre-commit (`pre-commit install`) + CI gitleaks block new leaks.
 

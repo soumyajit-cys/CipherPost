@@ -24,10 +24,9 @@ export default function SuppressionsPage() {
 
   useEffect(() => { load() }, [])
 
-  if (error) return <ErrorState title="Suppressions unavailable" hint={error} />
+  if (error) return <ErrorState message={`Suppressions unavailable: ${error}`} />
   if (!rows) return <LoadingState label="Loading suppressions…" />
 
-  const now = Date.now()
   const active = rows.filter((s) => s.active)
   const expired = rows.filter((s) => !s.active && s.status === 'approved')
 

@@ -1,0 +1,30 @@
+# Direct dependencies only (unpinned floor). Pinned reproducible install is in
+# requirements.txt (generated via `pip freeze` from a known-good venv).
+# Regenerate with: pip install -r backend/requirements.in && pip freeze > backend/requirements.txt
+fastapi
+uvicorn[standard]
+celery[redis]
+redis
+sqlalchemy[asyncio]
+asyncpg
+psycopg2-binary
+greenlet
+scapy
+dpkt
+pyOpenSSL
+cryptography
+scikit-learn
+shap
+jinja2
+weasyprint
+python-multipart
+pydantic
+pydantic-settings
+PyJWT
+prometheus-client
+structlog
+httpx
+numpy
+pandas
+joblib
+aiofiles

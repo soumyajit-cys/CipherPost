@@ -354,11 +354,22 @@ async def _pubsub_sse(channels: list[str], request: Request):
             pass
 
 
+@app.post("/api/v1/live/ticket")
+async def live_ticket(ctx: AuthContext = Depends(get_current_user)):
+    """Issue a short-lived single-use SSE ticket (scope live:read, 60s TTL).
+    Frontend fetches this with the Bearer token, then opens EventSource with
+    ?ticket= so the long-lived token never appears in URLs/logs."""
+    from app.core.auth import create_sse_ticket
+    return {"ticket": create_sse_ticket(ctx.user_id or "", ctx.org_id, ctx.role),
+            "expires_in": 60, "scope": "live:read"}
+
+
 @app.get("/api/v1/live/stream")
 async def live_stream(request: Request, token: str | None = Query(None),
+                      ticket: str | None = Query(None),
                       db: AsyncSession = Depends(get_db)):
     """Unified SSE stream: sessions + findings + alerts."""
-    await _sse_ctx(request, token, db)
+    await _sse_ctx(request, token, ticket, db)
     chans = [f"{settings.LIVE_PUBSUB_PREFIX}:sessions", f"{settings.LIVE_PUBSUB_PREFIX}:findings", f"{settings.LIVE_PUBSUB_PREFIX}:alerts", f"{settings.LIVE_PUBSUB_PREFIX}:status"]
     return StreamingResponse(_pubsub_sse(chans, request), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

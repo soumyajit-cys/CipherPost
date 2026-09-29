@@ -22,6 +22,11 @@ python-multipart
 pydantic
 pydantic-settings
 PyJWT
+# Phase 2: small, well-known deps (justified):
+# - dnspython: real MTA-STS/DANE checks (Task 5, approved in spec)
+# - fakeredis: failure-mode tests without real Redis (Tasks 1-2, 8)
+dnspython
+fakeredis
 prometheus-client
 structlog
 httpx

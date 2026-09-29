@@ -37,6 +37,27 @@ def _get_sync_session():
     engine = create_engine(settings.DATABASE_URL_SYNC, pool_size=5)
     return sessionmaker(bind=engine)()
 
+
+def deterministic_session_id(payload: dict) -> str:
+    """Stable id for (five_tuple, start_ts, end_ts, endpoints) so redelivery
+    cannot create duplicates. Falls back to uuid4 only when keys are missing."""
+    import hashlib
+    try:
+        key = "|".join([
+            str(payload.get("five_tuple", "")),
+            str(payload.get("start_ts", "")),
+            str(payload.get("end_ts", "")),
+            str(payload.get("client_ip", "")),
+            str(payload.get("server_ip", "")),
+            str(payload.get("client_port", "")),
+            str(payload.get("server_port", "")),
+        ])
+        if key.strip("|"):
+            return "sess-" + hashlib.sha256(key.encode()).hexdigest()[:32]
+    except Exception:
+        pass
+    return "sess-" + uuid.uuid4().hex[:32]
+
 class AnalysisWorker:
     def __init__(self, redis_client=None, scorer=None):
         self.r = redis_client or redis.Redis.from_url(settings.REDIS_URL, decode_responses=False)

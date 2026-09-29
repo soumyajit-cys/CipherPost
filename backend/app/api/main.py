@@ -72,14 +72,31 @@ async def health():
 # under-privileged calls get 403. See docs/auth.md.
 
 @app.post("/api/v1/auth/login")
-async def login(body: dict, db: AsyncSession = Depends(get_db)):
-    from datetime import datetime
+async def login(body: dict, request: Request, db: AsyncSession = Depends(get_db)):
+    from datetime import datetime, timezone
+    from app.core.auth import (
+        is_login_locked, record_login_failure, record_login_success,
+    )
     email = (body.get("email") or "").strip().lower()
+    client_ip = (request.client.host if request.client else "unknown")
+    acct_key = f"login:acct:{email or 'unknown'}"
+    ip_key = f"login:ip:{client_ip}"
+    if email and is_login_locked(acct_key, ip_key):
+        raise HTTPException(401, "Invalid email or password")
     user = (await db.execute(select(User).where(User.email == email))).scalars().first()
     if user is None or not user.is_active or not verify_password(
             body.get("password") or "", user.password_hash):
+        record_login_failure(acct_key, ip_key)
+        # Generic error (no user enumeration) + audit failure with org guard.
+        try:
+            org = user.org_id if user is not None else "unknown"
+            await log_audit(db, org, email or "unknown", "auth.login.failed",
+                            "session", {"ip": client_ip})
+        except Exception:
+            pass
         raise HTTPException(401, "Invalid email or password")
-    user.last_login = datetime.utcnow()
+    record_login_success(acct_key, ip_key)
+    user.last_login = datetime.now(timezone.utc)
     await db.commit()
     token = create_access_token(user.id, user.org_id, user.role.value)
     await log_audit(db, user.org_id, user.email, "auth.login", "session")

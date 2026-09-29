@@ -293,8 +293,12 @@ class AlertDispatcher:
                          (time.time() - r.expiry_alerted_at.timestamp()) > 86400]
                 for r in fresh:
                     try:
-                        from datetime import datetime
-                        days = (r.not_after - datetime.utcnow()).days if r.not_after else -1
+                        from datetime import datetime, timezone
+                        _now = datetime.now(timezone.utc)
+                        _na = r.not_after
+                        if _na is not None and _na.tzinfo is None:
+                            _na = _na.replace(tzinfo=timezone.utc)
+                        days = (_na - _now).days if _na else -1
                     except Exception:
                         days = -1
                     self._dispatch({

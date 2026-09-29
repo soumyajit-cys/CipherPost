@@ -781,6 +781,89 @@ async def domain_transport_security(domain: str, refresh: bool = Query(False),
     return check_domain(domain, refresh=refresh)
 
 
+# --- mail flows (phase 2 task 6: per-flow posture) ----------------------------
+
+def _flow_to_dict(f) -> dict:
+    total = f.total_sessions or 0
+    enc = f.encrypted_sessions or 0
+    return {"id": f.id, "client": f.client_host, "server": f.server_host,
+            "protocol": f.protocol, "port": f.port,
+            "total_sessions": total, "encrypted_sessions": enc,
+            "plaintext_sessions": f.plaintext_sessions or 0,
+            "encrypted_share": round(enc / total, 3) if total else None,
+            "versions": f.versions or {}, "ciphers": f.ciphers or {},
+            "best_version": f.best_version,
+            "first_seen": f.first_seen.isoformat() if f.first_seen else None,
+            "last_seen": f.last_seen.isoformat() if f.last_seen else None}
+
+
+@app.get("/api/v1/flows")
+async def list_flows(unencrypted_within_days: int | None = Query(None, ge=1, le=90),
+                     limit: int = Query(100, ge=1, le=500),
+                     ctx: AuthContext = Depends(get_current_user),
+                     db: AsyncSession = Depends(get_db)):
+    """Mail flows answering: which flows sent mail unencrypted recently?
+
+    Pass unencrypted_within_days=N to list only flows with plaintext sessions
+    seen in the last N days (default listing returns all, worst first).
+    """
+    from datetime import datetime, timezone, timedelta
+    from app.models.entities import MailFlow
+    q = select(MailFlow).where(MailFlow.org_id == ctx.org_id)
+    if unencrypted_within_days:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=unencrypted_within_days)
+        q = q.where(MailFlow.plaintext_sessions > 0, MailFlow.last_seen >= cutoff)
+    q = q.order_by(MailFlow.plaintext_sessions.desc()).limit(limit)
+    rows = (await db.execute(q)).scalars().all()
+    return [_flow_to_dict(f) for f in rows]
+
+
+@app.get("/api/v1/flows/{flow_id}/history")
+async def flow_history(flow_id: str, days: int = Query(30, ge=1, le=90),
+                       format: str | None = Query(None),
+                       ctx: AuthContext = Depends(get_current_user),
+                       db: AsyncSession = Depends(get_db)):
+    """Per-flow session history over time; format=csv exports unencrypted answers."""
+    from datetime import datetime, timezone, timedelta
+    from app.models.entities import MailFlow
+    flow = await db.get(MailFlow, flow_id)
+    if flow is None or flow.org_id != ctx.org_id:
+        raise HTTPException(404, "Flow not found")
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    q = select(Session.five_tuple, Session.tls_version, Session.negotiated_cipher,
+               Session.created_at).where(Session.org_id == ctx.org_id)
+    rows = (await db.execute(q)).all()
+    points = []
+    for ft, tls_v, cipher, created in rows:
+        if not created:
+            continue
+        aware = created if getattr(created, "tzinfo", None) else created.replace(tzinfo=timezone.utc)
+        if aware < cutoff:
+            continue
+        # directional pair match for this flow
+        if flow.client_host not in (ft or "") or flow.server_host not in (ft or ""):
+            continue
+        points.append({"tls_version": tls_v, "cipher": cipher,
+                       "at": created.isoformat()})
+    out = {"flow": _flow_to_dict(flow), "sessions_sampled": len(points),
+           "history": sorted(points, key=lambda p: p["at"])}
+    if format == "csv":
+        import csv as _csv
+        import io as _io
+        buf = _io.StringIO()
+        w = _csv.writer(buf)
+        w.writerow(["flow_id", "client", "server", "protocol", "port",
+                    "at", "tls_version", "cipher"])
+        for p in out["history"]:
+            w.writerow([flow.id, flow.client_host, flow.server_host,
+                        flow.protocol, flow.port, p["at"],
+                        p["tls_version"], p["cipher"]])
+        return Response(buf.getvalue(), media_type="text/csv",
+                        headers={"Content-Disposition":
+                                 f"attachment; filename=flow-{flow.id}.csv"})
+    return out
+
+
 @app.get("/api/v1/ml/versions")
 async def ml_versions(ctx: AuthContext = Depends(get_current_user)):
     """Model registry: which versions scored what (track 5)."""

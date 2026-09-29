@@ -232,7 +232,15 @@ class DBRetention:
                 cutoff = now - timedelta(days=days)
                 n_total = 0
                 while True:
-                    n = self._purge_batch(db, model, cutoff)
+                    if table == "sessions":
+                        from app.models.entities import AnalysisJob as _Job
+                        held = db.query(_Job.id).filter(
+                            (_Job.legal_hold.is_(True)))
+                        n = self._purge_batch(
+                            db, model, cutoff,
+                            extra=lambda q: q.filter(~model.job_id.in_(held)))
+                    else:
+                        n = self._purge_batch(db, model, cutoff)
                     if n == 0:
                         break
                     db.commit()

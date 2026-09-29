@@ -263,6 +263,29 @@ function SessionTable({ sessions, onSelect }: { sessions: SessionSummary[]; anal
 
 
 
+function SuppressButton({ ruleId, fiveTuple }: { ruleId: string; fiveTuple: string }) {
+  const [done, setDone] = useState(false)
+  if (done) return <span className="text-[10px] text-sev-low">suppression requested</span>
+  return (
+    <button
+      className="rounded border border-base-600 px-1.5 py-0.5 text-[10px] text-base-400 hover:text-base-100"
+      title="Request an accepted-risk suppression for this rule"
+      onClick={async () => {
+        const reason = window.prompt(`Suppress ${ruleId}?\nEnter a reason (required, audited):`)
+        if (!reason) return
+        try {
+          await api.createSuppression?.({ rule_id: ruleId, scope: {}, reason })
+          setDone(true)
+        } catch (e) {
+          window.alert(`Suppression failed: ${e}`)
+        }
+      }}
+    >
+      Suppress
+    </button>
+  )
+}
+
 function FindingsList({ findings }: { findings: Finding[] }) {
   const [severityFilter, setSeverityFilter] = useState<string>('all')
   const rows = useMemo(() => {
@@ -307,6 +330,9 @@ function FindingsList({ findings }: { findings: Finding[] }) {
                     </span>
                     {f.reference && <span className="font-mono text-accent/80">{f.reference}</span>}
                     {f.kind !== 'rule' && <span className="rounded bg-base-700 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-base-200">{f.kind}</span>}
+                    {(f as any).suppressed
+                      ? <span className="rounded border border-sev-low/50 px-1.5 py-0.5 text-[10px] text-sev-low">suppressed: accepted risk</span>
+                      : <SuppressButton ruleId={f.ruleId} fiveTuple={f.session.fiveTuple} />}
                     {(f.compliance ?? []).slice(0, 4).map((c, i) => (
                       <span key={i} title={`${c.framework_title} — ${c.note}`} className="rounded border border-base-600 px-1.5 py-0.5 font-mono text-[10px] text-base-400">
                         {c.framework} {c.control}

@@ -1,5 +1,9 @@
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 from sqlalchemy import (
     String, Integer, Float, Boolean, DateTime, Text, Enum, ForeignKey,
     UniqueConstraint, Index, JSON,

@@ -38,7 +38,7 @@ services:
       dockerfile: docker/Dockerfile.worker
     command: ["python", "-m", "app.migrate"]
     environment:
-      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost
       CIPHERPOST_ENV: dev
     depends_on:
       db:
@@ -52,8 +52,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:cipherpost@db:5432/cipherpost
-      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost
       CIPHERPOST_REDIS_URL: redis://redis:6379/0
       CIPHERPOST_CELERY_BROKER_URL: redis://redis:6379/0
       CIPHERPOST_CELERY_RESULT_BACKEND: redis://redis:6379/0
@@ -82,8 +82,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.worker
     environment:
-      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:cipherpost@db:5432/cipherpost
-      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost
       CIPHERPOST_REDIS_URL: redis://redis:6379/0
       CIPHERPOST_CELERY_BROKER_URL: redis://redis:6379/0
       CIPHERPOST_CELERY_RESULT_BACKEND: redis://redis:6379/0
@@ -110,8 +110,8 @@ services:
     # cap_add: [NET_RAW, NET_ADMIN]
     command: ["python", "-m", "app.live.capture", "--iface", "eth0"]
     environment:
-      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:cipherpost@db:5432/cipherpost
-      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost
       CIPHERPOST_REDIS_URL: redis://redis:6379/0
       CIPHERPOST_LIVE_IFACE: eth0
       CIPHERPOST_RAW_CAPTURE_DIR: /data/capture
@@ -134,8 +134,8 @@ services:
       dockerfile: docker/Dockerfile.worker
     command: ["python", "-m", "app.live.analyze"]
     environment:
-      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:cipherpost@db:5432/cipherpost
-      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost
       CIPHERPOST_REDIS_URL: redis://redis:6379/0
       CIPHERPOST_TRUSTED_CA_BUNDLE_PATH: /app/tests/fixtures/trusted_root.pem
       CIPHERPOST_ENV: dev
@@ -154,7 +154,7 @@ services:
     command: ["python", "-m", "app.live.alerts"]
     environment:
       CIPHERPOST_REDIS_URL: redis://redis:6379/0
-      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost
       CIPHERPOST_ALERT_MIN_SEVERITY: high
       CIPHERPOST_ENV: dev
       CIPHERPOST_ALERT_WEBHOOK_URL: ${CIPHERPOST_ALERT_WEBHOOK_URL:-}
@@ -174,7 +174,7 @@ services:
       - ../scripts:/app/scripts:ro
     environment:
       CIPHERPOST_REDIS_URL: redis://redis:6379/0
-      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost
       CIPHERPOST_ENV: dev
     depends_on:
       redis:

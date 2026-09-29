@@ -39,10 +39,10 @@ spec:
             requests: { cpu: 250m, memory: 512Mi }
             limits: { cpu: "1", memory: 1Gi }
           readinessProbe:
-            httpGet: { path: /api/v1/health, port: 8000 }
+            httpGet: { path: /api/v1/health/ready, port: 8000 }
             periodSeconds: 10
           livenessProbe:
-            httpGet: { path: /api/v1/health, port: 8000 }
+            httpGet: { path: /api/v1/health/live, port: 8000 }
             periodSeconds: 30
 ---
 apiVersion: v1

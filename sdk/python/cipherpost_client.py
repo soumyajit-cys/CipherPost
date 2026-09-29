@@ -156,3 +156,10 @@ class CipherPostClient:
 
     def audit(self, limit: int = 100, action: str | None = None) -> list:
         return self._get("/api/v1/audit", {"limit": limit, "action": action})
+
+    def flows(self, unencrypted_within_days: int | None = None) -> list:
+        return self._get("/api/v1/flows",
+                         {"unencrypted_within_days": unencrypted_within_days})
+
+    def suppressions(self, status: str | None = None) -> list:
+        return self._get("/api/v1/suppressions", {"status": status})

@@ -359,8 +359,8 @@ def _validate_rrsig(name: str, rrs, rrsigs, anchor) -> bool:
             k.to_digestable() == anchor.to_digestable() for k in keys)
         if not anchored:
             return False
-        rrset = dns.rrset.from_rdata(dns.name.from_text(name), 300, rrs)
-        sigset = dns.rrset.from_rdata(dns.name.from_text(name), 300, rrsigs)
+        rrset = dns.rrset.from_rdata(dns.name.from_text(name), 300, *rrs)
+        sigset = dns.rrset.from_rdata(dns.name.from_text(name), 300, *rrsigs)
         dns.dnssec.validate(rrset, sigset, {keyname: keys})
         return True
     except Exception as e:

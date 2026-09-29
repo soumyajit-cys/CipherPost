@@ -96,6 +96,7 @@ class Finding(Base):
     kind: Mapped[str] = mapped_column(String(32), default="rule")  # rule | ml | anomaly
     source: Mapped[str] = mapped_column(String(32), default="rules-engine")
     evidence: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
+    legal_hold: Mapped[bool] = mapped_column(Boolean, default=False)  # phase 2: survives retention
 
     session: Mapped[Session] = relationship(back_populates="findings")
 

@@ -71,12 +71,31 @@ def _b64url_decode(data: str) -> bytes:
 
 
 def _jwt_secret() -> bytes:
+    from app.core import config as _cfgmod
+    env = (getattr(settings, "ENV", "production") or "production").strip().lower()
     secret = getattr(settings, "JWT_SECRET", "") or ""
-    if not secret or secret == "change-me-in-production":
-        # Dev fallback: stable per-process secret would invalidate logins on
-        # restart, so derive from a persisted file if present, else ephemeral.
-        # Production MUST set CIPHERPOST_JWT_SECRET (warned at startup).
-        return b"cipherpost-dev-only-secret"
+    if env == "dev":
+        # Dev only: ephemeral per-process secret + loud warning. Never use a
+        # hardcoded constant that an attacker could read from the public repo.
+        global _DEV_EPHEMERAL_SECRET
+        try:
+            _DEV_EPHEMERAL_SECRET
+        except NameError:
+            import logging as _logging
+            _DEV_EPHEMERAL_SECRET = secrets.token_bytes(32)
+            _logging.getLogger("cipherpost.auth").warning(
+                "CIPHERPOST_ENV=dev: using ephemeral random JWT secret "
+                "(logins invalid after restart). Set CIPHERPOST_JWT_SECRET "
+                "for stable sessions; never use dev mode in production."
+            )
+        return _DEV_EPHEMERAL_SECRET
+    # Production: refuse weak secrets (defence in depth; startup also checks).
+    try:
+        _cfgmod.validate_startup_secrets(settings)
+    except RuntimeError:
+        # Re-raise with context pointing at JWT specifically if that is the
+        # cause; otherwise propagate the full production refusal.
+        raise
     return secret.encode()
 
 

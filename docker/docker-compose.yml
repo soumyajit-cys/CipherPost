@@ -157,6 +157,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.worker
+    user: "10001:10001"
     command: ["python", "-m", "app.live.alerts"]
     environment:
       CIPHERPOST_REDIS_URL: redis://redis:6379/0

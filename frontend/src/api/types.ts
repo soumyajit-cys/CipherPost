@@ -46,6 +46,21 @@ export interface Finding {
   evidence: Record<string, unknown> | null
   session: { fiveTuple: string; protocol: string }
   compliance?: ComplianceTag[] | null
+  suppressed?: boolean | null
+  suppressionId?: number | null
+}
+
+export interface Suppression {
+  id: number
+  org_id: string
+  rule_id: string
+  scope: Record<string, unknown>
+  reason: string
+  created_by: string
+  status: string
+  created_at: string | null
+  expires_at: string | null
+  active: boolean
 }
 
 export interface SessionSummary {

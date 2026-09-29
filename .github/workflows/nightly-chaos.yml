@@ -1,0 +1,47 @@
+name: cipherpost-nightly-chaos
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  chaos:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=3s --health-retries=10
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: cipherpost
+          POSTGRES_USER: cipherpost
+          POSTGRES_PASSWORD: cipherpost
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U cipherpost"
+          --health-interval=5s --health-timeout=3s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install backend deps (pinned)
+        run: pip install -r backend/requirements.txt
+      - name: Full suite including slow chaos
+        env:
+          CIPHERPOST_ENV: dev
+          CIPHERPOST_REDIS_URL: redis://localhost:6379/0
+          CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@localhost:5432/cipherpost
+        run: PYTHONPATH=backend/. python -m pytest backend/tests -q
+      - name: Migration head check
+        env:
+          CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:cipherpost@localhost:5432/cipherpost
+        run: |
+          PYTHONPATH=backend python -m app.migrate
+          PYTHONPATH=backend alembic -c backend/alembic.ini check

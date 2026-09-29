@@ -93,12 +93,39 @@ kubectl apply -f k8s/capture-daemonset.yaml
 
 - Nightly: `scripts/backup_postgres.sh /backups/cipherpost` (cron/systemd
   timer; keeps 14 dumps; `PG*` env for host/user).
-- Restore: `scripts/backup_postgres.sh restore <file.dump>`.
+- Restore: `scripts/restore_postgres.sh [--yes] <file.dump>` (asks for the DB
+  name unless `--yes`; CI `restore-check` proves backup → wipe → restore keeps
+  row counts with Alembic at head).
 - RPO/RTO note: dumps cover findings/sessions/history (the long-term
   asset). Raw capture segments are rolling-window by design and are NOT
   backed up. For point-in-time recovery, enable Postgres WAL archiving.
 - Redis streams are transport, not storage — safe to lose on failover
-  (capture agents resume; in-flight sessions re-derive).
+  (consumers reclaim via XAUTOCLAIM; in-flight sessions re-derive; poison
+  messages sit in `<stream>:dlq`, never silently dropped).
+
+## Data lifecycle (Phase 2)
+
+- Per-type retention (days, `0` = keep): `RETENTION_SESSIONS_DAYS` (90),
+  `RETENTION_FINDINGS_DAYS` (90), `RETENTION_ALERTS_DAYS` (180),
+  `RETENTION_AUDIT_DAYS` (365, longest). Raw capture still uses
+  `RAW_RETENTION_SECONDS` + `RetentionRawStore` purge.
+- Run `python -m app.live.retention` hourly (cron/K8s CronJob): batched
+  deletes (`RETENTION_BATCH_SIZE`), legal-hold rows skipped, purged-row
+  metrics exposed for Prometheus.
+- Legal hold: `POST /api/v1/jobs/{id}/legal-hold` and
+  `POST /api/v1/findings/{id}/legal-hold` (audited); held rows survive purges.
+
+## Transport checks (Phase 2)
+
+- Set `CIPHERPOST_DNS_RESOLVER` (e.g. your validating resolver IP),
+  `CIPHERPOST_DNS_TIMEOUT_SECONDS`, and `CIPHERPOST_DNSSEC_TRUST_ANCHOR`
+  (base64 DNSKEY DER) to enable real MTA-STS/DANE. Without an anchor, signed
+  TLSA validates as `dnssec-failed` (honest: trust cannot be established).
+- `GET /api/v1/domains/{d}/transport-security?refresh=true` for on-demand
+  re-checks; the alerter re-checks seen domains every
+  `TRANSPORT_RECHECK_INTERVAL_SECONDS` (alerts only on proven `misconfigured`).
+- Optional live smoke: `python scripts/smoke_transport.py gmail.com` (needs
+  internet; never in CI).
 
 ## First-boot checklist
 

@@ -123,6 +123,33 @@ class AnalysisWorker:
                 Session.commit()
             elif job.org_id is None and default_org_id:
                 job.org_id = default_org_id
+            # flow aggregation + regression: compare against best-seen state,
+            # then append any proven regression finding before persisting.
+            try:
+                from app.live.flows import update_flow
+                _proto = sa.protocol.value if hasattr(sa.protocol, "value") else str(sa.protocol)
+                _tls_name = getattr(sa, "negotiated_version_name", None)
+                _encrypted = _tls_name is not None
+                _flow, _regression = update_flow(
+                    Session, default_org_id,
+                    {"five_tuple": sa.five_tuple, "protocol": _proto},
+                    _tls_name, getattr(sa, "cipher", None), _encrypted)
+                if _regression:
+                    from app.parsing.rules import Finding as _RuleFinding
+                    sa.findings.append(_RuleFinding(
+                        rule_id=_regression["rule_id"],
+                        rule_name="transport-regression",
+                        severity=_regression["severity"],
+                        title=_regression["title"],
+                        description=_regression["title"],
+                        reference="RFC 8461 posture continuity",
+                    ))
+                    try:
+                        self.gossip.counters.inc("flow_regressions")
+                    except Exception:
+                        pass
+            except Exception as e:
+                log.debug("flow aggregation skipped: %s", e)
             # map fields
             from datetime import datetime, timezone
             _now = datetime.now(timezone.utc)

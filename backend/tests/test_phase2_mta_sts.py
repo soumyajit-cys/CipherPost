@@ -164,7 +164,7 @@ def test_signed_tlsa_validates_secure_with_anchor(monkeypatch):
     fake.add("signed.test", "MX", "10 mx1.signed.test.")
     fake.zones[("_25._tcp.mx1.signed.test", "TLSA")] = [tlsa, sigset]
     fake.zones[("signed.test", "DNSKEY")] = [
-        dns.rrset.from_rdata(keyname, 60, [dnskey])]
+        dns.rrset.from_rdata(keyname, 60, dnskey)]
     old_anchor = cfg.settings.DNSSEC_TRUST_ANCHOR
     import dns.rdata
     cfg.settings.DNSSEC_TRUST_ANCHOR = base64.b64encode(dnskey.to_wire()).decode()

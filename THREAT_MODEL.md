@@ -52,8 +52,14 @@ Treat every packet, handshake field, and certificate as attacker-controlled.
 - `test_stage7_live.py` — live-packet path fuzz (`test_fuzz_live_packets_no_crash`),
   replay determinism (live == batch), retention purge, dedup logic.
 - `test_track3_agents.py` — stream consumer-group exactly-once semantics.
-- CI (`.github/workflows/ci.yml`) runs all of the above plus rules-eval and
-  ML-eval gates on every PR.
+- CI (`.github/workflows/ci.yml`) runs all of the above plus synthetic-corpus
+  rules-eval and ML-eval gates (explicitly labelled synthetic, not real-world)
+  plus `scripts/eval_real.py` (empty manifest, informational) and
+  `migrate-check` (empty Postgres → head + `alembic check` no-drift) on every PR.
+- Phase 1 additions: `test_phase1_config.py` (startup refusal), `test_phase1_auth.py`
+  (PyJWT alg-none/expiry/tamper, SSE single-use, lockout, CORS),
+  `test_phase1_migrate.py` (raw tables in metadata/migration), `test_phase1_eval.py`
+  (real-harness miss/false-positive reporting, tshark diff runner).
 
 ## 5. Residual risks (accepted, documented)
 

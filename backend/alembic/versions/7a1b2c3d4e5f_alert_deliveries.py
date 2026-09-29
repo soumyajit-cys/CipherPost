@@ -32,11 +32,11 @@ def upgrade() -> None:
     sa.Column('org_id', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('ix_alert_deliveries_alert', 'alert_deliveries', ['alert_id'], unique=False)
+    op.create_index('ix_alert_deliveries_alert_id', 'alert_deliveries', ['alert_id'], unique=False)
     op.create_index('ix_alert_deliveries_status', 'alert_deliveries', ['status'], unique=False)
 
 
 def downgrade() -> None:
     op.drop_index('ix_alert_deliveries_status', table_name='alert_deliveries')
-    op.drop_index('ix_alert_deliveries_alert', table_name='alert_deliveries')
+    op.drop_index('ix_alert_deliveries_alert_id', table_name='alert_deliveries')
     op.drop_table('alert_deliveries')

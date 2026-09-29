@@ -27,7 +27,7 @@ def upgrade() -> None:
     sa.Column('actor', sa.String(length=256), nullable=False),
     sa.Column('action', sa.String(length=128), nullable=False),
     sa.Column('resource', sa.String(length=512), nullable=False),
-    sa.Column('detail', app.core.database.JSONBType(), nullable=True),
+    sa.Column('detail', _JSONBType(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
@@ -61,7 +61,7 @@ def upgrade() -> None:
     sa.Column('org_id', sa.String(length=64), nullable=True),
     sa.Column('subject_cn', sa.String(length=512), nullable=False),
     sa.Column('issuer_cn', sa.String(length=512), nullable=False),
-    sa.Column('sans', app.core.database.JSONBType(), nullable=True),
+    sa.Column('sans', _JSONBType(), nullable=True),
     sa.Column('not_before', sa.DateTime(), nullable=True),
     sa.Column('not_after', sa.DateTime(), nullable=True),
     sa.Column('pubkey_alg', sa.String(length=64), nullable=False),
@@ -143,7 +143,7 @@ def upgrade() -> None:
     sa.Column('max_severity', sa.String(length=16), nullable=True),
     sa.Column('model_version', sa.String(length=64), nullable=True),
     sa.Column('org_id', sa.String(length=64), nullable=True),
-    sa.Column('details', app.core.database.JSONBType(), nullable=True),
+    sa.Column('details', _JSONBType(), nullable=True),
     sa.ForeignKeyConstraint(['job_id'], ['analysis_jobs.id'], ),
     sa.ForeignKeyConstraint(['org_id'], ['organizations.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -162,7 +162,7 @@ def upgrade() -> None:
     sa.Column('reference', sa.String(length=512), nullable=False),
     sa.Column('kind', sa.String(length=32), nullable=False),
     sa.Column('source', sa.String(length=32), nullable=False),
-    sa.Column('evidence', app.core.database.JSONBType(), nullable=True),
+    sa.Column('evidence', _JSONBType(), nullable=True),
     sa.ForeignKeyConstraint(['session_id'], ['sessions.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

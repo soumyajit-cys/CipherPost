@@ -428,6 +428,14 @@ class AlertDispatcher:
                     self.consumer.ack(entry_id)
                     _bus.clear_attempts(self.r, self.consumer.stream, entry_id)
                     return
+            if self._suppressed(finding):
+                try:
+                    self.gossip.counters.inc("alerts_suppressed")
+                except Exception:
+                    pass
+                self.consumer.ack(entry_id)
+                _bus.clear_attempts(self.r, self.consumer.stream, entry_id)
+                return
             # Group by root cause; dispatch any groups whose hold expired.
             self.groups.add(finding)
             for grouped in self.groups.flush_expired():

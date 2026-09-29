@@ -186,28 +186,27 @@ PYTHONPATH=backend/. python scripts/export_mock_data.py
   Observed leaf certs are inventoried (`GET /api/v1/certs`) with proactive
   expiry forecasting (`GET /api/v1/certs/expiring`).
 
-## Maturity: what's hardened vs evolving (Phase 1 foundations)
+## Maturity: what's hardened vs evolving (Phase 2 reliability)
 
-Honestly labeled, so teams can deploy with eyes open (see THREAT_MODEL.md,
-DEPLOYMENT.md, docs/auth.md, SECURITY.md). Phase 1 is foundations, not a
-production-ready claim — Docker/K8s hardening and migrations were
-code-reviewed but not executed end-to-end here.
+Honestly labeled (see THREAT_MODEL.md, DEPLOYMENT.md, docs/auth.md,
+SECURITY.md, CHANGELOG.md). Phase 2 makes the system safe to leave running
+unattended on live traffic in a monitored staging environment — it is still
+not production-ready: no 30-day live run has happened.
 
-**Hardened in Phase 1 (verified by tests where noted):** secure-by-default
-startup (`CIPHERPOST_ENV`, production refuses weak secrets — tested);
-PyJWT HS256 pinned + login lockout + CORS allowlist + SSE single-use tickets
-(tested); repo hygiene (node_modules/pycache untracked, lab CA documented,
-SECURITY.md); pinned deps (`requirements.in`→`requirements.txt` + Dependabot)
-and tz-aware datetimes (98 backend tests pass); Alembic initial migration
-(empty-Postgres upgrade + `alembic check` verified locally, CI gate added);
-compose/K8s least-privilege (unpublished DB/Redis, env passwords, non-root,
-migrate gating — not runtime-verified); real-eval harness foundation
-(`tests/real/` empty manifest + `eval_real.py` + `diff_tshark.py`, tested).
+**Hardened in Phase 2 (verified as noted):** at-least-once Redis delivery
+(ACK-after-write, idempotent ids, reclaim, DLQ — fakeredis tests); shared
+Redis alert dedup/rate + grouped alerts + per-channel delivery rows (tests);
+suppressions with expiry/RBAC/audit (tests + sqlite); batched retention with
+legal hold + restore-verified backups (tests + CI job; EXPLAIN on 2k rows
+used org indexes); real MTA-STS/DANE with anchor-pinned DNSSEC (fake-DNS
+tests, 7 passing); mail flows + regression alerts (tests); health/liveness/
+readiness + Prometheus rules + runbook; load measured (~28k pkt/s toy corpus)
+and 1-min soak (0 errors, flat 47.6 MB RSS) on Ryzen 7 5700G/14 GB.
 
-**Evolving / know the limits:** 19-rule 100% P/R is synthetic-corpus only
-(see `tests/real/` — no real labels yet); MTA-STS/DANE remains `not-checked`;
-ML labels remain rules-derived; multi-org single-sensor; k8s Postgres/Redis
-for small clusters; frontend `http` mode assumed.
+**Still needs a real 30-day live-traffic run before production-ready:**
+true link-rate sizing (fixtures are 261 packets), full root-chain DNSSEC,
+session-attributed MTA-STS/DANE findings, multi-sensor dedup at scale,
+Postgres WAL/PITR drills, frontend compliance/suppression UX review.
 
 ## Further documentation
 

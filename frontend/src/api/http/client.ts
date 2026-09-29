@@ -326,6 +326,33 @@ export const httpClient: ApiClient = {
     return get<{ agents: { agent_id: string; mode: string; iface: string; online: boolean; age_seconds: number; stats?: Record<string, number> }[] }>('/agents')
   },
 
+  async listSuppressions(status?: string) {
+    return get('/suppressions' + (status ? `?status=${encodeURIComponent(status)}` : ''))
+  },
+
+  async createSuppression(body: { rule_id: string; scope?: Record<string, unknown>; reason: string; expires_days?: number }) {
+    return post('/suppressions', body)
+  },
+
+  async updateSuppression(id: number, body: Record<string, unknown>) {
+    const res = await fetch(`${BASE}/suppressions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) throw new Error(`PATCH /suppressions/${id} → ${res.status}`)
+    return res.json()
+  },
+
+  async deleteSuppression(id: number) {
+    const res = await fetch(`${BASE}/suppressions/${id}`, { method: 'DELETE', headers: authHeaders() })
+    if (!res.ok) throw new Error(`DELETE /suppressions/${id} → ${res.status}`)
+  },
+
+  async suppressionsExpiring(days = 14) {
+    return get(`/suppressions/expiring-soon?days=${days}`)
+  },
+
   logout() {
     localStorage.removeItem(TOKEN_KEY)
   },

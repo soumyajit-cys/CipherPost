@@ -108,9 +108,11 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.worker
+    user: "10001:10001"
+    # Least privilege: NET_RAW + NET_ADMIN only, never privileged:true / root.
+    cap_add: [NET_RAW, NET_ADMIN]
     # For real SPAN/TAP deployment use network_mode: host and cap_add
     # network_mode: host  # uncomment for host capture
-    # cap_add: [NET_RAW, NET_ADMIN]
     command: ["python", "-m", "app.live.capture", "--iface", "eth0"]
     environment:
       CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost

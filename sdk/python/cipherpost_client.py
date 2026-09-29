@@ -134,6 +134,10 @@ class CipherPostClient:
     def live_status(self) -> dict:
         return self._get("/api/v1/live/status")
 
+    def live_ticket(self) -> dict:
+        """Issue a short-lived single-use SSE ticket (use ?ticket=, never ?token=)."""
+        return self._req("POST", "/api/v1/live/ticket", {})
+
     def agents(self) -> dict:
         return self._get("/api/v1/agents")
 

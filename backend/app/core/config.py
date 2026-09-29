@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str = "change-me-on-first-login"
     DEFAULT_ORG_NAME: str = "default"
 
+    # --- http surface ---------------------------------------------------------
+    # Comma-separated allowlist for CORS. Empty = same-origin only (no CORS
+    # headers). Never use "*" with credentials in production.
+    CORS_ORIGINS: str = ""
+
     # --- live acquisition (stage 2+) ----------------------------------------
     LIVE_IFACE: str = "lo"                     # SPAN/TAP-fed interface (promiscuous)
     LIVE_PROMISC: bool = True

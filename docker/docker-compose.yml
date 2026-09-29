@@ -36,6 +36,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.worker
+    user: "10001:10001"
     command: ["python", "-m", "app.migrate"]
     environment:
       CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:${POSTGRES_PASSWORD:-cipherpost}@db:5432/cipherpost

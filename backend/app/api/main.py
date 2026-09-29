@@ -241,6 +241,116 @@ async def list_audit(limit: int = Query(100, ge=1, le=500),
             for r in rows]
 
 
+# --- suppressions (phase 2 task 3: accepted-risk exceptions) ------------------
+
+def _sup_to_dict(s) -> dict:
+    from app.proactive.suppressions import is_active as _is_active
+    return {"id": s.id, "org_id": s.org_id, "rule_id": s.rule_id,
+            "scope": s.scope, "reason": s.reason, "created_by": s.created_by,
+            "status": s.status,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "expires_at": s.expires_at.isoformat() if s.expires_at else None,
+            "active": _is_active(s.status, s.expires_at)}
+
+
+@app.get("/api/v1/suppressions")
+async def list_suppressions(status: str | None = Query(None),
+                            ctx: AuthContext = Depends(get_current_user),
+                            db: AsyncSession = Depends(get_db)):
+    from app.models.entities import Suppression
+    q = select(Suppression).where(Suppression.org_id == ctx.org_id)
+    if status:
+        q = q.where(Suppression.status == status)
+    rows = (await db.execute(q.order_by(Suppression.id.desc()))).scalars().all()
+    return [_sup_to_dict(s) for s in rows]
+
+
+@app.get("/api/v1/suppressions/expiring-soon")
+async def suppressions_expiring(days: int = Query(14, ge=1, le=90),
+                                ctx: AuthContext = Depends(get_current_user),
+                                db: AsyncSession = Depends(get_db)):
+    from datetime import datetime, timezone, timedelta
+    from app.models.entities import Suppression
+    now = datetime.now(timezone.utc)
+    horizon = now + timedelta(days=days)
+    rows = (await db.execute(
+        select(Suppression).where(Suppression.org_id == ctx.org_id,
+                                  Suppression.status == "approved",
+                                  Suppression.expires_at > now,
+                                  Suppression.expires_at <= horizon)
+        .order_by(Suppression.expires_at.asc()))).scalars().all()
+    return [_sup_to_dict(s) for s in rows]
+
+
+@app.post("/api/v1/suppressions")
+async def create_suppression(body: dict,
+                             ctx: AuthContext = Depends(require_roles("analyst")),
+                             db: AsyncSession = Depends(get_db)):
+    """Analyst+ can request; approved immediately iff config skips approval or
+    the requester is an admin."""
+    from datetime import datetime, timezone, timedelta
+    from app.models.entities import Suppression
+    rule_id = (body.get("rule_id") or "").strip()
+    reason = (body.get("reason") or "").strip()
+    if not rule_id or not reason:
+        raise HTTPException(400, "rule_id and reason are required")
+    try:
+        days = int(body.get("expires_days", settings.SUPPRESSION_DEFAULT_DAYS))
+    except Exception:
+        raise HTTPException(400, "expires_days must be an integer")
+    days = max(1, min(days, settings.SUPPRESSION_MAX_DAYS))
+    now = datetime.now(timezone.utc)
+    scope = body.get("scope") or {}
+    if not isinstance(scope, dict):
+        raise HTTPException(400, "scope must be an object")
+    auto = (not settings.SUPPRESSION_REQUIRE_APPROVAL) or ctx.role == "admin"
+    s = Suppression(org_id=ctx.org_id, rule_id=rule_id, scope=scope,
+                    reason=reason, created_by=ctx.email,
+                    status="approved" if auto else "pending",
+                    created_at=now, expires_at=now + timedelta(days=days))
+    db.add(s)
+    await db.commit()
+    await db.refresh(s)
+    await log_audit(db, ctx.org_id, ctx.email, "suppression.create", rule_id,
+                    {"scope": scope, "status": s.status, "days": days})
+    return _sup_to_dict(s)
+
+
+@app.patch("/api/v1/suppressions/{sup_id}")
+async def update_suppression(sup_id: int, body: dict,
+                             ctx: AuthContext = Depends(require_roles("admin")),
+                             db: AsyncSession = Depends(get_db)):
+    """Admin approve/reject/revoke (audit-logged)."""
+    from app.models.entities import Suppression
+    s = await db.get(Suppression, sup_id)
+    if s is None or s.org_id != ctx.org_id:
+        raise HTTPException(404, "Suppression not found")
+    if "status" in body:
+        if body["status"] not in ("approved", "rejected", "revoked"):
+            raise HTTPException(400, "status must be approved|rejected|revoked")
+        s.status = body["status"]
+    if "reason" in body and body["reason"]:
+        s.reason = str(body["reason"])
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "suppression.update",
+                    str(sup_id), {"status": s.status})
+    return _sup_to_dict(s)
+
+
+@app.delete("/api/v1/suppressions/{sup_id}")
+async def delete_suppression(sup_id: int,
+                             ctx: AuthContext = Depends(require_roles("admin")),
+                             db: AsyncSession = Depends(get_db)):
+    from app.models.entities import Suppression
+    s = await db.get(Suppression, sup_id)
+    if s is None or s.org_id != ctx.org_id:
+        raise HTTPException(404, "Suppression not found")
+    await db.delete(s)
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "suppression.delete", str(sup_id), {})
+    return {"status": "deleted"}
+
+
 _GOSSIP_GAUGES: dict = {}
 
 

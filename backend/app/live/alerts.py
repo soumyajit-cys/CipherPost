@@ -322,6 +322,47 @@ class AlertDispatcher:
         except Exception as e:
             log.debug("expiry sweep skipped: %s", e)
 
+    def _handle_entry(self, entry_id: str, payload) -> None:
+        """At-least-once handling: dispatch, then ACK; failures retry/DLQ."""
+        from app.live import streams as _bus
+        try:
+            finding = payload if isinstance(payload, dict) else json.loads(payload)
+        except Exception as e:
+            attempts = _bus.note_attempt(self.r, self.consumer.stream, entry_id)
+            if attempts >= settings.STREAM_MAX_ATTEMPTS:
+                self.consumer.dead_letter(entry_id, {}, f"decode: {e}", attempts)
+            return
+        try:
+            if isinstance(finding.get("findings"), list) and finding["findings"]:
+                if not self._should_alert(finding):
+                    self.consumer.ack(entry_id)
+                    _bus.clear_attempts(self.r, self.consumer.stream, entry_id)
+                    return
+                self._dispatch(finding)
+            else:
+                if not self._should_alert(finding):
+                    self.consumer.ack(entry_id)
+                    _bus.clear_attempts(self.r, self.consumer.stream, entry_id)
+                    return
+                self._dispatch(finding)
+        except Exception as e:
+            attempts = _bus.note_attempt(self.r, self.consumer.stream, entry_id)
+            if attempts >= settings.STREAM_MAX_ATTEMPTS:
+                self.consumer.dead_letter(entry_id, finding
+                                          if isinstance(finding, dict) else {},
+                                          str(e), attempts)
+                log.warning("finding %s dead-lettered after %d attempts: %s",
+                            entry_id, attempts, e)
+            else:
+                log.debug("finding %s attempt %d failed: %s", entry_id, attempts, e)
+            return
+        _bus.clear_attempts(self.r, self.consumer.stream, entry_id)
+        self.consumer.ack(entry_id)
+        try:
+            self.gossip.counters.set("dlq_depth", self.consumer.dlq_depth())
+        except Exception:
+            pass
+
     def run(self):
         log.info("alert dispatcher starting, min_severity=%s adapters=%s", settings.ALERT_MIN_SEVERITY, [a.name for a in self.adapters])
         self.gossip.start()
@@ -335,26 +376,21 @@ class AlertDispatcher:
             if time.time() - last_expiry > settings.CERT_EXPIRY_CHECK_INTERVAL_SECONDS:
                 last_expiry = time.time()
                 self._expiry_sweep()
-            items = self.consumer.poll(timeout_ms=800)
+            items = self.consumer.poll_raw(timeout_ms=800)
             if not items:
+                for eid, payload in self.consumer.reclaim():
+                    if self._stop.is_set():
+                        break
+                    try:
+                        self._handle_entry(eid, payload)
+                    except Exception as e:
+                        log.warning("reclaim dispatch error: %s", e)
                 continue
-            for payload in items:
+            for entry_id, payload in items:
                 if self._stop.is_set():
                     break
                 try:
-                    # payload is decoded finding dict
-                    finding = payload if isinstance(payload, dict) else json.loads(payload)
-                    # findings stream contains aggregated finding dict with max_severity etc
-                    # also handle per-rule finding
-                    if isinstance(finding.get("findings"), list) and finding["findings"]:
-                        # aggregated session findings: check max severity
-                        if not self._should_alert(finding):
-                            continue
-                        self._dispatch(finding)
-                    else:
-                        if not self._should_alert(finding):
-                            continue
-                        self._dispatch(finding)
+                    self._handle_entry(entry_id, payload)
                 except Exception as e:
                     log.warning("alert dispatch error: %s", e)
         self.gossip.stop()

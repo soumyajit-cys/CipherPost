@@ -138,3 +138,20 @@ def match_suppression(rule_id: str, finding: dict, suppressions) -> object | Non
         if scope_matches(scope, finding):
             return s
     return None
+
+
+def filter_active(rows, now=None) -> list:
+    now = now or datetime.now(timezone.utc)
+    out = []
+    for s in rows or []:
+        exp = getattr(s, "expires_at", None)
+        if getattr(s, "status", "") != "approved":
+            continue
+        try:
+            if exp is not None and getattr(exp, "tzinfo", None) is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            if exp and exp > now:
+                out.append(s)
+        except Exception:
+            continue
+    return out

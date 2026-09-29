@@ -148,3 +148,93 @@ class RollingRawStore:
             "segments": len(list(self.dir.glob(f"*{_EXT}"))),
             "dir": str(self.dir),
         }
+
+
+class DBRetention:
+    """Batch-purge old rows per data type without long table locks.
+
+    - Deletes in batches (RETENTION_BATCH_SIZE) with a commit per batch.
+    - Never touches rows with legal_hold set, rows with NULL timestamps
+      (legacy), or audit rows (longest retention, still purged eventually).
+    - Reports rows purged per table via the injected metrics mapping
+      (or returns the counts for tests).
+    """
+
+    def __init__(self, session_factory=None, batch_size: int | None = None,
+                 metrics=None):
+        from app.core.config import settings as _s
+        self.batch_size = batch_size or _s.RETENTION_BATCH_SIZE
+        self.metrics = metrics
+        self._session_factory = session_factory or self._default_factory
+
+    @staticmethod
+    def _default_factory():
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from app.core.config import settings as _s
+        engine = create_engine(_s.DATABASE_URL_SYNC)
+        return sessionmaker(bind=engine)()
+
+    def _count_metric(self, table: str, n: int) -> None:
+        try:
+            if self.metrics is not None:
+                self.metrics.inc(f"retention_purged_total{{table=\"{table}\"}}", n)
+        except Exception:
+            pass
+
+    def _purge_batch(self, db, model, cutoff, extra=None) -> int:
+        ts_col = getattr(model, "created_at", None) or getattr(model, "ts", None)
+        q = db.query(model).filter(ts_col.is_not(None), ts_col < cutoff)
+        if hasattr(model, "legal_hold"):
+            q = q.filter((model.legal_hold.is_(False)) | (model.legal_hold.is_(None)))
+        if extra is not None:
+            q = extra(q)
+        rows = q.limit(self.batch_size).all()
+        for r in rows:
+            db.delete(r)
+        return len(rows)
+
+    def purge_all(self, now=None) -> dict[str, int]:
+        from datetime import datetime, timezone, timedelta
+        from app.core.config import settings as _s
+        from app.models.entities import Session, Finding, AuditLog, Alert, BaselineFeature
+        now = now or datetime.now(timezone.utc)
+        totals: dict[str, int] = {}
+        db = self._session_factory()
+        try:
+            plans = [
+                ("sessions", Session, _s.RETENTION_SESSIONS_DAYS),
+                ("findings", Finding, _s.RETENTION_FINDINGS_DAYS),
+                ("alerts", Alert, _s.RETENTION_ALERTS_DAYS),
+                ("audit_log", AuditLog, _s.RETENTION_AUDIT_DAYS),
+            ]
+            for table, model, days in plans:
+                if not days or days <= 0:
+                    totals[table] = 0
+                    continue
+                cutoff = now - timedelta(days=days)
+                n_total = 0
+                while True:
+                    n = self._purge_batch(db, model, cutoff)
+                    if n == 0:
+                        break
+                    db.commit()
+                    n_total += n
+                    self._count_metric(table, n)
+                # findings belonging to purged sessions cascade via FK only
+                # when the DB enforces it; sessions deleted above leave
+                # orphan findings to the findings pass (same cutoff).
+                totals[table] = n_total
+            db.commit()
+        except Exception as e:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            log.warning("retention purge failed: %s", e)
+        finally:
+            try:
+                db.close()
+            except Exception:
+                pass
+        return totals

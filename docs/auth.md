@@ -45,7 +45,7 @@ immediately). Pre-auth rows are backfilled to the default org at startup.
 
 ## Audit
 
-`auth.login`, `pcap.upload`, `report.export`, `user.*`, `apikey.*`,
+`auth.login`, `auth.login.failed`, `pcap.upload`, `report.export`, `user.*`, `apikey.*`,
 `alertconfig.update` are written to `audit_log`. Admins and auditors can
 read via `GET /api/v1/audit`.
 

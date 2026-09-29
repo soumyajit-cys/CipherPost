@@ -223,6 +223,8 @@ class AuditLog(Base):
     detail: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
+    __table_args__ = (Index("ix_audit_log_created_at", "created_at"),)
+
 
 class Alert(Base):
     """Dispatched alert history (mirrors raw DDL in live/alerts + database).

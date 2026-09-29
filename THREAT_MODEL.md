@@ -89,7 +89,12 @@ Treat every packet, handshake field, and certificate as attacker-controlled.
    real-world performance — see `tests/real/` (empty, human-labelled harness
    + tshark diff, not a gate).
 5. **Deployment hardening verified by code review, not by running containers**
-   (Docker/K8s non-root, unexposed DB/Redis, migrate gating were not
-   executed here — verify with `docker compose config` + staging deploy).
-   Time handling is now tz-aware, but stored DB timestamps may mix naive
+   (Docker/K8s non-root, unexposed DB/Redis, migrate gating were verified via
+   `docker compose config` only — run a staging deploy before production).
+   Time handling is tz-aware, but stored DB timestamps may mix naive
    legacy rows with aware new rows — comparisons normalize to UTC.
+6. **Phase 2 still needs a real 30-day live-traffic run.** Load numbers come
+   from a 261-packet synthetic corpus + 1-minute looped soak (same machine:
+   Ryzen 7 5700G, 14 GB); link-rate sizing, full root-chain DNSSEC, and
+   session-attributed MTA-STS/DANE findings are follow-ups. Alert group hold
+   (10 s) delays first notification by design; tune per site.

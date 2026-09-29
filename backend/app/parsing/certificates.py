@@ -52,13 +52,13 @@ class CertAnalysis:
     def expired(self) -> bool:
         if not self.not_after:
             return False
-        return datetime.datetime.utcnow() > self.not_after
+        return datetime.datetime.now(datetime.timezone.utc) > self.not_after
 
     @property
     def not_yet_valid(self) -> bool:
         if not self.not_before:
             return False
-        return datetime.datetime.utcnow() < self.not_before
+        return datetime.datetime.now(datetime.timezone.utc) < self.not_before
 
     @property
     def weak_signature(self) -> bool:
@@ -109,7 +109,7 @@ def analyze_certificate(der: bytes) -> CertAnalysis:
             is_self_signed=False, is_ca=False, chain_result="parse-error",
             chain_error=str(e)[:256], der=der,
         )
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc)
     not_before = cert.not_valid_before_utc if hasattr(cert, "not_valid_before_utc") else cert.not_valid_before
     not_after = cert.not_valid_after_utc if hasattr(cert, "not_valid_after_utc") else cert.not_valid_after
     not_before = not_before.replace(tzinfo=None)

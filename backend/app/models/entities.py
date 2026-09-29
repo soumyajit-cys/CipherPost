@@ -39,7 +39,7 @@ class AnalysisJob(Base):
     error: Mapped[str] = mapped_column(Text, default="")
     file_size: Mapped[int] = mapped_column(Integer, default=0)
     org_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("organizations.id"), nullable=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     sessions: Mapped[list["Session"]] = relationship(back_populates="job", cascade="all, delete-orphan")
@@ -135,7 +135,7 @@ class Organization(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(256), unique=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
     users: Mapped[list["User"]] = relationship(back_populates="org")
 
@@ -155,7 +155,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(512))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.ANALYST)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     org: Mapped[Organization] = relationship(back_populates="users")
@@ -171,7 +171,7 @@ class ApiKey(Base):
     key_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     prefix: Mapped[str] = mapped_column(String(16))
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
@@ -196,8 +196,8 @@ class TrackedCert(Base):
     signature_alg: Mapped[str] = mapped_column(String(128), default="")
     is_self_signed: Mapped[bool] = mapped_column(Boolean, default=False)
     chain_result: Mapped[str] = mapped_column(String(64), default="")
-    first_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    last_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    first_seen: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    last_seen: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     seen_count: Mapped[int] = mapped_column(Integer, default=1)
     expiry_alerted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -213,4 +213,4 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String(128), index=True)
     resource: Mapped[str] = mapped_column(String(512), default="")
     detail: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)

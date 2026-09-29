@@ -52,13 +52,23 @@ class CertAnalysis:
     def expired(self) -> bool:
         if not self.not_after:
             return False
-        return datetime.datetime.now(datetime.timezone.utc) > self.not_after
+        import datetime as _dt
+        now = _dt.datetime.now(_dt.timezone.utc)
+        na = self.not_after
+        if na.tzinfo is None:
+            na = na.replace(tzinfo=_dt.timezone.utc)
+        return now > na
 
     @property
     def not_yet_valid(self) -> bool:
         if not self.not_before:
             return False
-        return datetime.datetime.now(datetime.timezone.utc) < self.not_before
+        import datetime as _dt
+        now = _dt.datetime.now(_dt.timezone.utc)
+        nb = self.not_before
+        if nb.tzinfo is None:
+            nb = nb.replace(tzinfo=_dt.timezone.utc)
+        return now < nb
 
     @property
     def weak_signature(self) -> bool:

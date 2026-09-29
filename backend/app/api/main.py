@@ -571,6 +571,17 @@ async def list_sessions(
     rows = (await db.execute(q)).scalars().all()
     return [{"id": s.id, "protocol": s.protocol, "five_tuple": s.five_tuple, "tls_version": s.tls_version, "risk_score": s.risk_score, "max_severity": s.max_severity, "is_anomaly": s.is_anomaly, "model_version": s.model_version, "details": s.details} for s in rows]
 
+async def _active_suppressions(db: AsyncSession, org_id: str) -> list:
+    """Load active (approved, unexpired) suppressions for an org."""
+    from datetime import datetime, timezone
+    from app.models.entities import Suppression
+    from app.proactive.suppressions import filter_active
+    rows = (await db.execute(
+        select(Suppression).where(Suppression.org_id == org_id,
+                                  Suppression.status == "approved"))).scalars().all()
+    return filter_active(rows, datetime.now(timezone.utc))
+
+
 @app.get("/api/v1/findings")
 async def list_findings(
     severity: str | None = Query(None),

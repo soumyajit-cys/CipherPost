@@ -125,6 +125,12 @@ class Settings(BaseSettings):
     DRIFT_Z_THRESHOLD: float = 3.0
     DRIFT_MIN_FEATURES: int = 3
 
+    # --- suppressions (phase 2 task 3) --------------------------------------
+    SUPPRESSION_REQUIRE_APPROVAL: bool = True  # analyst requests, admin approves
+    SUPPRESSION_DEFAULT_DAYS: int = 90
+    SUPPRESSION_MAX_DAYS: int = 180
+    SUPPRESSION_EXPIRING_SOON_DAYS: int = 14
+
     class Config:
         env_prefix = "CIPHERPOST_"
         env_file = ".env"

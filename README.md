@@ -186,25 +186,28 @@ PYTHONPATH=backend/. python scripts/export_mock_data.py
   Observed leaf certs are inventoried (`GET /api/v1/certs`) with proactive
   expiry forecasting (`GET /api/v1/certs/expiring`).
 
-## Maturity: what's production-ready vs evolving
+## Maturity: what's hardened vs evolving (Phase 1 foundations)
 
 Honestly labeled, so teams can deploy with eyes open (see THREAT_MODEL.md,
-DEPLOYMENT.md, docs/auth.md):
+DEPLOYMENT.md, docs/auth.md, SECURITY.md). Phase 1 is foundations, not a
+production-ready claim — Docker/K8s hardening and migrations were
+code-reviewed but not executed end-to-end here.
 
-**Production-ready:** streaming capture→analysis→alert pipeline; 19-rule
-engine (100% P/R on labeled corpus); JWT/RBAC/API-key auth with audit log;
-org-scoped tenancy columns; Splunk HEC + Jira integrations; rolling ML
-baseline with versioning/drift/disagreement reporting; replay determinism
-(live == batch); Docker + Kubernetes manifests; CI with eval gates and
-secret/container scans; backup scripts; Grafana starter dashboard.
+**Hardened in Phase 1 (verified by tests where noted):** secure-by-default
+startup (`CIPHERPOST_ENV`, production refuses weak secrets — tested);
+PyJWT HS256 pinned + login lockout + CORS allowlist + SSE single-use tickets
+(tested); repo hygiene (node_modules/pycache untracked, lab CA documented,
+SECURITY.md); pinned deps (`requirements.in`→`requirements.txt` + Dependabot)
+and tz-aware datetimes (98 backend tests pass); Alembic initial migration
+(empty-Postgres upgrade + `alembic check` verified locally, CI gate added);
+compose/K8s least-privilege (unpublished DB/Redis, env passwords, non-root,
+migrate gating — not runtime-verified); real-eval harness foundation
+(`tests/real/` empty manifest + `eval_real.py` + `diff_tshark.py`, tested).
 
-**Evolving / know the limits:** MTA-STS/DANE checking is a documented stub
-(no DNS resolver in scope — reports `not-checked`, never faked); ML labels
-remain rules-derived (scores are prioritization, not ground truth);
-multi-org is data-model-ready but single shared sensor writes to the
-default org; k8s Postgres/Redis are for small clusters (use managed
-services in production); frontend compliance tags and agents strip assume
-the http backend mode.
+**Evolving / know the limits:** 19-rule 100% P/R is synthetic-corpus only
+(see `tests/real/` — no real labels yet); MTA-STS/DANE remains `not-checked`;
+ML labels remain rules-derived; multi-org single-sensor; k8s Postgres/Redis
+for small clusters; frontend `http` mode assumed.
 
 ## Further documentation
 

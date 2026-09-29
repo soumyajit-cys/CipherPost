@@ -96,12 +96,20 @@ class AnalysisWorker:
             self._org_cache = None
         return self._org_cache
 
-    def _persist(self, sa, scoring_result, raw_refs, session_raw_ts):
-        """Persist session+findings+shap to Postgres using sync session."""
+    def _persist(self, sa, scoring_result, raw_refs, session_raw_ts,
+                 session_id: str | None = None):
+        """Persist session+findings+shap to Postgres using sync session.
+
+        Idempotent: if `session_id` already exists, returns (id, False) without
+        inserting duplicates. Returns (sess_id, created).
+        """
         Session = _get_sync_session()
         try:
             from app.models.entities import Session as SessionModel, Finding, ShaPRow, Severity
-            sess_id = uuid.uuid4().hex
+            sess_id = session_id or uuid.uuid4().hex
+            existing = Session.get(SessionModel, sess_id)
+            if existing is not None:
+                return sess_id, False
             # derive job: use LIVE_JOB_TAG as a synthetic job id (ensure exists)
             from app.models.entities import AnalysisJob, JobStatus
             job_id = settings.LIVE_JOB_TAG

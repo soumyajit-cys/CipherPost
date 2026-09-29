@@ -90,6 +90,11 @@ def _resolver():
     timeout = float(getattr(_s, "DNS_TIMEOUT_SECONDS", 5.0) or 5.0)
     r.timeout = timeout
     r.lifetime = timeout
+    try:
+        import dns.flags
+        r.use_edns(0, dns.flags.DO, 4096)
+    except Exception:
+        pass
     return r
 
 

@@ -288,14 +288,19 @@ async def metrics():
 # --- live SSE & extended API (stage 5) -----------------------------------
 
 async def _sse_ctx(request: Request, token: str | None,
+                   ticket: str | None,
                    db: AsyncSession) -> AuthContext:
-    """SSE auth: EventSource cannot send headers, so accept ?token= as well."""
-    if token:
-        from app.core.auth import decode_token
+    """SSE auth: EventSource cannot send headers, so accept a short-lived
+    single-use ticket via ?ticket= (or legacy ?token= carrying a ticket).
+    Main bearer tokens are NOT accepted in URLs to avoid log leaks; use the
+    Authorization header for those (non-EventSource clients)."""
+    raw = ticket or token
+    if raw:
+        from app.core.auth import consume_sse_ticket
         try:
-            claims = decode_token(token)
+            claims = consume_sse_ticket(raw)
         except ValueError:
-            raise HTTPException(401, "Invalid SSE token")
+            raise HTTPException(401, "Invalid or expired SSE ticket")
         user = await db.get(User, claims["sub"])
         if user is None or not user.is_active:
             raise HTTPException(401, "User inactive")

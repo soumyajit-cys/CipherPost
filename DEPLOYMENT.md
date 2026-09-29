@@ -102,7 +102,11 @@ kubectl apply -f k8s/capture-daemonset.yaml
 
 ## First-boot checklist
 
-1. Secrets set (`JWT_SECRET` ≥ 32 random chars, strong `ADMIN_PASSWORD`).
+1. Secrets set (`JWT_SECRET` ≥ 32 random chars e.g. `openssl rand -hex 32`,
+   strong `ADMIN_PASSWORD` ≥ 12 chars, `POSTGRES_PASSWORD` in env/secret;
+   `CIPHERPOST_ENV=production` default enforces this at startup).
+2. Migrations applied (`python -m app.migrate` / compose `migrate` service /
+   K8s initContainer; CI verifies `alembic check` with no drift).
 2. Login as bootstrap admin → create operator accounts → rotate/disable
    bootstrap if policy requires.
 3. Configure alert channels (admin only) + Splunk HEC / Jira if used.

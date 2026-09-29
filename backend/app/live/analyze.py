@@ -13,6 +13,7 @@ import threading
 import time
 import uuid
 from datetime import datetime
+from typing import Any
 
 import redis
 
@@ -233,6 +234,42 @@ class AnalysisWorker:
             pass
         return sess_id, True
 
+    def _handle_entry(self, entry_id: str, payload: Any) -> None:
+        """Process one stream entry with retry accounting and DLQ.
+
+        ACKs only after durable handling. Poison messages go to the dead-letter
+        stream after STREAM_MAX_ATTEMPTS attempts.
+        """
+        if isinstance(payload, dict) and "protocol" in payload:
+            sess_payload = payload
+        elif isinstance(payload, dict) and "v" in payload:
+            v = payload["v"]
+            sess_payload = json.loads(v) if isinstance(v, (bytes, str)) else v
+        else:
+            sess_payload = payload
+        if isinstance(sess_payload, bytes):
+            sess_payload = json.loads(sess_payload)
+        try:
+            self._process_one(sess_payload)
+        except Exception as e:
+            attempts = bus.note_attempt(self.r, self.consumer.stream, entry_id)
+            if attempts >= settings.STREAM_MAX_ATTEMPTS:
+                self.consumer.dead_letter(entry_id, sess_payload
+                                          if isinstance(sess_payload, dict) else {},
+                                          str(e), attempts)
+                try:
+                    self.gossip.counters.inc("sessions_dead_lettered")
+                except Exception:
+                    pass
+                log.warning("session %s dead-lettered after %d attempts: %s",
+                            entry_id, attempts, e)
+            else:
+                log.debug("session %s attempt %d failed, will redeliver: %s",
+                          entry_id, attempts, e)
+            return
+        bus.clear_attempts(self.r, self.consumer.stream, entry_id)
+        self.consumer.ack(entry_id)
+
     def run(self):
         log.info("analysis worker starting, stream=%s group=%s", settings.SESSION_STREAM, settings.ANALYSIS_CONSUMER_GROUP)
         self.gossip.start()
@@ -242,26 +279,22 @@ class AnalysisWorker:
             except ValueError:
                 pass
         while not self._stop.is_set():
-            items = self.consumer.poll(timeout_ms=800)
+            items = self.consumer.poll_raw(timeout_ms=800)
             if not items:
+                # Reclaim entries stuck with dead consumers, then idle briefly.
+                for eid, payload in self.consumer.reclaim():
+                    if self._stop.is_set():
+                        break
+                    try:
+                        self._handle_entry(eid, payload)
+                    except Exception as e:
+                        log.warning("reclaim process error: %s", e)
                 continue
-            for payload in items:
+            for entry_id, payload in items:
                 if self._stop.is_set():
                     break
                 try:
-                    # payload is already decoded json dict from streams.StreamConsumer
-                    # but our session payload is also json-encoded bytes; handle both
-                    if isinstance(payload, dict) and "protocol" in payload:
-                        sess_payload = payload
-                    elif isinstance(payload, dict) and "v" in payload:
-                        sess_payload = json.loads(payload["v"]) if isinstance(payload["v"], (bytes,str)) else payload["v"]
-                    else:
-                        sess_payload = payload
-                    # if payload came via xreadgroup, it's the inner dict from session_to_payload
-                    # which is itself json; ensure we pass dict
-                    if isinstance(sess_payload, bytes):
-                        sess_payload = json.loads(sess_payload)
-                    self._process_one(sess_payload)
+                    self._handle_entry(entry_id, payload)
                 except Exception as e:
                     log.warning("process error: %s", e)
         self.gossip.stop()

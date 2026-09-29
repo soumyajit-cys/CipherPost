@@ -124,6 +124,8 @@ class AnalysisWorker:
             elif job.org_id is None and default_org_id:
                 job.org_id = default_org_id
             # map fields
+            from datetime import datetime, timezone
+            _now = datetime.now(timezone.utc)
             sess = SessionModel(
                 id=sess_id, job_id=job_id,
                 protocol=sa.protocol, five_tuple=sa.five_tuple,
@@ -145,6 +147,7 @@ class AnalysisWorker:
                 max_severity= max((f.severity for f in sa.findings), key=lambda s: {"info":0,"low":1,"medium":2,"high":3,"critical":4}.get(s,0), default=None) if sa.findings else None,
                 org_id=default_org_id,
                 details={"raw_refs": raw_refs or [], "live_ts": session_raw_ts},
+                created_at=_now,
             )
             Session.add(sess)
             for f in sa.findings:
@@ -153,6 +156,7 @@ class AnalysisWorker:
                     severity=Severity(f.severity), title=f.title,
                     description=f.description, reference=f.reference,
                     kind=f.kind, evidence=f.evidence or {},
+                    created_at=_now,
                 ))
             if scoring_result:
                 for c in scoring_result.shap_contributions:

@@ -19,6 +19,7 @@ spec:
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      securityContext: {runAsUser: 10001, runAsNonRoot: true}
       nodeSelector:
         cipherpost/capture: "true"   # label only SPAN-fed nodes
       containers:
@@ -26,6 +27,8 @@ spec:
           image: cipherpost/worker:latest
           command: ["python", "-m", "app.live.capture", "--iface", "eth0"]
           securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 10001
             capabilities:
               add: ["NET_RAW", "NET_ADMIN"]
           envFrom:

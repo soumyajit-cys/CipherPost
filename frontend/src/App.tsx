@@ -47,6 +47,7 @@ function DashboardRoutes() {
           <Route path="/live" element={<LivePage />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/fleet" element={<FleetOverviewPage />} />
+          <Route path="/suppressions" element={<SuppressionsPage />} />
           <Route path="/analyses/:id" element={<AnalysisDetailPage />} />
           <Route path="/analyses/:id/sessions/:sessionId" element={<SessionDrilldownPage />} />
           <Route path="/login" element={<LoginPage />} />

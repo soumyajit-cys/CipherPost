@@ -75,6 +75,8 @@ export class CipherPostClient {
   findings = (severity?: string): Promise<Finding[]> => this.get('/api/v1/findings', { severity });
   fleetTrend = (days = 7): Promise<unknown> => this.get('/api/v1/fleet/trend', { days });
   liveStatus = (): Promise<unknown> => this.get('/api/v1/live/status');
+  liveTicket = (): Promise<{ ticket: string; expires_in: number; scope: string }> =>
+    this.req('POST', '/api/v1/live/ticket', {});
   agents = (): Promise<unknown> => this.get('/api/v1/agents');
   alerts = (limit = 50): Promise<unknown[]> => this.get('/api/v1/alerts', { limit });
   certsExpiring = (days = 30): Promise<unknown[]> => this.get('/api/v1/certs/expiring', { days });

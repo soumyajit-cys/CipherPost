@@ -150,6 +150,23 @@ class RollingRawStore:
         }
 
 
+def run_db_retention_once() -> dict[str, int]:
+    """Entry point for cron/K8s CronJob: purge old rows, log counts."""
+    totals = DBRetention().purge_all()
+    for table, n in totals.items():
+        if n:
+            log.info("retention purged %d rows from %s", n, table)
+    return totals
+
+
+if __name__ == "__main__":
+    import argparse as _ap
+    _p = _ap.ArgumentParser(description="CipherPost retention: purge old DB rows")
+    _p.parse_args()
+    logging.basicConfig(level=logging.INFO)
+    print(run_db_retention_once())
+
+
 class DBRetention:
     """Batch-purge old rows per data type without long table locks.
 

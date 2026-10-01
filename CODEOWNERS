@@ -1,0 +1,11 @@
+# Owners (placeholders — replace with teams before inviting contributors)
+* @REPLACE-WITH-OWNER
+/backend/app/core/auth.py @REPLACE-WITH-SECURITY-OWNER
+/backend/app/core/oidc.py @REPLACE-WITH-SECURITY-OWNER
+/backend/app/live/ @REPLACE-WITH-PIPELINE-OWNER
+/backend/alembic/ @REPLACE-WITH-DATA-OWNER
+/deploy/helm/ @REPLACE-WITH-PLATFORM-OWNER
+/docker/ @REPLACE-WITH-PLATFORM-OWNER
+/frontend/ @REPLACE-WITH-UI-OWNER
+/sdk/ @REPLACE-WITH-SDK-OWNER
+/docs/ @REPLACE-WITH-DOCS-OWNER

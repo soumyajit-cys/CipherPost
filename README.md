@@ -227,20 +227,23 @@ real SPAN captures; license choice by the owner (see
 
 ```
 backend/app/
-  core/       config, database, logging, auth (JWT/RBAC/API keys)
-  models/     SQLAlchemy entities (orgs, users, keys, audit, certs)
+  core/       config, database, logging, auth (JWT/RBAC/API keys, OIDC, MFA)
+  models/     SQLAlchemy entities (orgs, users, keys, audit, certs, flows)
   parsing/    reassembly, TLS parsing, certs, rules, analysis, corpus gen, eval
   ml/         features, ML engine, eval, model registry
-  proactive/  cert inventory, compliance mapping, MTA-STS/DANE stub
+  proactive/  cert inventory, compliance mapping, MTA-STS/DANE, suppressions
   live/       capture, analysis, alerts (+splunk), ticketing (jira), agents
+  agent/      standalone sensor (metadata-only ingest client + disk queue)
   reporting/  JSON/HTML/PDF report generator
   api/        FastAPI application
   services/   Celery worker tasks
+  cli.py      offline `cipherpost` CLI (no server/DB/Redis)
 frontend/     React + Recharts dashboard (+ landing, login, agents strip)
-docker/       Dockerfiles, docker-compose, nginx
+docker/       Dockerfiles, docker-compose (+prod), nginx
+deploy/       Helm chart, systemd units
 k8s/          namespace, config, services, capture DaemonSet, HPA, ingress
 sdk/          typed Python + TypeScript API clients (contract-tested)
-ops/          Grafana dashboard, Prometheus notes
+ops/          Grafana dashboard, Prometheus notes + alert rules
 scripts/      traffic gen, replay harness, backup, disagreement report
 tests/        corpus fixtures + integration/robustness suites
 ```

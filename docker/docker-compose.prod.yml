@@ -8,7 +8,7 @@
 # - Frontend on 127.0.0.1 only; put your TLS reverse proxy in front.
 # - migrate runs to completion before api/worker start (startup ordering).
 #
-# Usage:
+# Usage (from repo root; --env-file feeds interpolation AND runtime):
 #   umask 077
 #   cat > .env.prod <<'EOF'
 #   POSTGRES_PASSWORD=strong-db-password
@@ -17,7 +17,7 @@
 #   CIPHERPOST_IMAGE_TAG=0.3.0
 #   EOF
 #   chmod 600 .env.prod
-#   docker compose -f docker/docker-compose.prod.yml --env-file .env.prod up -d
+#   docker compose --env-file .env.prod -f docker/docker-compose.prod.yml up -d
 
 services:
   db:

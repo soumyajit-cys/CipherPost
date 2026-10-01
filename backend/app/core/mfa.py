@@ -171,4 +171,12 @@ def record_mfa_success(user_key: str) -> None:
 
 
 def reset_mfa_state() -> None:
+    """Test-only: clear in-memory buckets and best-effort Redis keys."""
     _mem_mfa_failures.clear()
+    r = _mfa_redis()
+    if r is not None:
+        try:
+            for k in list(r.keys("*:mfa")) + list(r.keys("*:mfa-lock")):
+                r.delete(k)
+        except Exception:
+            pass

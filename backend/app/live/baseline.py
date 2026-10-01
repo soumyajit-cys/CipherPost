@@ -125,8 +125,9 @@ def compute_drift(reference: np.ndarray, recent: np.ndarray,
     return out
 
 
-def drift_from_db(hours_recent: int = 24, days_reference: int = 6) -> dict:
-    """Load windows from baseline_features and run compute_drift."""
+def drift_from_db(hours_recent: int = 24, days_reference: int = 6,
+                  org_id: str | None = None) -> dict:
+    """Load org-scoped windows from baseline_features and run compute_drift."""
     from sqlalchemy import create_engine, text
     from datetime import timedelta
     try:
@@ -142,6 +143,9 @@ def drift_from_db(hours_recent: int = 24, days_reference: int = 6) -> dict:
             def load(since, until=None):
                 q = "SELECT features FROM baseline_features WHERE ts >= :since"
                 params = {"since": since}
+                if org_id:
+                    q += " AND org_id = :org"
+                    params["org"] = org_id
                 if until is not None:
                     q += " AND ts < :until"
                     params["until"] = until

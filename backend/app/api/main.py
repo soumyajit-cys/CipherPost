@@ -1135,9 +1135,12 @@ async def list_findings(
     protocol: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    page: int | None = Query(None, ge=1),
+    per_page: int | None = Query(None, ge=1, le=200),
     ctx: AuthContext = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    limit, offset = _paginate(limit, offset, page, per_page)
     q = select(Finding).join(Session, Finding.session_id==Session.id).where(Session.org_id == ctx.org_id).order_by(Finding.severity.desc()).offset(offset).limit(limit)
     if severity:
         q = q.where(Finding.severity==Severity(severity))

@@ -156,6 +156,14 @@ class Settings(BaseSettings):
     DRIFT_Z_THRESHOLD: float = 3.0
     DRIFT_MIN_FEATURES: int = 3
 
+    # --- multi-tenancy (phase 3 task 2) -------------------------------------
+    # Single-tenant mode preserves the legacy behavior (unstamped sessions go
+    # to the default org). Multi-org deployments MUST set this to false and
+    # issue org-scoped agent tokens; unstamped sessions are then dead-lettered.
+    SINGLE_TENANT: bool = True
+    INGEST_MAX_QUEUE: int = 5000  # 429 backpressure above this stream length
+    INGEST_MAX_BATCH: int = 200
+
     # --- suppressions (phase 2 task 3) --------------------------------------
     SUPPRESSION_REQUIRE_APPROVAL: bool = True  # analyst requests, admin approves
     SUPPRESSION_DEFAULT_DAYS: int = 90

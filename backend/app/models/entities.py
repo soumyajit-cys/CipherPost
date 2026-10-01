@@ -362,3 +362,21 @@ class AgentToken(Base):
     created_by: Mapped[str] = mapped_column(String(256), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class FindingFeedback(Base):
+    """Analyst labels on findings (phase 3 task 8): confirmed / false_positive /
+    accepted_risk with a comment. Org-isolated, exportable as a dataset.
+    Never used for automatic retraining (explicit human review only)."""
+
+    __tablename__ = "finding_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_id: Mapped[str] = mapped_column(String(64), ForeignKey("organizations.id"), index=True)
+    finding_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    rule_id: Mapped[str] = mapped_column(String(128), index=True)
+    session_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    verdict: Mapped[str] = mapped_column(String(32))  # confirmed|false_positive|accepted_risk
+    comment: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(256), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

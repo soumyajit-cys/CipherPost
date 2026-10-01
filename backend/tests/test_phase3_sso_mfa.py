@@ -212,6 +212,68 @@ def test_mfa_enroll_confirm_verify_and_lockout():
         _clear_overrides()
 
 
+def test_mfa_happy_path_ticket_to_token():
+    import asyncio
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+    from app.core.database import Base
+    import app.models.entities as E
+    from app.api.main import app
+    from app.core.database import get_db
+    from app.core.auth import get_current_user, AuthContext, create_mfa_ticket
+    from app.core import mfa as _mfa
+    from fastapi.testclient import TestClient
+
+    engine = create_async_engine("sqlite+aiosqlite://")
+    maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async def _init():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        async with maker() as s:
+            s.add(E.Organization(id="org-a", name="default"))
+            secret = _mfa.random_secret()
+            u = E.User(id="u9", org_id="org-a", email="mfa@x",
+                       password_hash="x", role=E.UserRole.ANALYST, is_active=True,
+                       mfa_enabled=True, mfa_secret_enc=_mfa.encrypt_secret(secret),
+                       mfa_recovery=[_mfa.hash_recovery_code("aaaa-bbbb")])
+            s.add(u)
+            await s.commit()
+            return secret
+
+    secret = asyncio.get_event_loop().run_until_complete(_init())
+
+    async def _db():
+        async with maker() as s:
+            yield s
+
+    async def _anon():
+        raise Exception("unused")
+
+    app.dependency_overrides[get_db] = _db
+    client = TestClient(app, raise_server_exceptions=False)
+    try:
+        ticket = create_mfa_ticket("u9", "org-a")
+        r = client.post("/api/v1/auth/mfa/verify",
+                        json={"mfa_ticket": ticket, "code": _mfa.totp_now(secret)})
+        assert r.status_code == 200, r.text
+        assert "token" in r.json()
+        # ticket is single-use
+        r = client.post("/api/v1/auth/mfa/verify",
+                        json={"mfa_ticket": ticket, "code": _mfa.totp_now(secret)})
+        assert r.status_code == 401
+        # recovery code path (single-use too)
+        ticket2 = create_mfa_ticket("u9", "org-a")
+        r = client.post("/api/v1/auth/mfa/verify",
+                        json={"mfa_ticket": ticket2, "recovery_code": "aaaa-bbbb"})
+        assert r.status_code == 200, r.text
+        ticket3 = create_mfa_ticket("u9", "org-a")
+        r = client.post("/api/v1/auth/mfa/verify",
+                        json={"mfa_ticket": ticket3, "recovery_code": "aaaa-bbbb"})
+        assert r.status_code == 401
+    finally:
+        _clear_overrides()
+
+
 def test_break_glass_disabled_by_default():
     client, _ = _client_for("admin")
     try:

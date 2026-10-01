@@ -211,12 +211,6 @@ async def me(ctx: AuthContext = Depends(get_current_user)):
             "role": ctx.role, "org_id": ctx.org_id, "via": ctx.via}
 
 
-@app.get("/api/v1/auth/me")
-async def me(ctx: AuthContext = Depends(get_current_user)):
-    return {"id": ctx.user_id, "email": ctx.email,
-            "role": ctx.role, "org_id": ctx.org_id, "via": ctx.via}
-
-
 # --- SSO / MFA / sessions (phase 3 task 1) ---------------------------------
 
 @app.get("/api/v1/auth/oidc/start")

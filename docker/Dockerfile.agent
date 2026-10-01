@@ -1,0 +1,23 @@
+# CipherPost standalone sensor agent: capture + parse locally, ship metadata only.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libffi-dev libpcap-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.agent.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+COPY backend/ /app/
+
+# Non-root user; packet capture granted via cap_add only (never privileged).
+RUN useradd -u 10001 -m appuser && mkdir -p /var/lib/cipherpost && chown -R appuser:appuser /app /var/lib/cipherpost
+USER appuser
+
+ENV PYTHONPATH=/app
+ENV CIPHERPOST_AGENT_QUEUE=/var/lib/cipherpost/agent-queue.jsonl
+
+EXPOSE 9099
+CMD ["python", "-m", "app.agent.agent"]

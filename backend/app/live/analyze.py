@@ -106,7 +106,12 @@ class AnalysisWorker:
         without inserting duplicates. Org resolution (fail closed): the
         ingest-stamped org wins; otherwise the default org only in explicit
         single-tenant mode; otherwise raise (dead-letter, never mis-attribute).
+        The multi-tenant refusal happens before any DB session is opened.
         """
+        if not payload_org_id and not settings.SINGLE_TENANT:
+            raise ValueError(
+                "unstamped session in multi-tenant mode "
+                "(sensors must use agent tokens via /api/v1/ingest/sessions)")
         Session = _get_sync_session()
         try:
             from app.models.entities import Session as SessionModel, Finding, ShaPRow, Severity
@@ -116,12 +121,8 @@ class AnalysisWorker:
                 return sess_id, False, existing.org_id
             if payload_org_id:
                 org_id = payload_org_id
-            elif settings.SINGLE_TENANT:
-                org_id = self._default_org_id(Session)
             else:
-                raise ValueError(
-                    "unstamped session in multi-tenant mode "
-                    "(sensors must use agent tokens via /api/v1/ingest/sessions)")
+                org_id = self._default_org_id(Session)
             # derive job: per-org synthetic job rows (legacy "live" for default)
             from app.models.entities import AnalysisJob, JobStatus
             default_org_id = self._default_org_id(Session)

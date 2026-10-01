@@ -201,11 +201,11 @@ class AnalysisWorker:
                     Session.add(ShaPRow(session_id=sess_id, feature=c.feature, value=c.value, impact=c.impact))
             try:
                 from app.proactive.certs import track_session_certs
-                track_session_certs(sa, default_org_id, Session)
+                track_session_certs(sa, org_id, Session)
             except Exception:
                 pass
             Session.commit()
-            return sess_id, True
+            return sess_id, True, org_id
         except Exception as e:
             Session.rollback()
             log.warning("persist failed: %s", e)

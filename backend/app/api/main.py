@@ -1102,10 +1102,13 @@ async def list_sessions(
     severity: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    page: int | None = Query(None, ge=1),
+    per_page: int | None = Query(None, ge=1, le=200),
     since: str | None = Query(None, description="ISO timestamp lower bound"),
     ctx: AuthContext = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    limit, offset = _paginate(limit, offset, page, per_page)
     q = select(Session).where(Session.org_id == ctx.org_id).order_by(Session.id.desc()).offset(offset).limit(limit)
     # severity filter via join findings
     if severity:

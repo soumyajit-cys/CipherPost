@@ -359,6 +359,7 @@ function FindingsList({ findings }: { findings: Finding[] }) {
                     {(f as any).suppressed
                       ? <span className="rounded border border-sev-low/50 px-1.5 py-0.5 text-[10px] text-sev-low">suppressed: accepted risk</span>
                       : <SuppressButton ruleId={f.ruleId} fiveTuple={f.session.fiveTuple} />}
+                    <FeedbackButtons findingId={f.id} />
                     {(f.compliance ?? []).slice(0, 4).map((c, i) => (
                       <span key={i} title={`${c.framework_title} — ${c.note}`} className="rounded border border-base-600 px-1.5 py-0.5 font-mono text-[10px] text-base-400">
                         {c.framework} {c.control}

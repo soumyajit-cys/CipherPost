@@ -1492,6 +1492,22 @@ async def _get_org_job(job_id: str, ctx: AuthContext, db: AsyncSession):
     return job
 
 
+def _paginate(limit: int, offset: int, page: int | None,
+               per_page: int | None) -> tuple[int, int]:
+    """Canonical pagination: limit/offset, with page/per_page aliases.
+
+    page is 1-based; per_page clamps like limit. Explicit offset wins over page.
+    """
+    limit = max(1, min(int(limit), 200))
+    if per_page is not None:
+        limit = max(1, min(int(per_page), 200))
+    if offset:
+        return limit, max(0, int(offset))
+    if page is not None:
+        return limit, max(0, (max(1, int(page)) - 1) * limit)
+    return limit, 0
+
+
 @app.get("/api/v1/jobs")
 async def list_jobs(
     limit: int = Query(50, ge=1, le=200),

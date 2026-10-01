@@ -359,11 +359,22 @@ async def get_current_user(
         claims = decode_token(creds.credentials)
     except ValueError:
         raise HTTPException(401, "Invalid or expired token")
+    if is_token_revoked(claims.get("jti", "")):
+        raise HTTPException(401, "Session revoked")
     user = await db.get(User, claims["sub"])
     if user is None or not user.is_active:
         raise HTTPException(401, "User inactive or deleted")
     if user.org_id != claims.get("org"):
         raise HTTPException(401, "Token org mismatch")
+    # Session version: bumped by revoke-all / password change. Tokens issued
+    # before revocation carry an older sv (missing sv means version 1).
+    token_sv = claims.get("sv", 1)
+    try:
+        token_sv = int(token_sv)
+    except Exception:
+        raise HTTPException(401, "Invalid session version")
+    if token_sv != int(getattr(user, "session_version", 1) or 1):
+        raise HTTPException(401, "Session revoked")
     return AuthContext(user_id=user.id, email=user.email,
                        org_id=user.org_id, role=user.role.value, via="jwt")
 

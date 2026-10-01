@@ -1,0 +1,11 @@
+apiVersion: v2
+name: cipherpost
+description: Passive TLS forensics for email infrastructure
+type: application
+version: 0.3.0
+appVersion: "0.3.0"
+home: https://github.com/cipherpost/cipherpost
+maintainers:
+  - name: CipherPost maintainers
+annotations:
+  category: Security

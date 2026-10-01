@@ -1087,13 +1087,17 @@ async def live_status(ctx: AuthContext = Depends(get_current_user)):
     return out
 
 @app.get("/api/v1/agents")
-async def list_agents(ctx: AuthContext = Depends(get_current_user)):
-    """Capture agents with recent heartbeats (track 3)."""
+async def list_agents(ctx: AuthContext = Depends(get_current_user),
+                      db: AsyncSession = Depends(get_db)):
+    """Capture agents with recent heartbeats (track 3), org-filtered."""
     from app.live.agents import list_agents as _list
     try:
         import redis as _redis
         r = _redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
-        return {"agents": _list(r)}
+        user = await db.get(User, ctx.user_id) if ctx.user_id else None
+        return {"agents": _list(
+            r, org_id=ctx.org_id, single_tenant=settings.SINGLE_TENANT,
+            is_platform=bool(user is not None and getattr(user, "is_platform_admin", False)))}
     except Exception as e:
         return {"agents": [], "error": str(e)}
 

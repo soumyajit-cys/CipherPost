@@ -211,6 +211,249 @@ async def me(ctx: AuthContext = Depends(get_current_user)):
             "role": ctx.role, "org_id": ctx.org_id, "via": ctx.via}
 
 
+@app.get("/api/v1/auth/me")
+async def me(ctx: AuthContext = Depends(get_current_user)):
+    return {"id": ctx.user_id, "email": ctx.email,
+            "role": ctx.role, "org_id": ctx.org_id, "via": ctx.via}
+
+
+# --- SSO / MFA / sessions (phase 3 task 1) ---------------------------------
+
+@app.get("/api/v1/auth/oidc/start")
+async def oidc_start(redirect_uri: str = Query(...)):
+    from app.core import oidc as _oidc
+    if not _oidc.enabled():
+        raise HTTPException(404, "SSO is not configured")
+    try:
+        url, state = _oidc.new_authorize_url(redirect_uri)
+    except Exception as e:
+        raise HTTPException(503, f"SSO unavailable: {e}")
+    return {"url": url, "state": state}
+
+
+@app.post("/api/v1/auth/oidc/callback")
+async def oidc_callback(body: dict, request: Request,
+                        db: AsyncSession = Depends(get_db)):
+    """Exchange code+state, verify the ID token, provision/find the user."""
+    from datetime import datetime, timezone
+    from app.core import oidc as _oidc
+    from app.core.auth import create_mfa_ticket
+    if not _oidc.enabled():
+        raise HTTPException(404, "SSO is not configured")
+    client_ip = (request.client.host if request.client else "unknown")
+    try:
+        stored = _oidc.consume_state((body.get("state") or "").strip())
+    except ValueError as e:
+        await log_audit(db, "unknown", "sso", "auth.sso.failed", "callback",
+                        {"ip": client_ip, "reason": str(e)[:200]})
+        raise HTTPException(401, "Invalid SSO state (possible replay)")
+    try:
+        tokens = _oidc.exchange_code((body.get("code") or "").strip(),
+                                     stored["verifier"],
+                                     (body.get("redirect_uri") or "").strip())
+        claims = _oidc.verify_id_token(tokens.get("id_token", ""), stored.get("nonce"))
+    except ValueError as e:
+        await log_audit(db, "unknown", "sso", "auth.sso.failed", "callback",
+                        {"ip": client_ip, "reason": str(e)[:200]})
+        raise HTTPException(401, "SSO verification failed")
+    role, org_name = _oidc.map_role_org(claims)
+    email = str(claims.get("email", "") or "").strip().lower()
+    sub = str(claims.get("sub", ""))
+    if not email or "@" not in email or not sub:
+        await log_audit(db, "unknown", email or "sso", "auth.sso.failed",
+                        "callback", {"reason": "missing email/sub claim"})
+        raise HTTPException(401, "SSO verification failed")
+    user = (await db.execute(select(User).where(User.oidc_sub == sub))).scalars().first()
+    if user is None:
+        user = (await db.execute(select(User).where(User.email == email))).scalars().first()
+        if user is not None and getattr(user, "oidc_sub", None) not in (None, sub):
+            await log_audit(db, user.org_id, email, "auth.sso.failed", "callback",
+                            {"reason": "oidc sub mismatch"})
+            raise HTTPException(403, "SSO account conflict")
+    if user is None:
+        if not settings.OIDC_JIT_PROVISIONING:
+            await log_audit(db, "unknown", email, "auth.sso.failed", "callback",
+                            {"reason": "jit disabled"})
+            raise HTTPException(403, "SSO account not provisioned")
+        import uuid as _uuid
+        from app.models.entities import Organization
+        org = (await db.execute(
+            select(Organization).where(Organization.name == org_name))).scalars().first()
+        if org is None:
+            org = (await db.execute(
+                select(Organization).where(Organization.name == settings.DEFAULT_ORG_NAME))).scalars().first()
+        user = User(id="user-" + _uuid.uuid4().hex[:12], org_id=org.id, email=email,
+                    password_hash=hash_password(secrets_token_hex()),
+                    role=UserRole(role), is_active=True, oidc_sub=sub)
+        db.add(user)
+        await db.commit()
+        await log_audit(db, org.id, email, "auth.sso.provisioned", "user",
+                        {"role": role, "org": org.name})
+    if not user.is_active:
+        raise HTTPException(401, "User inactive or deleted")
+    if getattr(user, "oidc_sub", None) is None:
+        user.oidc_sub = sub
+    user.last_login = datetime.now(timezone.utc)
+    await db.commit()
+    if await _mfa_required(user, db):
+        ticket = create_mfa_ticket(user.id, user.org_id)
+        await log_audit(db, user.org_id, user.email, "auth.mfa.challenged", "session")
+        return {"mfa_required": True, "mfa_ticket": ticket}
+    token = create_access_token(user.id, user.org_id, user.role.value,
+                                session_version=int(getattr(user, "session_version", 1) or 1))
+    await log_audit(db, user.org_id, user.email, "auth.login.sso", "session")
+    return {"token": token,
+            "user": {"id": user.id, "email": user.email,
+                     "role": user.role.value, "org_id": user.org_id}}
+
+
+def secrets_token_hex() -> str:
+    import secrets as _s
+    return _s.token_hex(32)
+
+
+@app.post("/api/v1/auth/mfa/enroll")
+async def mfa_enroll(ctx: AuthContext = Depends(get_current_user),
+                     db: AsyncSession = Depends(get_db)):
+    """Start TOTP enrollment. Returns otpauth URI + one-time recovery codes."""
+    from app.core import mfa as _mfa
+    if not settings.MFA_ENROLL_ALLOW:
+        raise HTTPException(403, "MFA enrollment is disabled")
+    user = await db.get(User, ctx.user_id)
+    if user is None:
+        raise HTTPException(401, "User inactive or deleted")
+    secret = _mfa.random_secret()
+    codes = _mfa.new_recovery_codes()
+    user.mfa_secret_enc = _mfa.encrypt_secret(secret)
+    user.mfa_recovery = [_mfa.hash_recovery_code(c) for c in codes]
+    await db.commit()
+    await log_audit(db, user.org_id, user.email, "auth.mfa.enroll_started", "mfa")
+    return {"otpauth_uri": _mfa.otpauth_uri(secret, user.email, settings.MFA_ISSUER_NAME),
+            "recovery_codes": codes,
+            "warning": "Store recovery codes now; secrets/recovery hashes only from here on"}
+
+
+@app.post("/api/v1/auth/mfa/confirm")
+async def mfa_confirm(body: dict,
+                      ctx: AuthContext = Depends(get_current_user),
+                      db: AsyncSession = Depends(get_db)):
+    """Confirm enrollment with a TOTP code from the authenticator app."""
+    from app.core import mfa as _mfa
+    user = await db.get(User, ctx.user_id)
+    if user is None or not getattr(user, "mfa_secret_enc", None):
+        raise HTTPException(400, "No pending MFA enrollment")
+    try:
+        secret = _mfa.decrypt_secret(user.mfa_secret_enc)
+    except ValueError:
+        raise HTTPException(500, "MFA secret unreadable; re-enroll")
+    if not _mfa.verify_code(secret, body.get("code") or ""):
+        await log_audit(db, user.org_id, user.email, "auth.mfa.failed", "mfa")
+        raise HTTPException(401, "Invalid MFA code")
+    user.mfa_enabled = True
+    await db.commit()
+    await log_audit(db, user.org_id, user.email, "auth.mfa.enabled", "mfa")
+    return {"status": "enabled"}
+
+
+@app.post("/api/v1/auth/mfa/verify")
+async def mfa_verify(body: dict, request: Request,
+                     db: AsyncSession = Depends(get_db)):
+    """Exchange an MFA ticket + TOTP (or recovery code) for a session token."""
+    from app.core import mfa as _mfa
+    from app.core.auth import consume_mfa_ticket
+    from datetime import datetime, timezone
+    client_ip = (request.client.host if request.client else "unknown")
+    try:
+        claims = consume_mfa_ticket((body.get("mfa_ticket") or "").strip())
+    except ValueError:
+        raise HTTPException(401, "Invalid or expired MFA ticket")
+    user = await db.get(User, claims["sub"])
+    if user is None or not user.is_active:
+        raise HTTPException(401, "User inactive or deleted")
+    ukey = f"mfa:{user.id}"
+    if _mfa.mfa_locked(ukey):
+        raise HTTPException(401, "Invalid MFA code")
+    ok = False
+    try:
+        secret = _mfa.decrypt_secret(user.mfa_secret_enc or "")
+        ok = _mfa.verify_code(secret, body.get("code") or "")
+    except ValueError:
+        ok = False
+    if not ok and body.get("recovery_code"):
+        remaining = _mfa.consume_recovery_code(user.mfa_recovery or [],
+                                               body.get("recovery_code") or "")
+        if remaining is not None:
+            user.mfa_recovery = remaining
+            ok = True
+    if not ok:
+        _mfa.record_mfa_failure(ukey)
+        await log_audit(db, user.org_id, user.email, "auth.mfa.failed", "session",
+                        {"ip": client_ip})
+        raise HTTPException(401, "Invalid MFA code")
+    _mfa.record_mfa_success(ukey)
+    user.last_login = datetime.now(timezone.utc)
+    await db.commit()
+    token = create_access_token(user.id, user.org_id, user.role.value,
+                                session_version=int(getattr(user, "session_version", 1) or 1))
+    await log_audit(db, user.org_id, user.email, "auth.login", "session",
+                    {"mfa": True})
+    return {"token": token,
+            "user": {"id": user.id, "email": user.email,
+                     "role": user.role.value, "org_id": user.org_id}}
+
+
+@app.post("/api/v1/auth/mfa/disable")
+async def mfa_disable(body: dict,
+                      ctx: AuthContext = Depends(require_roles("admin")),
+                      db: AsyncSession = Depends(get_db)):
+    """Admin reset of a user's MFA (lost authenticator path). Audited."""
+    target_id = (body.get("user_id") or "").strip()
+    user = await db.get(User, target_id)
+    if user is None or user.org_id != ctx.org_id:
+        raise HTTPException(404, "User not found")
+    user.mfa_enabled = False
+    user.mfa_secret_enc = None
+    user.mfa_recovery = None
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "auth.mfa.disabled", user.email, {})
+    return {"status": "disabled"}
+
+
+@app.post("/api/v1/auth/logout")
+async def logout(ctx: AuthContext = Depends(get_current_user),
+                 request: Request = None,
+                 db: AsyncSession = Depends(get_db)):
+    """Revoke the presenting token (deny-listed until its expiry)."""
+    from app.core.auth import revoke_token, decode_token
+    auth = (request.headers.get("authorization", "") if request else "")
+    if auth.lower().startswith("bearer "):
+        try:
+            claims = decode_token(auth[7:].strip())
+            ttl = max(60, int(claims.get("exp", 0)) - int(__import__("time").time()))
+            revoke_token(claims.get("jti", ""), ttl)
+        except ValueError:
+            pass
+    await log_audit(db, ctx.org_id, ctx.email, "auth.logout", "session")
+    return {"status": "logged out"}
+
+
+@app.post("/api/v1/auth/revoke-all")
+async def revoke_all_sessions(body: dict,
+                              ctx: AuthContext = Depends(get_current_user),
+                              db: AsyncSession = Depends(get_db)):
+    """Bump session version: kills every session for the target user."""
+    target_id = ((body.get("user_id") if isinstance(body, dict) else None) or ctx.user_id or "")
+    if target_id != ctx.user_id and ctx.role != "admin":
+        raise HTTPException(403, "Admins only for other users")
+    user = await db.get(User, target_id)
+    if user is None or (user.org_id != ctx.org_id and ctx.role != "admin"):
+        raise HTTPException(404, "User not found")
+    user.session_version = int(getattr(user, "session_version", 1) or 1) + 1
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "auth.sessions.revoked", user.email, {})
+    return {"status": "revoked"}
+
+
 @app.get("/api/v1/users")
 async def list_users(ctx: AuthContext = Depends(require_roles("admin")),
                      db: AsyncSession = Depends(get_db)):

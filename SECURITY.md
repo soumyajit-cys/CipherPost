@@ -2,14 +2,15 @@
 
 ## Supported versions
 
+We support the **latest minor release series** plus security fixes for the
+previous minor for **90 days** after release. Pre-1.0 (`0.x`): only the
+latest `0.x` is supported — upgrade promptly, migrations only roll forward.
+
 | Version | Supported |
 |---------|-----------|
-| `main` (Phase 1 foundations onward) | Yes |
-| Older snapshots / demo tags | No — upgrade to `main` |
-
-Phase 1 is "secure, clean, and trustworthy foundations" — not a
-production-ready claim. See README "Maturity" and THREAT_MODEL.md for honest
-scope. If you deploy, track `main` and review SECURITY notes each upgrade.
+| latest `0.x` (currently 0.3.x) | Yes |
+| older `0.x` | Security fixes for 90 days after superseding release |
+| untagged `main` snapshots | Best effort only — pin a release for anything real |
 
 ## Reporting a vulnerability
 

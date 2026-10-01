@@ -286,6 +286,32 @@ function SuppressButton({ ruleId, fiveTuple: _fiveTuple }: { ruleId: string; fiv
   )
 }
 
+function FeedbackButtons({ findingId }: { findingId: number }) {
+  const [sent, setSent] = useState<string | null>(null)
+  const send = async (verdict: 'confirmed' | 'false_positive') => {
+    try {
+      const base = (import.meta as any).env?.VITE_API_BASE_URL ?? '/api/v1'
+      const t = localStorage.getItem('cipherpost_token')
+      const res = await fetch(`${base}/findings/${findingId}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) },
+        body: JSON.stringify({ verdict }),
+      })
+      if (!res.ok) throw new Error(`→ ${res.status}`)
+      setSent(verdict)
+    } catch (e) {
+      window.alert(`Feedback failed: ${e}`)
+    }
+  }
+  if (sent) return <span className="text-[10px] text-base-500">labeled {sent.replace('_', ' ')}</span>
+  return (
+    <span className="inline-flex gap-1">
+      <button title="Confirm this finding" onClick={() => send('confirmed')} className="rounded border border-base-600 px-1.5 py-0.5 text-[10px] text-base-400 hover:text-positive">✓</button>
+      <button title="Flag as false positive" onClick={() => send('false_positive')} className="rounded border border-base-600 px-1.5 py-0.5 text-[10px] text-base-400 hover:text-sev-critical">✗</button>
+    </span>
+  )
+}
+
 function FindingsList({ findings }: { findings: Finding[] }) {
   const [severityFilter, setSeverityFilter] = useState<string>('all')
   const rows = useMemo(() => {

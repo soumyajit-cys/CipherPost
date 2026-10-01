@@ -142,7 +142,7 @@ class AnalysisWorker:
                 _tls_name = getattr(sa, "negotiated_version_name", None)
                 _encrypted = _tls_name is not None
                 _flow, _regression = update_flow(
-                    Session, default_org_id,
+                    Session, org_id,
                     {"five_tuple": sa.five_tuple, "protocol": _proto},
                     _tls_name, getattr(sa, "cipher", None), _encrypted)
                 if _regression:

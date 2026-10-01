@@ -43,17 +43,19 @@ def rule_catalog() -> list[dict]:
         if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
                 and node.func.attr == "add"):
             continue
+        # SessionAnalysis.add(rule_id, rule_name, severity, title,
+        #                     description, reference, **evidence) — positional.
+        pos = [a.value for a in node.args
+               if isinstance(a, ast.Constant) and isinstance(a.value, str)]
         kw = {}
         for k in node.keywords:
             if isinstance(k.value, ast.Constant) and isinstance(k.value.value, str):
                 kw[k.arg] = k.value.value
-        if "rule_id" in kw:
-            out.append({"rule_id": kw.get("rule_id", ""),
-                        "rule_name": kw.get("rule_name", ""),
-                        "severity": kw.get("severity", ""),
-                        "title": kw.get("title", ""),
-                        "description": kw.get("description", ""),
-                        "reference": kw.get("reference", "")})
+        fields = ["rule_id", "rule_name", "severity", "title",
+                  "description", "reference"]
+        rec = {f: (pos[i] if i < len(pos) else kw.get(f, "")) for i, f in enumerate(fields)}
+        if "rule_id" in rec and rec["rule_id"]:
+            out.append(rec)
     seen, unique = set(), []
     for r in out:
         if r["rule_id"] not in seen:

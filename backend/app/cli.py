@@ -39,14 +39,21 @@ def rule_catalog() -> list[dict]:
     src = (Path(__file__).resolve().parents[0] / "parsing" / "rules.py").read_text()
     tree = ast.parse(src)
     out = []
+    src_lines = src.splitlines()
     for node in ast.walk(tree):
         if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
                 and node.func.attr == "add"):
             continue
         # SessionAnalysis.add(rule_id, rule_name, severity, title,
         #                     description, reference, **evidence) — positional.
-        pos = [a.value for a in node.args
-               if isinstance(a, ast.Constant) and isinstance(a.value, str)]
+        # Non-literals (e.g. Severity.HIGH, f-strings) render via source segment.
+        pos = []
+        for a in node.args:
+            if isinstance(a, ast.Constant) and isinstance(a.value, str):
+                pos.append(a.value)
+            else:
+                seg = ast.get_source_segment(src, a) or ""
+                pos.append(seg.strip())
         kw = {}
         for k in node.keywords:
             if isinstance(k.value, ast.Constant) and isinstance(k.value.value, str):

@@ -1,0 +1,118 @@
+name: cipherpost-release
+
+# Tag-triggered releases. Safe to dry-run any time via workflow_dispatch or on
+# PRs touching release files: build/test/scan/SBOM always run; registry push,
+# signing, and attestations run ONLY on real tag pushes with secrets set.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "backend/app/VERSION"
+      - "CHANGELOG.md"
+      - "deploy/helm/cipherpost/**"
+      - "docker/Dockerfile.*"
+      - ".github/workflows/release.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag matches backend/app/VERSION
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          test "v$(tr -d ' \n' < backend/app/VERSION)" = "${GITHUB_REF_NAME}" \
+            || (echo "tag ${GITHUB_REF_NAME} != VERSION $(cat backend/app/VERSION)"; exit 1)
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install backend deps (pinned)
+        run: pip install -r backend/requirements.txt
+      - name: Full backend suite (fast)
+        run: PYTHONPATH=backend/. python -m pytest backend/tests -q -m "not slow"
+
+  images:
+    needs: [verify-tag, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write  # Sigstore keyless (only used when pushing)
+    strategy:
+      matrix:
+        image: [api, worker, frontend, agent]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Registry login (tag pushes with credentials only)
+        if: startsWith(github.ref, 'refs/tags/v') && secrets.REGISTRY_USER != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      # Single-arch local build for SBOM + vulnerability scan (always runs).
+      - name: Build local image for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.${{ matrix.image }}
+          platforms: linux/amd64
+          load: true
+          tags: cipherpost/${{ matrix.image }}:scan
+          cache-from: type=gha
+      - name: SBOM (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: cipherpost/${{ matrix.image }}:scan
+          format: spdx-json
+          output-file: sbom-${{ matrix.image }}.spdx.json
+      - name: Scan image, fail on criticals
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: cipherpost/${{ matrix.image }}:scan
+          format: table
+          severity: CRITICAL
+          exit-code: "1"
+      # Multi-arch push + sign + provenance: real tag pushes with secrets only.
+      - name: Push multi-arch images
+        id: push
+        if: startsWith(github.ref, 'refs/tags/v') && secrets.REGISTRY_USER != ''
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.${{ matrix.image }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: cipherpost/${{ matrix.image }}:${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Sign with cosign (keyless, pushed images only)
+        if: steps.push.outputs.digest != '' && secrets.COSIGN_KEY != ''
+        run: |
+          cosign sign --key env://COSIGN_KEY \
+            cipherpost/${{ matrix.image }}@${{ steps.push.outputs.digest }}
+        env:
+          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+      - name: Attest build provenance (pushed images only)
+        if: steps.push.outputs.digest != ''
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: cipherpost/${{ matrix.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.image }}
+          path: sbom-${{ matrix.image }}.spdx.json

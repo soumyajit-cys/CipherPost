@@ -158,8 +158,8 @@ def test_disagreement_scoped_to_org(tmp_path):
     S.commit()
     S.close()
     rep_a = build_report(db_url=f"sqlite:///{db_path}", org_id="org-a")
-    assert rep_a["total"] == 1
+    assert rep_a["total_scored_sessions"] == 1
     rep_b = build_report(db_url=f"sqlite:///{db_path}", org_id="org-b")
-    assert rep_b["total"] == 1
+    assert rep_b["total_scored_sessions"] == 1
     rep_all = build_report(db_url=f"sqlite:///{db_path}")
-    assert rep_all["total"] == 2
+    assert rep_all["total_scored_sessions"] == 2

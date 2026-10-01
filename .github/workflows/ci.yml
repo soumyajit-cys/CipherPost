@@ -29,6 +29,8 @@ jobs:
         run: PYTHONPATH=backend/. python -m app.ml.eval_ml tests/fixtures
       - name: Real-data eval harness (empty manifest, informational)
         run: PYTHONPATH=backend python scripts/eval_real.py tests/real/manifest.json
+      - name: OpenAPI breaking-change gate
+        run: PYTHONPATH=backend python scripts/check_openapi_break.py
       - name: Dependency vulnerability scan
         run: pip-audit -r backend/requirements.txt
 

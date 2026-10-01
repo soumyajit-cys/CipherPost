@@ -1,0 +1,47 @@
+{{- /* Capture DaemonSet: SPAN-fed nodes only, caps not privileges. */ -}}
+{{- if .Values.capture.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Release.Name }}-capture
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "cipherpost.selectorLabels" . | nindent 6 }}
+      app: capture
+  template:
+    metadata:
+      labels:
+        {{- include "cipherpost.selectorLabels" . | nindent 8 }}
+        app: capture
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      securityContext: {{- include "cipherpost.podSecurity" . | nindent 8 }}
+      nodeSelector: {{- toYaml .Values.capture.nodeSelector | nindent 8 }}
+      containers:
+        - name: agent
+          image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
+          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          command: ["python", "-m", "app.agent.agent", "--iface", {{ .Values.config.liveIface | quote }}]
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: {{ .Values.podSecurity.runAsUser }}
+            capabilities:
+              add: ["NET_RAW", "NET_ADMIN"]
+          env:
+            {{- include "cipherpost.env" . | nindent 12 }}
+          envFrom:
+            - secretRef: { name: {{ .Values.existingSecretRefs.app | quote }} }
+          resources: {{- toYaml .Values.resources.capture | nindent 12 }}
+          ports: [{ containerPort: 9099, name: health }]
+          livenessProbe:
+            httpGet: { path: /healthz, port: 9099 }
+            periodSeconds: 30
+          volumeMounts:
+            - { name: queue, mountPath: /var/lib/cipherpost }
+      volumes:
+        - name: queue
+          hostPath: { path: {{ .Values.capture.hostPath | quote }}, type: DirectoryOrCreate }
+{{- end }}

@@ -231,6 +231,66 @@ def _reset_login_state() -> None:
 
 
 # --------------------------------------------------------------------------
+# Session revocation: jti denylist + per-user session version.
+# Redis-backed with bounded in-memory fallback (mirrors SSE tickets):
+# revocation is enforced whenever the entry is visible; Redis outage only
+# loses cross-process propagation, which is logged loudly.
+# --------------------------------------------------------------------------
+
+_revoked_jti: set[str] = set()
+_revocation_warned = False
+
+
+def _revocation_redis():
+    try:
+        import redis as _redis
+        from app.core import config as _cfg
+        return _redis.Redis.from_url(_cfg.settings.REDIS_URL, decode_responses=True,
+                                     socket_connect_timeout=1, socket_timeout=1)
+    except Exception:
+        return None
+
+
+def revoke_token(jti: str, ttl_seconds: int = 86400) -> None:
+    if not jti:
+        return
+    r = _revocation_redis()
+    if r is not None:
+        try:
+            r.setex(f"revoked-jti:{jti}", max(60, int(ttl_seconds)), "1")
+            return
+        except Exception:
+            global _revocation_warned
+            if not _revocation_warned:
+                _revocation_warned = True
+                import logging as _logging
+                _logging.getLogger("cipherpost.auth").warning(
+                    "revocation falling back to in-memory set (Redis unavailable)")
+    _revoked_jti.add(jti)
+    if len(_revoked_jti) > 10_000:
+        _revoked_jti.clear()
+        _revoked_jti.add(jti)
+
+
+def is_token_revoked(jti: str) -> bool:
+    if not jti:
+        return False  # pre-revocation-era tokens carry no jti; sv still applies
+    r = _revocation_redis()
+    if r is not None:
+        try:
+            if r.get(f"revoked-jti:{jti}"):
+                return True
+        except Exception:
+            pass
+    return jti in _revoked_jti
+
+
+def reset_revocations() -> None:
+    """Test-only."""
+    _revoked_jti.clear()
+
+
+# --------------------------------------------------------------------------
 # API keys: `cp_<32 hex>`, only SHA-256 hash stored
 # --------------------------------------------------------------------------
 

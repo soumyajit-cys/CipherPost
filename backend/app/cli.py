@@ -24,7 +24,7 @@ SEV_ORDER = {"info": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
 def version() -> str:
     try:
         from pathlib import Path
-        return (Path(__file__).resolve().parents[1] / "VERSION").read_text().strip()
+        return (Path(__file__).resolve().parents[0] / "VERSION").read_text().strip()
     except Exception:
         return "0.0.0-unknown"
 
@@ -36,7 +36,7 @@ def rule_catalog() -> list[dict]:
     `rules list|explain` can never drift from the engine.
     """
     from pathlib import Path
-    src = (Path(__file__).resolve().parents[1] / "parsing" / "rules.py").read_text()
+    src = (Path(__file__).resolve().parents[0] / "parsing" / "rules.py").read_text()
     tree = ast.parse(src)
     out = []
     for node in ast.walk(tree):

@@ -144,9 +144,12 @@ class CaptureWorker:
         self.gossip.counters.set("sessions_dropped", self.asm.stats.evicted)
 
     def _agent_info(self) -> dict:
-        return {"mode": "replay" if self.replay_paths else "live",
+        info = {"mode": "replay" if self.replay_paths else "live",
                 "iface": self.iface,
                 "bpf": _bpf() if not self.replay_paths else ""}
+        if settings.AGENT_ORG_ID:
+            info["org_id"] = settings.AGENT_ORG_ID
+        return info
 
     def _agent_stats(self) -> dict:
         return {"packets_seen": self._packets_seen,

@@ -1,0 +1,9 @@
+# Minimal agent dependencies (no redis/fastapi/sqlalchemy/celery).
+# Pinned to match backend/requirements.txt where they overlap.
+scapy==2.7.0
+dpkt==1.9.8
+cryptography==50.0.1
+pyOpenSSL==26.4.0
+pydantic==2.13.5
+pydantic-settings==2.15.0
+httpx==0.28.1

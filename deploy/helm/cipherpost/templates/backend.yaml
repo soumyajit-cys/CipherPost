@@ -1,0 +1,174 @@
+{{- /* API + Celery worker + analyzer + alerter. */ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels:
+      {{- include "cipherpost.selectorLabels" . | nindent 6 }}
+      app: api
+  template:
+    metadata:
+      labels:
+        {{- include "cipherpost.selectorLabels" . | nindent 8 }}
+        app: api
+    spec:
+      securityContext: {{- include "cipherpost.podSecurity" . | nindent 8 }}
+      initContainers:
+        - name: migrate
+          image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
+          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          command: ["python", "-m", "app.migrate"]
+          securityContext: {{- include "cipherpost.containerSecurity" . | nindent 12 }}
+          env:
+            {{- include "cipherpost.env" . | nindent 12 }}
+          envFrom:
+            - secretRef: { name: {{ .Values.existingSecretRefs.app | quote }} }
+          resources: {{- toYaml .Values.resources.alerter | nindent 12 }}
+      containers:
+        - name: api
+          image: "{{ .Values.images.api.repository }}:{{ .Values.images.api.tag }}"
+          imagePullPolicy: {{ .Values.images.api.pullPolicy }}
+          ports: [{ containerPort: 8000 }]
+          securityContext: {{- include "cipherpost.containerSecurity" . | nindent 12 }}
+          env:
+            {{- include "cipherpost.env" . | nindent 12 }}
+          envFrom:
+            - secretRef: { name: {{ .Values.existingSecretRefs.app | quote }} }
+          resources: {{- toYaml .Values.resources.api | nindent 12 }}
+          readinessProbe:
+            httpGet: { path: /api/v1/health/ready, port: 8000 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /api/v1/health/live, port: 8000 }
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-api
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "cipherpost.selectorLabels" . | nindent 4 }}
+    app: api
+  ports: [{ port: 8000, targetPort: 8000 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-worker
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      {{- include "cipherpost.selectorLabels" . | nindent 6 }}
+      app: worker
+  template:
+    metadata:
+      labels:
+        {{- include "cipherpost.selectorLabels" . | nindent 8 }}
+        app: worker
+    spec:
+      securityContext: {{- include "cipherpost.podSecurity" . | nindent 8 }}
+      initContainers:
+        - name: migrate
+          image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
+          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          command: ["python", "-m", "app.migrate"]
+          securityContext: {{- include "cipherpost.containerSecurity" . | nindent 12 }}
+          env:
+            {{- include "cipherpost.env" . | nindent 12 }}
+          envFrom:
+            - secretRef: { name: {{ .Values.existingSecretRefs.app | quote }} }
+          resources: {{- toYaml .Values.resources.alerter | nindent 12 }}
+      containers:
+        - name: worker
+          image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
+          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          command: ["celery", "-A", "app.services.tasks", "worker", "--loglevel=info", "--concurrency=2"]
+          securityContext: {{- include "cipherpost.containerSecurity" . | nindent 12 }}
+          env:
+            {{- include "cipherpost.env" . | nindent 12 }}
+          envFrom:
+            - secretRef: { name: {{ .Values.existingSecretRefs.app | quote }} }
+          resources: {{- toYaml .Values.resources.worker | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-analyzer
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      {{- include "cipherpost.selectorLabels" . | nindent 6 }}
+      app: analyzer
+  template:
+    metadata:
+      labels:
+        {{- include "cipherpost.selectorLabels" . | nindent 8 }}
+        app: analyzer
+    spec:
+      securityContext: {{- include "cipherpost.podSecurity" . | nindent 8 }}
+      containers:
+        - name: analyzer
+          image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
+          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          command: ["python", "-m", "app.live.analyze"]
+          securityContext: {{- include "cipherpost.containerSecurity" . | nindent 12 }}
+          env:
+            {{- include "cipherpost.env" . | nindent 12 }}
+          envFrom:
+            - secretRef: { name: {{ .Values.existingSecretRefs.app | quote }} }
+          resources: {{- toYaml .Values.resources.analyzer | nindent 12 }}
+{{- if .Values.autoscaling.analyzer.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-analyzer
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: {{ .Release.Name }}-analyzer }
+  minReplicas: {{ .Values.autoscaling.analyzer.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.analyzer.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: {{ .Values.autoscaling.analyzer.cpuUtilization }} } }
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-alerter
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "cipherpost.selectorLabels" . | nindent 6 }}
+      app: alerter
+  template:
+    metadata:
+      labels:
+        {{- include "cipherpost.selectorLabels" . | nindent 8 }}
+        app: alerter
+    spec:
+      securityContext: {{- include "cipherpost.podSecurity" . | nindent 8 }}
+      containers:
+        - name: alerter
+          image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
+          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          command: ["python", "-m", "app.live.alerts"]
+          securityContext: {{- include "cipherpost.containerSecurity" . | nindent 12 }}
+          env:
+            {{- include "cipherpost.env" . | nindent 12 }}
+          envFrom:
+            - secretRef: { name: {{ .Values.existingSecretRefs.app | quote }} }
+          resources: {{- toYaml .Values.resources.alerter | nindent 12 }}

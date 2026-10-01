@@ -186,27 +186,27 @@ PYTHONPATH=backend/. python scripts/export_mock_data.py
   Observed leaf certs are inventoried (`GET /api/v1/certs`) with proactive
   expiry forecasting (`GET /api/v1/certs/expiring`).
 
-## Maturity: what's hardened vs evolving (Phase 2 reliability)
+## Maturity: what's hardened vs evolving (Phase 3 adoption)
 
-Honestly labeled (see THREAT_MODEL.md, DEPLOYMENT.md, docs/auth.md,
-SECURITY.md, CHANGELOG.md). Phase 2 makes the system safe to leave running
-unattended on live traffic in a monitored staging environment — it is still
-not production-ready: no 30-day live run has happened.
+Honestly labeled (see THREAT_MODEL.md, DEPLOYMENT.md, docs/, CHANGELOG.md).
+Phase 3 makes CipherPost adoptable by outside orgs (SSO/MFA, real tenancy,
+sensor agents, CLI, Helm, stable API, release pipeline, pilot docs) — but no
+external organization has piloted it yet. **A minimum of three external
+pilots is required before any v1.0 label; nothing here claims otherwise.**
 
-**Hardened in Phase 2 (verified as noted):** at-least-once Redis delivery
-(ACK-after-write, idempotent ids, reclaim, DLQ — fakeredis tests); shared
-Redis alert dedup/rate + grouped alerts + per-channel delivery rows (tests);
-suppressions with expiry/RBAC/audit (tests + sqlite); batched retention with
-legal hold + restore-verified backups (tests + CI job; EXPLAIN on 2k rows
-used org indexes); real MTA-STS/DANE with anchor-pinned DNSSEC (fake-DNS
-tests, 7 passing); mail flows + regression alerts (tests); health/liveness/
-readiness + Prometheus rules + runbook; load measured (~28k pkt/s toy corpus)
-and 1-min soak (0 errors, flat 47.6 MB RSS) on Ryzen 7 5700G/14 GB.
+**Adoption-ready (verified as noted):** OIDC login + TOTP MFA + session
+revocation (fake-IdP tests); org-scoped agent tokens + HTTPS ingest with
+backpressure + audited assume-access (A/B isolation suite); metadata-only
+sensor agent with disk queue (privacy/outage/revocation tests); offline CLI
+(golden/exit-code tests); Helm chart (`helm lint`, `template`, kubeconform
+13/13 — no kind run); committed OpenAPI + breaking-change CI gate; release
+workflow (dry-run safe); diagnostics bundles, feedback labels + precision
+dashboard, pilot/security/telemetry docs. 140+ backend tests green.
 
-**Still needs a real 30-day live-traffic run before production-ready:**
-true link-rate sizing (fixtures are 261 packets), full root-chain DNSSEC,
-session-attributed MTA-STS/DANE findings, multi-sensor dedup at scale,
-Postgres WAL/PITR drills, frontend compliance/suppression UX review.
+**Still required:** three external pilots; kind install test; real-IdP SSO
+verification (generic OIDC only, no vendor claims); link-rate sizing from
+real SPAN captures; license choice by the owner (see
+`docs/licensing-decision.md`).
 
 ## Further documentation
 

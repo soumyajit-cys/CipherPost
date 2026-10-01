@@ -110,7 +110,9 @@ async def login(body: dict, request: Request, db: AsyncSession = Depends(get_db)
     acct_key = f"login:acct:{email or 'unknown'}"
     ip_key = f"login:ip:{client_ip}"
     if email and is_login_locked(acct_key, ip_key):
-        raise HTTPException(401, "Invalid email or password")
+        # Locked: generic message (no enumeration) + Retry-After per policy.
+        return JSONResponse({"detail": "Invalid email or password"},
+                            status_code=401, headers={"Retry-After": "900"})
     # Break-glass platform admin (disabled when env empty; every use audited).
     if email and _break_glass_configured() and email == settings.BREAK_GLASS_EMAIL.strip().lower():
         return await _break_glass_login(body.get("password") or "", request, db)

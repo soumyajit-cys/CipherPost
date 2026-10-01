@@ -136,6 +136,24 @@ kubectl apply -f k8s/capture-daemonset.yaml
 - Optional live smoke: `python scripts/smoke_transport.py gmail.com` (needs
   internet; never in CI).
 
+## Upgrading (compose, Helm) — backup first, rollback ready
+
+1. **Back up**: `scripts/backup_postgres.sh /backups/cipherpost` and confirm
+   the dump exists. For Helm, also `helm get values <release> > values.bak`.
+2. **Check the migration**: read `CHANGELOG.md` for schema changes; dry-run
+   `helm template` / `docker compose config` and diff against the live state.
+3. **Upgrade**: `docker compose --env-file .env.prod -f
+   docker/docker-compose.prod.yml up -d` (migrate service runs first), or
+   `helm upgrade ...` (migration Job runs as a pre-upgrade hook; it must
+   succeed before pods roll).
+4. **Verify**: `/api/v1/health/ready` returns ready; `/api/v1/live/status`
+   queues drain; `alembic check` reports no drift.
+5. **Roll back**: compose — `CIPHERPOST_IMAGE_TAG=<prev> ... up -d` (schema
+   downgrades are NOT automatic; restore the pre-upgrade dump first if the
+   release migrated, then start the old images). Helm — `helm rollback
+   <release> <revision>` (same dump-restore rule applies for migrated
+   releases). Never downgrade code past a migration without restoring.
+
 ## First-boot checklist
 
 1. Secrets set (`JWT_SECRET` ≥ 32 random chars e.g. `openssl rand -hex 32`,

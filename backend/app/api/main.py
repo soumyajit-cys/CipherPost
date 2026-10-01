@@ -596,6 +596,209 @@ def _sup_to_dict(s) -> dict:
             "active": _is_active(s.status, s.expires_at)}
 
 
+# --- organizations + org-scoped agent ingest (phase 3 task 2) ---------------
+
+def require_platform_admin():
+    async def _dep(ctx: AuthContext = Depends(get_current_user),
+                   db: AsyncSession = Depends(get_db)) -> AuthContext:
+        user = await db.get(User, ctx.user_id) if ctx.user_id else None
+        if user is None or not bool(getattr(user, "is_platform_admin", False)):
+            raise HTTPException(403, "Platform admins only")
+        return ctx
+    return _dep
+
+
+@app.get("/api/v1/orgs")
+async def list_orgs(ctx: AuthContext = Depends(require_platform_admin()),
+                    db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(select(Organization).order_by(Organization.name))).scalars().all()
+    return [{"id": o.id, "name": o.name,
+             "created_at": o.created_at.isoformat() if o.created_at else None} for o in rows]
+
+
+@app.post("/api/v1/orgs")
+async def create_org(body: dict,
+                     ctx: AuthContext = Depends(require_platform_admin()),
+                     db: AsyncSession = Depends(get_db)):
+    import uuid as _uuid
+    name = (body.get("name") or "").strip()
+    if not name or len(name) > 256:
+        raise HTTPException(400, "Valid org name required")
+    exists = (await db.execute(
+        select(Organization).where(Organization.name == name))).scalars().first()
+    if exists:
+        raise HTTPException(409, "Org already exists")
+    org = Organization(id="org-" + _uuid.uuid4().hex[:12], name=name)
+    db.add(org)
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "org.create", name, {})
+    return {"id": org.id, "name": org.name}
+
+
+@app.post("/api/v1/admin/assume")
+async def assume_org(body: dict,
+                     ctx: AuthContext = Depends(require_platform_admin()),
+                     db: AsyncSession = Depends(get_db)):
+    """Audited cross-org access: platform admin gets a short-lived token scoped
+    to another org. The reason is required and audit-logged; silent reads of
+    tenant data are not possible without this trail."""
+    from datetime import timedelta
+    reason = (body.get("reason") or "").strip()
+    org_id = (body.get("org_id") or "").strip()
+    if not reason or not org_id:
+        raise HTTPException(400, "org_id and reason are required")
+    org = await db.get(Organization, org_id)
+    if org is None:
+        raise HTTPException(404, "Org not found")
+    user = await db.get(User, ctx.user_id)
+    token = create_access_token(user.id, org.id, user.role.value,
+                                expires_in=3600,
+                                extra={"assumed": True, "assumed_by": ctx.email},
+                                session_version=int(getattr(user, "session_version", 1) or 1))
+    await log_audit(db, org.id, ctx.email, "admin.assume_org", org.name,
+                    {"reason": reason, "expires_in": 3600})
+    return {"token": token, "org_id": org.id, "expires_in": 3600,
+            "warning": "This access is audit-logged"}
+
+
+def _agent_token_helpers():
+    from app.core.auth import generate_api_key, hash_api_key
+    return generate_api_key, hash_api_key
+
+
+@app.get("/api/v1/agent-tokens")
+async def list_agent_tokens(ctx: AuthContext = Depends(require_roles("admin")),
+                            db: AsyncSession = Depends(get_db)):
+    from app.models.entities import AgentToken
+    rows = (await db.execute(
+        select(AgentToken).where(AgentToken.org_id == ctx.org_id,
+                                 AgentToken.revoked.is_(False)))).scalars().all()
+    return [{"id": t.id, "name": t.name, "prefix": t.prefix,
+             "created_by": t.created_by,
+             "created_at": t.created_at.isoformat() if t.created_at else None,
+             "expires_at": t.expires_at.isoformat() if t.expires_at else None}
+            for t in rows]
+
+
+@app.post("/api/v1/agent-tokens")
+async def create_agent_token(body: dict,
+                             ctx: AuthContext = Depends(require_roles("admin")),
+                             db: AsyncSession = Depends(get_db)):
+    """Issue an org-scoped sensor credential. Raw token shown once, hash stored."""
+    import uuid as _uuid
+    from datetime import datetime, timezone, timedelta
+    from app.models.entities import AgentToken
+    generate_api_key, _ = _agent_token_helpers()
+    name = (body.get("name") or "").strip() or "sensor"
+    raw, digest, prefix = generate_api_key()
+    raw = "cpat_" + raw[3:]  # agent namespace (still 32 hex entropy)
+    expires_at = None
+    if body.get("expires_days"):
+        try:
+            expires_at = datetime.now(timezone.utc) + timedelta(days=int(body["expires_days"]))
+        except Exception:
+            raise HTTPException(400, "expires_days must be an integer")
+    from app.core.auth import hash_api_key
+    db.add(AgentToken(id="at-" + _uuid.uuid4().hex[:12], org_id=ctx.org_id,
+                      name=name, key_hash=hash_api_key(raw), prefix=raw[:11],
+                      created_by=ctx.email, expires_at=expires_at))
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "agenttoken.create", name,
+                    {"prefix": raw[:11]})
+    return {"raw_token": raw, "prefix": raw[:11],
+            "warning": "Store this token now; it cannot be retrieved again"}
+
+
+@app.delete("/api/v1/agent-tokens/{token_id}")
+async def revoke_agent_token(token_id: str,
+                             ctx: AuthContext = Depends(require_roles("admin")),
+                             db: AsyncSession = Depends(get_db)):
+    from app.models.entities import AgentToken
+    tok = await db.get(AgentToken, token_id)
+    if tok is None or tok.org_id != ctx.org_id:
+        raise HTTPException(404, "Agent token not found")
+    tok.revoked = True
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "agenttoken.revoke", tok.name,
+                    {"prefix": tok.prefix})
+    return {"status": "revoked", "prefix": tok.prefix}
+
+
+@app.post("/api/v1/ingest/sessions")
+async def ingest_sessions(request: Request, db: AsyncSession = Depends(get_db)):
+    """Authenticated sensor ingest: batched session metadata -> stream.
+
+    Auth is an org-scoped agent token (X-Agent-Token). The org is stamped from
+    the token — agents can never choose another org. Returns 429 with
+    Retry-After when the pipeline is backed up (backpressure).
+    """
+    import gzip as _gzip
+    import time as _time
+    from datetime import datetime, timezone
+    from app.core.auth import hash_api_key
+    from app.models.entities import AgentToken
+    raw_tok = request.headers.get("X-Agent-Token", "")
+    if not raw_tok:
+        raise HTTPException(401, "Agent token required")
+    row = (await db.execute(
+        select(AgentToken).where(AgentToken.key_hash == hash_api_key(raw_tok))
+    )).scalars().first()
+    if row is None or row.revoked:
+        raise HTTPException(401, "Invalid agent token")
+    if row.expires_at is not None:
+        exp = row.expires_at
+        if getattr(exp, "tzinfo", None) is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if exp <= datetime.now(timezone.utc):
+            raise HTTPException(401, "Agent token expired")
+    try:
+        body = await request.body()
+        if (request.headers.get("content-encoding", "") or "").lower() == "gzip":
+            body = _gzip.decompress(body)
+        import json as _json
+        data = _json.loads(body or b"{}")
+    except Exception:
+        raise HTTPException(400, "Invalid JSON body (or bad gzip)")
+    sessions = data.get("sessions")
+    if not isinstance(sessions, list) or not sessions:
+        raise HTTPException(400, "sessions must be a non-empty list")
+    if len(sessions) > settings.INGEST_MAX_BATCH:
+        raise HTTPException(413, f"Batch over limit ({settings.INGEST_MAX_BATCH})")
+    # Backpressure: refuse with 429 before the stream grows unbounded.
+    try:
+        import redis as _redis
+        r = _redis.Redis.from_url(settings.REDIS_URL, decode_responses=False)
+        if int(r.xlen(settings.SESSION_STREAM) or 0) > settings.INGEST_MAX_QUEUE:
+            return JSONResponse({"error": "pipeline backed up, retry later",
+                                 "accepted": 0},
+                                status_code=429,
+                                headers={"Retry-After": "5"})
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # Redis down: accept and let the stream publisher buffer/fail
+    from app.live import streams as _bus
+    accepted, rejected = 0, 0
+    try:
+        r = _redis.Redis.from_url(settings.REDIS_URL, decode_responses=False)
+    except Exception:
+        r = None
+    for entry in sessions:
+        if not isinstance(entry, dict) or not entry.get("five_tuple") or not entry.get("protocol"):
+            rejected += 1
+            continue
+        stamped = dict(entry)
+        stamped["org_id"] = row.org_id  # token's org always wins
+        stamped["agent"] = row.name
+        stamped["ingested_at"] = _time.time()
+        try:
+            _bus.publish(r, settings.SESSION_STREAM, stamped)
+            accepted += 1
+        except Exception:
+            rejected += 1
+    return {"accepted": accepted, "rejected": rejected, "org_id": row.org_id}
+
+
 @app.get("/api/v1/suppressions")
 async def list_suppressions(status: str | None = Query(None),
                             ctx: AuthContext = Depends(get_current_user),

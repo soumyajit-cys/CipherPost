@@ -338,3 +338,24 @@ class MailFlow(Base):
 
     __table_args__ = (Index("ix_mail_flows_org_seen", "org_id", "last_seen"),
                       Index("ix_mail_flows_org_server", "org_id", "server_host"))
+
+
+class AgentToken(Base):
+    """Org-scoped capture-agent credential (phase 3 task 2).
+
+    Raw token (`cpat_<hex>`) is shown once; only the SHA-256 hash is stored.
+    Sessions ingested with this token are stamped with its org_id — agents
+    can never choose or see another org.
+    """
+
+    __tablename__ = "agent_tokens"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    org_id: Mapped[str] = mapped_column(String(64), ForeignKey("organizations.id"), index=True)
+    name: Mapped[str] = mapped_column(String(256))
+    key_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    prefix: Mapped[str] = mapped_column(String(16))
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_by: Mapped[str] = mapped_column(String(256), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

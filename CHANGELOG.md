@@ -8,7 +8,28 @@ Versioning is semantic; `backend/app/VERSION` is the single source of truth.
 
 ## [0.3.0] - 2026-10-02 (Phase 3: adoption by outside organizations — in progress)
 
-### Added (Phase 3 workstream — see per-task entries below)
+### Added (Phase 3 workstream — each item tested, see report)
+
+- SSO (OIDC code+PKCE, pinned RS256, JWKS rotation, claim mapping, JIT),
+  TOTP MFA (encrypted secrets, recovery codes, lockout), session revocation
+  (jti deny-list + versioned tokens), break-glass admin path (`docs/sso.md`).
+- Real multi-tenancy: org-scoped agent tokens, HTTPS ingest with org stamping
+  and 429 backpressure, platform-vs-org admin split with audited assume-access,
+  A/B isolation suite over every org-scoped endpoint.
+- Standalone `cipherpost-agent`: local parse, metadata-only shipping (tested),
+  disk queue, TLS pinning, health endpoint, container + systemd packaging.
+- Offline `cipherpost` CLI (`scan`/`verify-domain`/`rules`/`version`),
+  versioned JSON + SARIF, exit codes 0/1/2/3, baseline/suppression filters
+  (`docs/cli.md`); `pyproject.toml` packaging (not published).
+- Helm chart (`helm lint` + `template` + kubeconform 13/13; no kind run),
+  hardened prod compose, upgrade/rollback guide.
+- Committed OpenAPI + breaking-change CI gate; API policy (pagination aliases,
+  Retry-After, deprecation); SDKs extended and contract-tested vs the schema.
+- Release workflow (dry-run safe), SBOM/scan/sign/provenance gates, scan
+  allowlist with justifications, licensing decision left to owner,
+  contributing/community files.
+- Diagnostics bundles (redacted), analyst feedback labels + precision
+  dashboard + export, pilot/security/telemetry docs.
 
 ## [0.2.0] - 2026-09-30 (Phase 2: reliability for unattended live traffic)
 

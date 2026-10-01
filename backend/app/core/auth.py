@@ -409,8 +409,10 @@ async def get_current_user(
     user = await db.get(User, claims["sub"])
     if user is None or not user.is_active:
         raise HTTPException(401, "User inactive or deleted")
-    if user.org_id != claims.get("org"):
+    if user.org_id != claims.get("org") and not claims.get("assumed"):
         raise HTTPException(401, "Token org mismatch")
+    # Assumed (platform-admin, audited at issuance) tokens act in the target org.
+    effective_org = claims.get("org") if claims.get("assumed") else user.org_id
     # Session version: bumped by revoke-all / password change. Tokens issued
     # before revocation carry an older sv (missing sv means version 1).
     token_sv = claims.get("sv", 1)
@@ -421,7 +423,7 @@ async def get_current_user(
     if token_sv != int(getattr(user, "session_version", 1) or 1):
         raise HTTPException(401, "Session revoked")
     return AuthContext(user_id=user.id, email=user.email,
-                       org_id=user.org_id, role=user.role.value, via="jwt")
+                       org_id=effective_org, role=user.role.value, via="jwt")
 
 
 def require_roles(*roles: str):

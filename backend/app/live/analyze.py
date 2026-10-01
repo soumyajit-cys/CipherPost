@@ -236,9 +236,10 @@ class AnalysisWorker:
         except Exception as e:
             log.debug("scoring failed: %s", e)
         # persist (idempotent on deterministic session id)
-        sess_id, created = self._persist(
+        sess_id, created, resolved_org = self._persist(
             sa, scoring, raw_refs, sess.start_ts,
             session_id=deterministic_session_id(sess_payload if isinstance(sess_payload, dict) else {}),
+            payload_org_id=(sess_payload.get("org_id") if isinstance(sess_payload, dict) else None),
         )
         if not created:
             # Redelivery: already stored, ack without republishing findings.
@@ -247,7 +248,7 @@ class AnalysisWorker:
         # publish findings
         findings_payload = {
             "session_id": sess_id or sess.five_tuple,
-            "org_id": getattr(self, "_org_cache", None),
+            "org_id": resolved_org,
             "five_tuple": sess.five_tuple,
             "protocol": sess.protocol.value if hasattr(sess.protocol, "value") else str(sess.protocol),
             "findings": [{"rule_id": f.rule_id, "severity": f.severity, "title": f.title} for f in sa.findings],

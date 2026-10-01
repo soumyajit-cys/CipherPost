@@ -1424,6 +1424,178 @@ async def flow_history(flow_id: str, days: int = Query(30, ge=1, le=90),
     return out
 
 
+# --- diagnostics bundle + analyst feedback (phase 3 task 8) ------------------
+
+def _redacted_config() -> dict:
+    out = {}
+    for k in sorted(dir(settings)):
+        if k.startswith("_") or k not in settings.__class__.model_fields:
+            continue
+        v = getattr(settings, k)
+        kl = k.lower()
+        if any(t in kl for t in ("secret", "password", "token", "api_token", "private")):
+            out[k] = "set" if v else "unset"
+        elif isinstance(v, (str, int, float, bool)) or v is None:
+            out[k] = v
+        else:
+            out[k] = str(v)
+    return out
+
+
+def _mask_addresses(value: str) -> str:
+    import re as _re
+    def _mask4(m):
+        return m.group(1) + ".x.x"
+    value = _re.sub(r"\b(\d{1,3}\.\d{1,3})\.\d{1,3}\.\d{1,3}\b", _mask4, value)
+    return value
+
+
+@app.get("/api/v1/diagnostics/bundle")
+async def diagnostics_bundle(include_addresses: bool = Query(False),
+                             ctx: AuthContext = Depends(require_roles("analyst")),
+                             db: AsyncSession = Depends(get_db)):
+    """Opt-in diagnostics bundle: generated locally on request only, secrets
+    redacted, addresses masked unless include_addresses (admin only)."""
+    if include_addresses and ctx.role != "admin":
+        raise HTTPException(403, "Admins only for unmasked addresses")
+    from datetime import datetime, timezone
+    counts = {}
+    try:
+        for label, model, col in (("sessions", Session, Session.org_id),
+                                  ("findings", None, None),
+                                  ("flows", None, None)):
+            if model is None:
+                continue
+            q = select(func.count()).select_from(model).where(col == ctx.org_id)
+            counts[label] = (await db.execute(q)).scalar() or 0
+        from app.models.entities import Finding as _F, MailFlow as _MF
+        counts["findings"] = (await db.execute(
+            select(func.count()).select_from(_F).join(
+                Session, _F.session_id == Session.id).where(
+                Session.org_id == ctx.org_id))).scalar() or 0
+        counts["flows"] = (await db.execute(
+            select(func.count()).select_from(_MF).where(
+                _MF.org_id == ctx.org_id))).scalar() or 0
+    except Exception as e:
+        counts = {"error": str(e)[:200]}
+    try:
+        from app.live.health import collect_health
+        health = await collect_health()
+    except Exception as e:
+        health = {"status": "unknown", "error": str(e)[:200]}
+    bundle = {"generated_at": datetime.now(timezone.utc).isoformat(),
+              "cipherpost_version": settings.APP_VERSION,
+              "org_id": ctx.org_id, "generated_by": ctx.email,
+              "config": _redacted_config(), "counts": counts, "health": health,
+              "note": "Secrets redacted; addresses masked unless requested by an admin."}
+    if not include_addresses:
+        import json as _json
+        bundle = json.loads(_mask_addresses(_json.dumps(bundle)))
+    await log_audit(db, ctx.org_id, ctx.email, "diagnostics.bundle", "bundle",
+                    {"include_addresses": include_addresses})
+    return bundle
+
+
+@app.post("/api/v1/findings/{finding_id}/feedback")
+async def submit_feedback(finding_id: int, body: dict,
+                          ctx: AuthContext = Depends(require_roles("analyst")),
+                          db: AsyncSession = Depends(get_db)):
+    """Analyst label on a finding. Stored only — never auto-retrains models."""
+    from datetime import datetime, timezone
+    from app.models.entities import FindingFeedback
+    verdict = (body.get("verdict") or "").strip()
+    if verdict not in ("confirmed", "false_positive", "accepted_risk"):
+        raise HTTPException(400, "verdict must be confirmed|false_positive|accepted_risk")
+    f = await db.get(Finding, finding_id)
+    if f is None:
+        raise HTTPException(404, "Finding not found")
+    sess = await db.get(Session, f.session_id)
+    if sess is None or sess.org_id != ctx.org_id:
+        raise HTTPException(404, "Finding not found")
+    fb = FindingFeedback(org_id=ctx.org_id, finding_id=f.id, rule_id=f.rule_id,
+                         session_id=f.session_id, verdict=verdict,
+                         comment=str(body.get("comment", ""))[:2000],
+                         created_by=ctx.email, created_at=datetime.now(timezone.utc))
+    db.add(fb)
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "finding.feedback", f.rule_id,
+                    {"verdict": verdict, "finding_id": f.id})
+    return {"id": fb.id, "verdict": verdict}
+
+
+@app.get("/api/v1/feedback")
+async def list_feedback(rule_id: str | None = Query(None),
+                        verdict: str | None = Query(None),
+                        limit: int = Query(100, ge=1, le=500),
+                        ctx: AuthContext = Depends(require_roles("analyst")),
+                        db: AsyncSession = Depends(get_db)):
+    from app.models.entities import FindingFeedback
+    q = select(FindingFeedback).where(FindingFeedback.org_id == ctx.org_id)
+    if rule_id:
+        q = q.where(FindingFeedback.rule_id == rule_id)
+    if verdict:
+        q = q.where(FindingFeedback.verdict == verdict)
+    rows = (await db.execute(q.order_by(FindingFeedback.id.desc()).limit(limit))).scalars().all()
+    return [{"id": r.id, "finding_id": r.finding_id, "rule_id": r.rule_id,
+             "verdict": r.verdict, "comment": r.comment, "created_by": r.created_by,
+             "created_at": r.created_at.isoformat() if r.created_at else None}
+            for r in rows]
+
+
+@app.get("/api/v1/feedback/precision")
+async def feedback_precision(ctx: AuthContext = Depends(require_roles("analyst")),
+                             db: AsyncSession = Depends(get_db)):
+    """Precision-by-rule dashboard data from analyst labels (no retraining)."""
+    from app.models.entities import FindingFeedback
+    rows = (await db.execute(
+        select(FindingFeedback.rule_id, FindingFeedback.verdict).where(
+            FindingFeedback.org_id == ctx.org_id))).all()
+    per: dict[str, dict[str, int]] = {}
+    for rule_id, verdict in rows:
+        d = per.setdefault(rule_id, {"confirmed": 0, "false_positive": 0,
+                                     "accepted_risk": 0})
+        if verdict in d:
+            d[verdict] += 1
+    out = []
+    for rule_id, d in sorted(per.items()):
+        denom = d["confirmed"] + d["false_positive"]
+        out.append({"rule_id": rule_id, **d,
+                    "precision": round(d["confirmed"] / denom, 3) if denom else None,
+                    "labels": sum(d.values())})
+    return {"rules": out}
+
+
+@app.get("/api/v1/feedback/export")
+async def export_feedback(format: str = Query("json"),
+                          ctx: AuthContext = Depends(require_roles("analyst")),
+                          db: AsyncSession = Depends(get_db)):
+    """Export the org's label dataset (JSON/CSV) for offline review."""
+    from app.models.entities import FindingFeedback
+    rows = (await db.execute(
+        select(FindingFeedback).where(FindingFeedback.org_id == ctx.org_id)
+        .order_by(FindingFeedback.id.asc()))).scalars().all()
+    data = [{"finding_id": r.finding_id, "rule_id": r.rule_id,
+             "session_id": r.session_id, "verdict": r.verdict,
+             "comment": r.comment, "created_by": r.created_by,
+             "created_at": r.created_at.isoformat() if r.created_at else None}
+            for r in rows]
+    await log_audit(db, ctx.org_id, ctx.email, "finding.feedback.export",
+                    "dataset", {"rows": len(data), "format": format})
+    if format == "csv":
+        import csv as _csv
+        import io as _io
+        buf = _io.StringIO()
+        w = _csv.DictWriter(buf, fieldnames=["finding_id", "rule_id", "session_id",
+                                             "verdict", "comment", "created_by",
+                                             "created_at"])
+        w.writeheader()
+        w.writerows(data)
+        return Response(buf.getvalue(), media_type="text/csv",
+                        headers={"Content-Disposition":
+                                 "attachment; filename=feedback-labels.csv"})
+    return {"labels": data}
+
+
 @app.get("/api/v1/ml/versions")
 async def ml_versions(ctx: AuthContext = Depends(get_current_user)):
     """Model registry: which versions scored what (track 5)."""

@@ -154,6 +154,40 @@ kubectl apply -f k8s/capture-daemonset.yaml
    <release> <revision>` (same dump-restore rule applies for migrated
    releases). Never downgrade code past a migration without restoring.
 
+## Multi-org operation (Phase 3)
+
+1. Set `CIPHERPOST_SINGLE_TENANT=false` on the server. Create orgs via
+   `POST /api/v1/orgs` (platform admin) and per-org admins.
+2. Per site/org, create an agent token (`POST /api/v1/agent-tokens`, admin)
+   and install the sensor with it — sessions are stamped with the token's
+   org and cannot cross orgs. Direct-Redis sensors are single-tenant only.
+3. Platform admins never browse tenant data silently: use
+   `POST /api/v1/admin/assume` with a reason (audited, 1 h token).
+4. SSO: set `CIPHERPOST_OIDC_*` (see `docs/sso.md`); verify against staging
+   first. Optionally set `CIPHERPOST_DISABLE_PASSWORD_LOGIN=true` only with
+   break-glass configured. Enforce MFA per org via `CIPHERPOST_MFA_REQUIRED_ORGS`.
+
+## Sensor install (standalone `cipherpost-agent`)
+
+Bare metal (hardened, non-root, capture caps only):
+
+```bash
+useradd -r -s /usr/sbin/nologin cipherpost
+mkdir -p /etc/cipherpost /var/lib/cipherpost && chown cipherpost /var/lib/cipherpost
+cat > /etc/cipherpost/agent.json <<'EOF'
+{"server": "https://cipherpost.example.com", "token": "cpat_...",
+ "iface": "eth1", "addr_mode": "hashed", "queue_path": "/var/lib/cipherpost/agent-queue.jsonl"}
+EOF
+cp deploy/systemd/cipherpost-agent.service /etc/systemd/system/
+systemctl daemon-reload && systemctl enable --now cipherpost-agent
+curl -s http://127.0.0.1:9099/healthz  # {"status":"ok"}
+```
+
+Container: `docker build -f docker/Dockerfile.agent .` then run with
+`--cap-add NET_RAW,NET_ADMIN` (never `--privileged`), mounting the queue
+dir. The agent ships metadata only (see `app/agent/meta.py` allow-list);
+verify with `test_no_payload_bytes_leave_sensor`.
+
 ## First-boot checklist
 
 1. Secrets set (`JWT_SECRET` ≥ 32 random chars e.g. `openssl rand -hex 32`,

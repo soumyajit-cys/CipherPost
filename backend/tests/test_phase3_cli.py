@@ -14,6 +14,15 @@ def _run(*args):
                           env={**os.environ, "PYTHONPATH": "backend"})
 
 
+def test_version_single_source_of_truth():
+    """backend/app/VERSION, settings.APP_VERSION, and CLI agree."""
+    from pathlib import Path
+    from app.core.config import settings
+    from app import cli
+    assert (Path("backend/app/VERSION").read_text().strip()
+            == settings.APP_VERSION == cli.version() == "0.3.0")
+
+
 def test_version_and_rules_no_network(monkeypatch):
     # Prove offline: any socket use fails the test.
     import socket as _s

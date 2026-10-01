@@ -1,0 +1,187 @@
+{{- /* Frontend, ingress, PDBs, NetworkPolicies, migration hook, monitoring, capture. */ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-frontend
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "cipherpost.selectorLabels" . | nindent 6 }}
+      app: frontend
+  template:
+    metadata:
+      labels:
+        {{- include "cipherpost.selectorLabels" . | nindent 8 }}
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: "{{ .Values.images.frontend.repository }}:{{ .Values.images.frontend.tag }}"
+          imagePullPolicy: {{ .Values.images.frontend.pullPolicy }}
+          ports: [{ containerPort: 80 }]
+          resources: {{- toYaml .Values.resources.frontend | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-frontend
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "cipherpost.selectorLabels" . | nindent 4 }}
+    app: frontend
+  ports: [{ port: 80, targetPort: 80 }]
+---
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+  {{- with .Values.ingress.tlsSecretName }}
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className | quote }}
+  {{- if .Values.ingress.tlsSecretName }}
+  tls:
+    - hosts: [{{ .Values.ingress.host | quote }}]
+      secretName: {{ .Values.ingress.tlsSecretName | quote }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend: { service: { name: {{ .Release.Name }}-api, port: { number: 8000 } } }
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: {{ .Release.Name }}-frontend, port: { number: 80 } } }
+{{- end }}
+---
+{{- if .Values.podDisruptionBudgets.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Release.Name }}-api
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudgets.apiMinAvailable }}
+  selector:
+    matchLabels:
+      {{- include "cipherpost.selectorLabels" . | nindent 6 }}
+      app: api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Release.Name }}-analyzer
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudgets.analyzerMinAvailable }}
+  selector:
+    matchLabels:
+      {{- include "cipherpost.selectorLabels" . | nindent 6 }}
+      app: analyzer
+{{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-migrate
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migration.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "cipherpost.selectorLabels" . | nindent 8 }}
+        app: migrate
+    spec:
+      securityContext: {{- include "cipherpost.podSecurity" . | nindent 8 }}
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
+          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          command: ["python", "-m", "app.migrate"]
+          securityContext: {{- include "cipherpost.containerSecurity" . | nindent 12 }}
+          env:
+            {{- include "cipherpost.env" . | nindent 12 }}
+          envFrom:
+            - secretRef: { name: {{ .Values.existingSecretRefs.app | quote }} }
+          resources: {{- toYaml .Values.resources.alerter | nindent 12 }}
+---
+{{- if .Values.networkPolicies.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-default-deny
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "cipherpost.selectorLabels" . | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "cipherpost.selectorLabels" . | nindent 12 }}
+      ports: [{ port: 8000 }, { port: 80 }]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "cipherpost.selectorLabels" . | nindent 12 }}
+      ports: [{ port: 5432 }, { port: 6379 }, { port: 8000 }]
+    - ports: [{ port: 53, protocol: UDP }, { port: 443 }]
+      to: [{ ipBlock: { cidr: 0.0.0.0/0 } }]
+{{- end }}
+---
+{{- if .Values.monitoring.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "cipherpost.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.monitoring.serviceMonitor.interval | quote }}
+{{- end }}
+---
+{{- if .Values.monitoring.prometheusRules.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: cipherpost-pipeline
+      interval: 30s
+      rules:
+        - alert: CipherPostDeadLetterNonEmpty
+          expr: max by (stream) (cipherpost_dlq_depth) > 0
+          for: 5m
+          labels: { severity: warning }
+          annotations: { summary: "Dead-letter stream non-empty" }
+        - alert: CipherPostNoSessions
+          expr: increase(cipherpost_capture_sessions_emitted[15m]) == 0
+          for: 0m
+          labels: { severity: critical }
+          annotations: { summary: "No sessions emitted for 15 minutes" }
+{{- end }}

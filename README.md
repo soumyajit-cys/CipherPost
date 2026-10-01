@@ -211,6 +211,13 @@ real SPAN captures; license choice by the owner (see
 ## Further documentation
 
 - `docs/auth.md` — auth, roles, API keys, tenancy, audit
+- `docs/sso.md` — OIDC/MFA setup (generic IdP; no vendor claims)
+- `docs/cli.md` — offline `cipherpost` CLI, exit codes, JSON/SARIF schema
+- `docs/api-policy.md` — /api/v1 stability, deprecations, pagination
+- `docs/pilot-guide.md` — 1-hour install, 2-week measurements, limits
+- `docs/security-review-pack.md` — architecture/data-flows for assessors
+- `docs/telemetry-proposal.md` — opt-in telemetry design (not implemented)
+- `docs/licensing-decision.md` — license options for the owner (no choice made)
 - `docs/design-system.md` — shared landing/dashboard visual language
 - `THREAT_MODEL.md` — what it catches, what it doesn't, own attack surface
 - `DEPLOYMENT.md` — compose / SPAN-TAP / Kubernetes, secrets, backup/DR

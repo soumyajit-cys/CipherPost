@@ -23,15 +23,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-def build_report(db_url: str | None = None) -> dict:
+def build_report(db_url: str | None = None, org_id: str | None = None) -> dict:
     from sqlalchemy import create_engine, text
     from app.core.config import settings
     engine = create_engine(db_url or settings.DATABASE_URL_SYNC)
     with engine.connect() as conn:
         try:
-            rows = conn.execute(text(
-                "SELECT id, risk_score, max_severity, model_version FROM sessions "
-                "WHERE risk_score IS NOT NULL")).all()
+            if org_id:
+                rows = conn.execute(text(
+                    "SELECT id, risk_score, max_severity, model_version FROM sessions "
+                    "WHERE risk_score IS NOT NULL AND org_id = :org"),
+                    {"org": org_id}).all()
+            else:
+                rows = conn.execute(text(
+                    "SELECT id, risk_score, max_severity, model_version FROM sessions "
+                    "WHERE risk_score IS NOT NULL")).all()
         except Exception as e:
             return {"error": f"query failed: {e}", "total": 0}
     counts = Counter()

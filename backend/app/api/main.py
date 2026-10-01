@@ -1490,7 +1490,7 @@ async def diagnostics_bundle(include_addresses: bool = Query(False),
               "note": "Secrets redacted; addresses masked unless requested by an admin."}
     if not include_addresses:
         import json as _json
-        bundle = json.loads(_mask_addresses(_json.dumps(bundle)))
+        bundle = _json.loads(_mask_addresses(_json.dumps(bundle)))
     await log_audit(db, ctx.org_id, ctx.email, "diagnostics.bundle", "bundle",
                     {"include_addresses": include_addresses})
     return bundle

@@ -101,7 +101,8 @@ def _jwt_secret() -> bytes:
 
 def create_access_token(sub: str, org_id: str, role: str,
                         expires_in: int | None = None,
-                        extra: dict | None = None) -> str:
+                        extra: dict | None = None,
+                        session_version: int = 1) -> str:
     import jwt as _pyjwt
     from app.core import config as _cfgmod2
     if expires_in is None:
@@ -110,6 +111,7 @@ def create_access_token(sub: str, org_id: str, role: str,
     payload = {
         "sub": sub, "org": org_id, "role": role,
         "iat": now, "exp": now + expires_in,
+        "jti": secrets.token_hex(8), "sv": int(session_version),
     }
     if extra:
         payload.update(extra)

@@ -150,6 +150,37 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install helm (no sudo)
+        run: |
+          curl -fsSL -o /tmp/helm.tar.gz https://get.helm.sh/helm-v4.0.0-linux-amd64.tar.gz
+          tar xzf /tmp/helm.tar.gz -C /tmp
+          echo "/tmp/linux-amd64" >> "$GITHUB_PATH"
+      - name: Install kubeconform
+        run: |
+          curl -fsSL -o /tmp/kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz
+          tar xzf /tmp/kubeconform.tar.gz -C /tmp
+          echo "/tmp" >> "$GITHUB_PATH"
+      - name: Helm lint
+        run: helm lint deploy/helm/cipherpost
+      - name: Helm template (defaults + full values)
+        run: |
+          helm template cp-ci deploy/helm/cipherpost --namespace cipherpost > /tmp/cp-ci.yaml
+          helm template cp-full deploy/helm/cipherpost --namespace cipherpost \
+            --set ingress.enabled=true --set monitoring.serviceMonitor.enabled=true \
+            --set monitoring.prometheusRules.enabled=true \
+            --set postgres.bundled.enabled=true --set redis.bundled.enabled=true \
+            --set autoscaling.analyzer.enabled=false > /tmp/cp-full.yaml
+      - name: Kubeconform strict
+        # NOTE: no kind-cluster install test (see report). ServiceMonitor/
+        # PrometheusRule are operator CRDs without public schemas: skipped.
+        run: |
+          kubeconform -strict -summary /tmp/cp-ci.yaml
+          kubeconform -summary -skip ServiceMonitor,PrometheusRule /tmp/cp-full.yaml
+
   container-scan:
     runs-on: ubuntu-latest
     needs: [backend, frontend]

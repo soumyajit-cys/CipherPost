@@ -180,13 +180,18 @@ def test_platform_admin_assume_is_audited_and_scoped():
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["org_id"] == "org-b"
-        # assumed token reads the target org (audited, 1h TTL)
+        # assumed token reads the target org (audited, 1h TTL).
+        # Drop the canned-auth override so the token is genuinely verified.
+        from app.core.auth import get_current_user as _gcu
+        from app.api.main import app as _app
+        _app.dependency_overrides.pop(_gcu, None)
         r2 = client.get("/api/v1/sessions",
                         headers={"Authorization": f"Bearer {body['token']}"})
-        assert r2.status_code == 200
+        assert r2.status_code == 200, r2.text
         # audit trail exists for both actions (assume logged under target org)
         ah = {"Authorization": f"Bearer {body['token']}"}
-        assert len(client.get("/api/v1/audit?action=admin.assume_org", headers=ah).json()) == 1
+        got = client.get("/api/v1/audit?action=admin.assume_org", headers=ah).json()
+        assert len(got) == 1, got
         assert len(client.get("/api/v1/audit?action=org.create").json()) == 1
     finally:
         _clear()

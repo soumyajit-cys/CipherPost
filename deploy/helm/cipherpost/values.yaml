@@ -1,0 +1,104 @@
+# CipherPost Helm values. Secrets are NEVER in values: use existingSecretRefs.
+global:
+  namespace: cipherpost
+
+images:
+  api:
+    repository: cipherpost/api
+    tag: "0.3.0"
+    pullPolicy: IfNotPresent
+  worker:
+    repository: cipherpost/worker
+    tag: "0.3.0"
+    pullPolicy: IfNotPresent
+  frontend:
+    repository: cipherpost/frontend
+    tag: "0.3.0"
+    pullPolicy: IfNotPresent
+
+# Existing secrets (created out of band, e.g. k8s/secret.local.yaml).
+existingSecretRefs:
+  app: cipherpost-secrets        # DB URLs, JWT, admin, webhook URLs
+  postgres: null                 # e.g. managed-db-creds -> POSTGRES_PASSWORD
+  redis: null
+
+config:
+  env: production                # never dev in real deploys
+  logLevel: INFO
+  liveIface: eth0
+  corsOrigins: ""
+  singleTenant: "true"           # set "false" for multi-org + agent tokens
+  dnsResolver: ""
+  dnssecTrustAnchor: ""
+
+postgres:
+  # Evaluation only. Production MUST use external: set external.host below.
+  bundled:
+    enabled: false
+    storage: 50Gi
+  external:
+    host: ""
+    port: 5432
+    database: cipherpost
+    user: cipherpost
+
+redis:
+  bundled:
+    enabled: false
+  external:
+    host: ""
+
+ingress:
+  enabled: false
+  className: ""
+  host: cipherpost.example.com
+  tlsSecretName: ""              # existing TLS secret; empty = plain HTTP behind LB
+
+resources:
+  api: { requests: { cpu: 250m, memory: 512Mi }, limits: { cpu: "1", memory: 1Gi } }
+  worker: { requests: { cpu: 500m, memory: 1Gi }, limits: { cpu: "2", memory: 2Gi } }
+  analyzer: { requests: { cpu: "1", memory: 2Gi }, limits: { cpu: "4", memory: 4Gi } }
+  alerter: { requests: { cpu: 100m, memory: 256Mi }, limits: { cpu: 500m, memory: 512Mi } }
+  frontend: { requests: { cpu: 50m, memory: 64Mi }, limits: { cpu: 250m, memory: 128Mi } }
+  capture: { requests: { cpu: 250m, memory: 512Mi }, limits: { cpu: "2", memory: 2Gi } }
+
+podSecurity:
+  runAsUser: 10001
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+
+autoscaling:
+  analyzer:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    cpuUtilization: 70
+
+podDisruptionBudgets:
+  enabled: true
+  apiMinAvailable: 1
+  analyzerMinAvailable: 1
+
+networkPolicies:
+  enabled: true
+
+migration:
+  backoffLimit: 3
+
+monitoring:
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+  prometheusRules:
+    enabled: false
+
+capture:
+  enabled: true                 # DaemonSet on SPAN-fed nodes only
+  nodeSelector:
+    cipherpost/capture: "true"
+  hostPath: /var/lib/cipherpost/capture
+
+frontend:
+  replicas: 2
+api:
+  replicas: 2

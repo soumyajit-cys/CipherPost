@@ -135,13 +135,13 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              {{- include "cipherpost.selectorLabels" . | nindent 12 }}
+              {{- include "cipherpost.selectorLabels" . | nindent 14 }}
       ports: [{ port: 8000 }, { port: 80 }]
   egress:
     - to:
         - podSelector:
             matchLabels:
-              {{- include "cipherpost.selectorLabels" . | nindent 12 }}
+              {{- include "cipherpost.selectorLabels" . | nindent 14 }}
       ports: [{ port: 5432 }, { port: 6379 }, { port: 8000 }]
     - ports: [{ port: 53, protocol: UDP }, { port: 443 }]
       to: [{ ipBlock: { cidr: 0.0.0.0/0 } }]

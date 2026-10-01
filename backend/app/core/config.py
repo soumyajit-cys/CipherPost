@@ -129,6 +129,7 @@ class Settings(BaseSettings):
 
     # --- capture agents (track 3) ---------------------------------------------
     AGENT_ID: str = ""  # default: <hostname>/<iface>
+    AGENT_ORG_ID: str = ""  # phase 3: stamp heartbeats (agent tokens for ingest)
     AGENT_HEARTBEAT_SECONDS: float = 10.0
     AGENT_TTL_SECONDS: float = 30.0
 

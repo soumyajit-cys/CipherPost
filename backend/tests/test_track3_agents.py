@@ -98,11 +98,14 @@ def test_agent_heartbeat_roundtrip():
     r = FakeRedis()
     hb = AgentHeartbeat(r, "site-a/eth0", interval=60, ttl=60)
     hb.start({"mode": "live", "iface": "eth0"}, lambda: {"packets_seen": 42})
-    agents = list_agents(r)
+    # Phase 3: org filtering is fail-closed; legacy unstamped agents show only
+    # in single-tenant mode (or to platform admins).
+    assert list_agents(r) == []
+    agents = list_agents(r, single_tenant=True)
     assert len(agents) == 1
     assert agents[0]["agent_id"] == "site-a/eth0"
     assert agents[0]["online"] is True
     assert agents[0]["stats"]["packets_seen"] == 42
     hb.stop()
-    assert list_agents(r) == []
+    assert list_agents(r, single_tenant=True) == []
     assert default_agent_id("eth0").endswith("/eth0")

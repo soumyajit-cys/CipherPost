@@ -252,4 +252,6 @@ export interface ApiClient {
   updateSuppression?(id: number, body: Partial<Suppression>): Promise<Suppression>
   deleteSuppression?(id: number): Promise<void>
   suppressionsExpiring?(days?: number): Promise<Suppression[]>
+  /** Per-mail-flow posture (Phase 2). */
+  listFlows?(unencryptedWithinDays?: number): Promise<unknown[]>
 }

@@ -165,6 +165,13 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Phase 3: SSO/MFA + platform admin. All default to deny/local-only.
+    mfa_secret_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    mfa_recovery: Mapped[list | None] = mapped_column(JSONBType, nullable=True)
+    oidc_sub: Mapped[str | None] = mapped_column(String(256), nullable=True, index=True)
+    session_version: Mapped[int] = mapped_column(Integer, default=1)
+    is_platform_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
     org: Mapped[Organization] = relationship(back_populates="users")
 

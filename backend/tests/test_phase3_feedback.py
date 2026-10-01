@@ -48,13 +48,23 @@ def _client(maker, org="org-a"):
         async with maker() as s:
             yield s
 
+    holder = {"org": org}
+
     async def _user():
-        return AuthContext(user_id="u-" + org, email=f"{org}@x",
-                           org_id=org, role="analyst", via="jwt")
+        o = holder["org"]
+        return AuthContext(user_id="u-" + o, email=f"{o}@x",
+                           org_id=o, role="analyst", via="jwt")
 
     app.dependency_overrides[get_db] = _db
     app.dependency_overrides[get_current_user] = _user
-    return TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=False)
+    client.holder = holder  # type: ignore[attr-defined]
+    return client
+
+
+def _as(client, org):
+    client.holder["org"] = org  # type: ignore[attr-defined]
+    return client
 
 
 def _clear():
@@ -71,23 +81,25 @@ def _finding_id(client):
 
 def test_feedback_submit_isolated_and_audited():
     maker = _setup()
-    ca, cb = _client(maker, "org-a"), _client(maker, "org-b")
+    client = _client(maker, "org-a")  # single client; identity via _as()
     try:
-        fa = _finding_id(ca)
+        fa = _finding_id(client)
         # bad verdict rejected
-        assert ca.post(f"/api/v1/findings/{fa}/feedback",
-                       json={"verdict": "maybe"}).status_code == 400
-        r = ca.post(f"/api/v1/findings/{fa}/feedback",
-                    json={"verdict": "false_positive", "comment": "lab scanner"})
+        assert client.post(f"/api/v1/findings/{fa}/feedback",
+                           json={"verdict": "maybe"}).status_code == 400
+        r = client.post(f"/api/v1/findings/{fa}/feedback",
+                        json={"verdict": "false_positive", "comment": "lab scanner"})
         assert r.status_code == 200
         # other org's finding id is not found (no cross-org write)
-        fb = _finding_id(cb)
-        assert ca.post(f"/api/v1/findings/{fb}/feedback",
-                       json={"verdict": "confirmed"}).status_code == 404
+        fb = _finding_id(_as(client, "org-b"))
+        assert _as(client, "org-a").post(
+            f"/api/v1/findings/{fb}/feedback",
+            json={"verdict": "confirmed"}).status_code == 404
         # lists are org-scoped; audit written
-        assert len(ca.get("/api/v1/feedback").json()) == 1
-        assert cb.get("/api/v1/feedback").json() == []
-        assert len(ca.get("/api/v1/audit?action=finding.feedback").json()) == 1
+        assert len(client.get("/api/v1/feedback").json()) == 1
+        assert _as(client, "org-b").get("/api/v1/feedback").json() == []
+        _as(client, "org-a")
+        assert len(client.get("/api/v1/audit?action=finding.feedback").json()) == 1
     finally:
         _clear()
 

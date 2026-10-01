@@ -134,6 +134,12 @@ kubectl apply -f k8s/capture-daemonset.yaml
    `CIPHERPOST_ENV=production` default enforces this at startup).
 2. Migrations applied (`python -m app.migrate` / compose `migrate` service /
    K8s initContainer; CI verifies `alembic check` with no drift).
+   Known caveat (verified 2026-10-02): every revision downgrades cleanly, but a
+   full `downgrade base` + rebuild is NOT supported — the initial revision
+   leaves its Postgres ENUM types (`jobstatus`, `userrole`, `severity`) behind
+   (standard Alembic behavior; that migration is frozen). Fresh databases
+   (`upgrade head` on empty) and stepwise `downgrade -1` / `upgrade +1` are
+   the supported paths and are verified in CI.
 2. Login as bootstrap admin → create operator accounts → rotate/disable
    bootstrap if policy requires.
 3. Configure alert channels (admin only) + Splunk HEC / Jira if used.

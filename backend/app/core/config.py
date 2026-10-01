@@ -42,6 +42,28 @@ class Settings(BaseSettings):
     # headers). Never use "*" with credentials in production.
     CORS_ORIGINS: str = ""
 
+    # --- SSO / OIDC (phase 3 task 1; all empty = SSO disabled) --------------
+    OIDC_ISSUER: str = ""
+    OIDC_CLIENT_ID: str = ""
+    OIDC_CLIENT_SECRET: str = ""
+    OIDC_SCOPES: str = "openid email profile"
+    OIDC_JWKS_CACHE_SECONDS: int = 600
+    # JSON claim-mapping rules, e.g. '[{"claim":"groups","match":"*@admins","role":"admin"}]'.
+    # First match wins; default role below when nothing matches (least privilege).
+    OIDC_CLAIM_RULES: str = "[]"
+    OIDC_DEFAULT_ROLE: str = "auditor"
+    OIDC_DEFAULT_ORG: str = "default"
+    OIDC_JIT_PROVISIONING: bool = True  # create users on first SSO login
+    DISABLE_PASSWORD_LOGIN: bool = False  # set true only with SSO + break-glass ready
+    # Break-glass local admin (disabled when email/password empty). Audited on use.
+    BREAK_GLASS_EMAIL: str = ""
+    BREAK_GLASS_PASSWORD: str = ""
+    # --- MFA (phase 3 task 1) --------------------------------------------------
+    MFA_ENROLL_ALLOW: bool = True
+    MFA_REQUIRED_ORGS: str = ""  # comma-separated org names where MFA is mandatory
+    MFA_ISSUER_NAME: str = "CipherPost"
+    JWT_SESSION_LIFETIME_SECONDS: int = 86400  # max session age (also JWT expiry default)
+
     # --- live acquisition (stage 2+) ----------------------------------------
     LIVE_IFACE: str = "lo"                     # SPAN/TAP-fed interface (promiscuous)
     LIVE_PROMISC: bool = True

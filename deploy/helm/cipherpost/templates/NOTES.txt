@@ -1,0 +1,18 @@
+CipherPost {{ .Chart.AppVersion }} is ready.
+
+1. Create the secrets first (never in values):
+     kubectl create secret generic cipherpost-secrets \
+       --from-literal=CIPHERPOST_DATABASE_URL_SYNC='postgresql+psycopg2://...' \
+       --from-literal=CIPHERPOST_JWT_SECRET="$(openssl rand -hex 32)" \
+       --from-literal=CIPHERPOST_ADMIN_PASSWORD='...' \
+       --from-literal=POSTGRES_PASSWORD='...'
+
+2. Label SPAN-fed nodes for capture (optional):
+     kubectl label node <span-node> cipherpost/capture=true
+
+3. Upgrade safely: back up Postgres first (scripts/backup_postgres.sh);
+   the migrate Job runs as a pre-upgrade hook, then rolls forward.
+   Roll back with: helm rollback <release> <revision>.
+
+Bundled Postgres/Redis are EVALUATION ONLY. Production must set external
+hosts and managed services. See DEPLOYMENT.md.

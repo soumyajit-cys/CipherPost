@@ -33,6 +33,8 @@ jobs:
         run: PYTHONPATH=backend python scripts/check_openapi_break.py
       - name: Dependency vulnerability scan
         run: pip-audit -r backend/requirements.txt
+      - name: Audit allowlist gate
+        run: python scripts/check_allowlist.py
 
   migrate-check:
     runs-on: ubuntu-latest

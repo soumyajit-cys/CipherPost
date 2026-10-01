@@ -1,0 +1,12 @@
+# Vulnerability/scan ignore allowlist. Every entry REQUIRES all three fields:
+# id (tool advisory/VULN id or fingerprint), justification (why it is safe
+# to ship), expires (YYYY-MM-DD; CI fails past expiry via scripts/check_allowlist.py).
+# Prefer upgrading over ignoring. Empty lists mean: no ignores active.
+pip: []
+npm: []
+secrets: []
+# Example (DO NOT copy blindly):
+# pip:
+#   - id: PYSEC-2024-00000
+#     justification: "dev-only path in weasyprint, unreachable from our report flow; tracked in #123"
+#     expires: "2026-12-31"

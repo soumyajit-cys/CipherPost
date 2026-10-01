@@ -795,13 +795,20 @@ async def ingest_sessions(request: Request, db: AsyncSession = Depends(get_db)):
 
 @app.get("/api/v1/suppressions")
 async def list_suppressions(status: str | None = Query(None),
+                            limit: int | None = Query(None, ge=1, le=500),
+                            page: int | None = Query(None, ge=1),
+                            per_page: int | None = Query(None, ge=1, le=500),
                             ctx: AuthContext = Depends(get_current_user),
                             db: AsyncSession = Depends(get_db)):
     from app.models.entities import Suppression
     q = select(Suppression).where(Suppression.org_id == ctx.org_id)
     if status:
         q = q.where(Suppression.status == status)
-    rows = (await db.execute(q.order_by(Suppression.id.desc()))).scalars().all()
+    q = q.order_by(Suppression.id.desc())
+    if limit is not None or page is not None or per_page is not None:
+        lim, off = _paginate(limit or 500, 0, page, per_page, maximum=500)
+        q = q.offset(off).limit(lim)
+    rows = (await db.execute(q)).scalars().all()
     return [_sup_to_dict(s) for s in rows]
 
 

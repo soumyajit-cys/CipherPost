@@ -3,9 +3,16 @@ from pathlib import Path
 from typing import Optional
 
 
+def _app_version() -> str:
+    try:
+        return (Path(__file__).resolve().parents[1] / "VERSION").read_text().strip()
+    except Exception:
+        return "0.0.0-unknown"
+
+
 class Settings(BaseSettings):
     APP_NAME: str = "CipherPost"
-    APP_VERSION: str = "0.1.0"
+    APP_VERSION: str = _app_version()
     DEBUG: bool = False
     # Deployment environment: "dev" relaxes secret checks (ephemeral secret +
     # loud warning); "production" (default) refuses to start with weak secrets.

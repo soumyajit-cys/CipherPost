@@ -51,7 +51,16 @@ docker compose -f docker/docker-compose.yml --profile replay up --build
 
 ## Shape C — Kubernetes (scaled enterprise)
 
+The Helm chart (`deploy/helm/cipherpost`) is the canonical install path and
+is lint/template/kubeconform-verified in CI. Raw manifests in `k8s/` are kept
+for single-node evaluation and are consistent with the chart defaults.
+
 ```bash
+# From the chart (recommended):
+helm upgrade --install cipherpost ./deploy/helm/cipherpost \
+  --namespace cipherpost --create-namespace \
+  --set ingress.enabled=true --set ingress.host=mail-sec.example.com
+# Raw manifests (evaluation fallback):
 kubectl apply -f k8s/namespace.yaml
 cp k8s/secret.yaml k8s/secret.local.yaml  # fill in (gitignored)
 kubectl apply -f k8s/secret.local.yaml

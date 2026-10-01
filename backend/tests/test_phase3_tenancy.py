@@ -175,6 +175,7 @@ def test_platform_admin_assume_is_audited_and_scoped():
                            json={"org_id": "org-b"}).status_code == 400
         r = client.post("/api/v1/orgs", json={"name": "org-c"})
         assert r.status_code == 200 and r.json()["name"] == "org-c"
+        assert len(client.get("/api/v1/audit?action=org.create").json()) == 1
         r = client.post("/api/v1/admin/assume",
                         json={"org_id": "org-b", "reason": "incident 123"})
         assert r.status_code == 200, r.text
@@ -192,7 +193,6 @@ def test_platform_admin_assume_is_audited_and_scoped():
         ah = {"Authorization": f"Bearer {body['token']}"}
         got = client.get("/api/v1/audit?action=admin.assume_org", headers=ah).json()
         assert len(got) == 1, got
-        assert len(client.get("/api/v1/audit?action=org.create").json()) == 1
     finally:
         _clear()
 

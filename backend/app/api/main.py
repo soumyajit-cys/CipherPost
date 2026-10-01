@@ -420,12 +420,12 @@ async def mfa_disable(body: dict,
 
 
 @app.post("/api/v1/auth/logout")
-async def logout(ctx: AuthContext = Depends(get_current_user),
-                 request: Request = None,
+async def logout(request: Request,
+                 ctx: AuthContext = Depends(get_current_user),
                  db: AsyncSession = Depends(get_db)):
     """Revoke the presenting token (deny-listed until its expiry)."""
     from app.core.auth import revoke_token, decode_token
-    auth = (request.headers.get("authorization", "") if request else "")
+    auth = request.headers.get("authorization", "")
     if auth.lower().startswith("bearer "):
         try:
             claims = decode_token(auth[7:].strip())

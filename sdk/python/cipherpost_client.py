@@ -161,5 +161,62 @@ class CipherPostClient:
         return self._get("/api/v1/flows",
                          {"unencrypted_within_days": unencrypted_within_days})
 
+    def flow_history(self, flow_id: str, days: int = 30) -> dict:
+        return self._get(f"/api/v1/flows/{flow_id}/history", {"days": days})
+
     def suppressions(self, status: str | None = None) -> list:
         return self._get("/api/v1/suppressions", {"status": status})
+
+    def create_suppression(self, rule_id: str, reason: str, scope: dict | None = None,
+                           expires_days: int = 90) -> dict:
+        return self._req("POST", "/api/v1/suppressions",
+                         {"rule_id": rule_id, "reason": reason,
+                          "scope": scope or {}, "expires_days": expires_days})
+
+    def update_suppression(self, sup_id: int, **fields) -> dict:
+        return self._req("PATCH", f"/api/v1/suppressions/{sup_id}", fields)
+
+    # -- MFA / sessions (SSO-issued tokens work like password tokens) ---------
+    def mfa_verify(self, mfa_ticket: str, code: str | None = None,
+                   recovery_code: str | None = None) -> dict:
+        out = self._req("POST", "/api/v1/auth/mfa/verify",
+                        {"mfa_ticket": mfa_ticket, "code": code,
+                         "recovery_code": recovery_code})
+        self.token = out["token"]
+        return out
+
+    def logout(self) -> dict:
+        return self._req("POST", "/api/v1/auth/logout", {})
+
+    def revoke_all_sessions(self, user_id: str | None = None) -> dict:
+        return self._req("POST", "/api/v1/auth/revoke-all",
+                         {"user_id": user_id} if user_id else {})
+
+    # -- agent tokens / orgs (admin + platform admin) --------------------------
+    def agent_tokens(self) -> list:
+        return self._get("/api/v1/agent-tokens")
+
+    def create_agent_token(self, name: str, expires_days: int | None = None) -> dict:
+        return self._req("POST", "/api/v1/agent-tokens",
+                         {"name": name, "expires_days": expires_days})
+
+    def revoke_agent_token(self, token_id: str) -> dict:
+        return self._req("DELETE", f"/api/v1/agent-tokens/{token_id}")
+
+    def orgs(self) -> list:
+        return self._get("/api/v1/orgs")
+
+    def create_org(self, name: str) -> dict:
+        return self._req("POST", "/api/v1/orgs", {"name": name})
+
+    def assume_org(self, org_id: str, reason: str) -> dict:
+        return self._req("POST", "/api/v1/admin/assume",
+                         {"org_id": org_id, "reason": reason})
+
+    # -- legal hold -------------------------------------------------------------
+    def set_job_hold(self, job_id: str, hold: bool = True) -> dict:
+        return self._req("POST", f"/api/v1/jobs/{job_id}/legal-hold", {"hold": hold})
+
+    def set_finding_hold(self, finding_id: int, hold: bool = True) -> dict:
+        return self._req("POST", f"/api/v1/findings/{finding_id}/legal-hold",
+                         {"hold": hold})

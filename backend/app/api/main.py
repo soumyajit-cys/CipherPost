@@ -1431,10 +1431,8 @@ async def ml_disagreement(ctx: AuthContext = Depends(require_roles("analyst"))):
     sys.path.insert(0, "scripts")
     from ml_disagreement_report import build_report
     from app.core.config import settings as _s
-    rows_report = build_report()
-    # scope note: report is org-global; filter would need per-row org joins.
-    # For single-org deployments this is exact; multi-org gets fleet-wide view
-    # restricted to analyst+ roles (documented limitation).
+    rows_report = build_report(org_id=ctx.org_id)
+    # Org-scoped: each org sees only its own sessions (fail closed on org).
     return rows_report
 
 

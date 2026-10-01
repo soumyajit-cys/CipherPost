@@ -1419,9 +1419,9 @@ async def ml_versions(ctx: AuthContext = Depends(get_current_user)):
 
 @app.get("/api/v1/ml/drift")
 async def ml_drift(ctx: AuthContext = Depends(require_roles("analyst"))):
-    """Rolling-baseline drift check: recent-24h vs prior-6d feature means."""
+    """Rolling-baseline drift check: recent-24h vs prior-6d feature means (org-scoped)."""
     from app.live.baseline import drift_from_db
-    return drift_from_db()
+    return drift_from_db(org_id=ctx.org_id)
 
 
 @app.get("/api/v1/ml/disagreement")

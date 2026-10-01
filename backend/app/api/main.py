@@ -1348,6 +1348,8 @@ def _flow_to_dict(f) -> dict:
 @app.get("/api/v1/flows")
 async def list_flows(unencrypted_within_days: int | None = Query(None, ge=1, le=90),
                      limit: int = Query(100, ge=1, le=500),
+                     page: int | None = Query(None, ge=1),
+                     per_page: int | None = Query(None, ge=1, le=500),
                      ctx: AuthContext = Depends(get_current_user),
                      db: AsyncSession = Depends(get_db)):
     """Mail flows answering: which flows sent mail unencrypted recently?
@@ -1357,6 +1359,7 @@ async def list_flows(unencrypted_within_days: int | None = Query(None, ge=1, le=
     """
     from datetime import datetime, timezone, timedelta
     from app.models.entities import MailFlow
+    limit, _ = _paginate(limit, 0, page, per_page, maximum=500)
     q = select(MailFlow).where(MailFlow.org_id == ctx.org_id)
     if unencrypted_within_days:
         cutoff = datetime.now(timezone.utc) - timedelta(days=unencrypted_within_days)
@@ -1499,14 +1502,15 @@ async def _get_org_job(job_id: str, ctx: AuthContext, db: AsyncSession):
 
 
 def _paginate(limit: int, offset: int, page: int | None,
-               per_page: int | None) -> tuple[int, int]:
+               per_page: int | None, maximum: int = 200) -> tuple[int, int]:
     """Canonical pagination: limit/offset, with page/per_page aliases.
 
     page is 1-based; per_page clamps like limit. Explicit offset wins over page.
     """
-    limit = max(1, min(int(limit), 200))
+    maximum = max(1, int(maximum))
+    limit = max(1, min(int(limit), maximum))
     if per_page is not None:
-        limit = max(1, min(int(per_page), 200))
+        limit = max(1, min(int(per_page), maximum))
     if offset:
         return limit, max(0, int(offset))
     if page is not None:

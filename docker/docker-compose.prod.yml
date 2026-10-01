@@ -1,0 +1,137 @@
+# CipherPost PRODUCTION compose (hardened). Differences from docker-compose.yml (dev):
+# - CIPHERPOST_ENV=production (refuses weak secrets; dev compose uses dev).
+# - No published DB/Redis ports at all (internal only).
+# - Secrets via a 600-permission env file (.env.prod, gitignored, NEVER
+#   committed): full CIPHERPOST_DATABASE_URL* incl. passwords, JWT_SECRET,
+#   ADMIN_PASSWORD, POSTGRES_PASSWORD. Nothing secret lives in this file.
+# - Pinned image tags (CIPHERPOST_IMAGE_TAG, e.g. 0.3.0 — never latest).
+# - Frontend on 127.0.0.1 only; put your TLS reverse proxy in front.
+# - migrate runs to completion before api/worker start (startup ordering).
+#
+# Usage:
+#   umask 077
+#   cat > .env.prod <<'EOF'
+#   POSTGRES_PASSWORD=strong-db-password
+#   CIPHERPOST_JWT_SECRET=$(openssl rand -hex 32)
+#   CIPHERPOST_ADMIN_PASSWORD=strong-admin-password-12+chars
+#   CIPHERPOST_IMAGE_TAG=0.3.0
+#   EOF
+#   chmod 600 .env.prod
+#   docker compose -f docker/docker-compose.prod.yml --env-file .env.prod up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    env_file:
+      - path: ../.env.prod
+        required: true
+    environment:
+      POSTGRES_DB: cipherpost
+      POSTGRES_USER: cipherpost
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cipherpost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    image: cipherpost/worker:${CIPHERPOST_IMAGE_TAG:?set CIPHERPOST_IMAGE_TAG}
+    user: "10001:10001"
+    command: ["python", "-m", "app.migrate"]
+    env_file:
+      - path: ../.env.prod
+        required: true
+    environment:
+      CIPHERPOST_ENV: production
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}@db:5432/cipherpost
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: cipherpost/api:${CIPHERPOST_IMAGE_TAG:?set CIPHERPOST_IMAGE_TAG}
+    user: "10001:10001"
+    env_file:
+      - path: ../.env.prod
+        required: true
+    environment:
+      CIPHERPOST_ENV: production
+      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}@db:5432/cipherpost
+      CIPHERPOST_REDIS_URL: redis://redis:6379/0
+      CIPHERPOST_CELERY_BROKER_URL: redis://redis:6379/0
+      CIPHERPOST_CELERY_RESULT_BACKEND: redis://redis:6379/0
+      CIPHERPOST_TRUSTED_CA_BUNDLE_PATH: /app/tests/fixtures/trusted_root.pem
+      CIPHERPOST_LOG_LEVEL: INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - upload_data:/data/uploads
+      - report_data:/data/reports
+      - capture_data:/data/capture
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/health/ready', timeout=2).raise_for_status()"]
+      interval: 10s
+      retries: 5
+
+  worker:
+    image: cipherpost/worker:${CIPHERPOST_IMAGE_TAG:?set CIPHERPOST_IMAGE_TAG}
+    user: "10001:10001"
+    env_file:
+      - path: ../.env.prod
+        required: true
+    environment:
+      CIPHERPOST_ENV: production
+      CIPHERPOST_DATABASE_URL: postgresql+asyncpg://cipherpost:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}@db:5432/cipherpost
+      CIPHERPOST_DATABASE_URL_SYNC: postgresql+psycopg2://cipherpost:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}@db:5432/cipherpost
+      CIPHERPOST_REDIS_URL: redis://redis:6379/0
+      CIPHERPOST_CELERY_BROKER_URL: redis://redis:6379/0
+      CIPHERPOST_CELERY_RESULT_BACKEND: redis://redis:6379/0
+      CIPHERPOST_TRUSTED_CA_BUNDLE_PATH: /app/tests/fixtures/trusted_root.pem
+      CIPHERPOST_LOG_LEVEL: INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - upload_data:/data/uploads
+      - report_data:/data/reports
+    restart: unless-stopped
+
+  frontend:
+    image: cipherpost/frontend:${CIPHERPOST_IMAGE_TAG:?set CIPHERPOST_IMAGE_TAG}
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  redisdata:
+  upload_data:
+  report_data:
+  capture_data:

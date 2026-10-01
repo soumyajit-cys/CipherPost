@@ -1,6 +1,16 @@
 # Changelog
 
-## Phase 2 — reliability for unattended live traffic (2026-09-30)
+All notable changes to this project are documented here, following
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Versioning is semantic; `backend/app/VERSION` is the single source of truth.
+
+## [Unreleased]
+
+## [0.3.0] - 2026-10-02 (Phase 3: adoption by outside organizations — in progress)
+
+### Added (Phase 3 workstream — see per-task entries below)
+
+## [0.2.0] - 2026-09-30 (Phase 2: reliability for unattended live traffic)
 
 **Reliable delivery:** Redis consumers are at-least-once (ACK after durable
 write, idempotent session ids, XAUTOCLAIM reclaim, dead-letter streams with
@@ -36,7 +46,7 @@ liveness/readiness probes; Prometheus rules + runbook; measured sizing guide.
 tests pass; 6 slow chaos tests pass. See README Maturity for honest limits —
 a real 30-day live-traffic run is still required before production-ready.
 
-## Phase 1 — secure, clean, trustworthy foundations (2026-09-29)
+## [0.1.0] - 2026-09-29 (Phase 1: secure, clean, trustworthy foundations)
 
 Secure-by-default startup, PyJWT + lockout + CORS + SSE tickets, repo hygiene,
 pinned deps, Alembic migrations, deployment hardening, real-data eval harness.

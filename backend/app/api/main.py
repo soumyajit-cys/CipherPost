@@ -1518,9 +1518,12 @@ def _paginate(limit: int, offset: int, page: int | None,
 async def list_jobs(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    page: int | None = Query(None, ge=1),
+    per_page: int | None = Query(None, ge=1, le=200),
     ctx: AuthContext = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    limit, offset = _paginate(limit, offset, page, per_page)
     q = select(AnalysisJob).where(AnalysisJob.org_id == ctx.org_id).order_by(AnalysisJob.created_at.desc()).offset(offset).limit(limit)
     rows = (await db.execute(q)).scalars().all()
     return [

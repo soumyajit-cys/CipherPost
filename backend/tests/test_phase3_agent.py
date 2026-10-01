@@ -65,7 +65,8 @@ def test_offline_queue_replay_after_outage(tmp_path):
     stub = IngestStub()
     try:
         q = DiskQueue(str(tmp_path / "q.jsonl"), max_bytes=1024 * 1024)
-        ship = Shipper(f"http://127.0.0.1:{stub.port}", "cpat_test", timeout=5)
+        ship = Shipper(f"http://127.0.0.1:{stub.port}", "cpat_test", timeout=2,
+                       max_retries=2)
         for i in range(5):
             q.append({"five_tuple": f"a:{i}-b:25", "n": i})
         assert q.depth() == 5

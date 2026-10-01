@@ -158,6 +158,40 @@ def test_ingest_backpressure_429():
         _clear()
 
 
+def test_platform_admin_assume_is_audited_and_scoped():
+    import app.models.entities as E
+    maker = _setup()
+
+    async def _promote():
+        async with maker() as s:
+            u = await s.get(E.User, "ua")
+            u.is_platform_admin = True
+            await s.commit()
+    asyncio.get_event_loop().run_until_complete(_promote())
+    client = _client(maker)
+    try:
+        # reason required
+        assert client.post("/api/v1/admin/assume",
+                           json={"org_id": "org-b"}).status_code == 400
+        r = client.post("/api/v1/orgs", json={"name": "org-c"})
+        assert r.status_code == 200 and r.json()["name"] == "org-c"
+        r = client.post("/api/v1/admin/assume",
+                        json={"org_id": "org-b", "reason": "incident 123"})
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["org_id"] == "org-b"
+        # assumed token reads the target org (audited, 1h TTL)
+        r2 = client.get("/api/v1/sessions",
+                        headers={"Authorization": f"Bearer {body['token']}"})
+        assert r2.status_code == 200
+        # audit trail exists for both actions (assume logged under target org)
+        ah = {"Authorization": f"Bearer {body['token']}"}
+        assert len(client.get("/api/v1/audit?action=admin.assume_org", headers=ah).json()) == 1
+        assert len(client.get("/api/v1/audit?action=org.create").json()) == 1
+    finally:
+        _clear()
+
+
 def test_org_crud_and_assume_are_platform_only_and_audited():
     maker = _setup()
     client = _client(maker)

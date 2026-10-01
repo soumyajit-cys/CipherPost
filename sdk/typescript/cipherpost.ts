@@ -84,6 +84,19 @@ export class CipherPostClient {
   audit = (limit = 100): Promise<unknown[]> => this.get('/api/v1/audit', { limit });
   flows = (unencryptedWithinDays?: number): Promise<unknown[]> =>
     this.get('/api/v1/flows', { unencrypted_within_days: unencryptedWithinDays });
+  flowHistory = (id: string, days = 30): Promise<unknown> =>
+    this.get(`/api/v1/flows/${id}/history`, { days });
   suppressions = (status?: string): Promise<unknown[]> =>
     this.get('/api/v1/suppressions', { status });
+  createSuppression = (body: { rule_id: string; reason: string; scope?: Record<string, unknown>; expires_days?: number }): Promise<unknown> =>
+    this.req('POST', '/api/v1/suppressions', body);
+  mfaVerify = (mfaTicket: string, code?: string, recoveryCode?: string): Promise<{ token: string }> =>
+    this.req('POST', '/api/v1/auth/mfa/verify', { mfa_ticket: mfaTicket, code, recovery_code: recoveryCode });
+  logout = (): Promise<unknown> => this.req('POST', '/api/v1/auth/logout', {});
+  agentTokens = (): Promise<unknown[]> => this.get('/api/v1/agent-tokens');
+  createAgentToken = (name: string, expiresDays?: number): Promise<{ raw_token: string }> =>
+    this.req('POST', '/api/v1/agent-tokens', { name, expires_days: expiresDays });
+  orgs = (): Promise<unknown[]> => this.get('/api/v1/orgs');
+  assumeOrg = (orgId: string, reason: string): Promise<{ token: string }> =>
+    this.req('POST', '/api/v1/admin/assume', { org_id: orgId, reason });
 }

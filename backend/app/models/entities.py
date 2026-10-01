@@ -266,6 +266,9 @@ class BaselineFeature(Base):
                                                 server_default=_sa_text("NOW()"),
                                                 nullable=True)
     features: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
+    org_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (Index("ix_baseline_features_org_ts", "org_id", "ts"),)
 
 
 class AlertDelivery(Base):

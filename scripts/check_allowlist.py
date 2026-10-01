@@ -1,28 +1,53 @@
-"""CI check: every audit allowlist entry needs id + justification + unexpired date."""
+"""CI check: every audit allowlist entry needs id + justification + unexpired date.
+
+Stdlib only (no yaml dependency): parses the fixed `.audit-allowlist.yml`
+schema of `tool:` sections containing `- id:` entries.
+"""
 from __future__ import annotations
 
 import datetime
+import re
 import sys
 
 
+def parse_allowlist(path: str) -> dict[str, list[dict]]:
+    tools: dict[str, list[dict]] = {}
+    current_tool: str | None = None
+    current: dict | None = None
+    with open(path) as f:
+        for raw in f:
+            line = raw.rstrip("\n")
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            m = re.match(r"^([A-Za-z0-9_-]+):\s*(\[\])?\s*$", stripped)
+            if m and not line.startswith((" ", "\t")):
+                current_tool = m.group(1)
+                tools.setdefault(current_tool, [])
+                current = None
+                continue
+            m = re.match(r"^-\s*id:\s*(.+)$", stripped)
+            if m and current_tool:
+                current = {"id": m.group(1).strip()}
+                tools[current_tool].append(current)
+                continue
+            m = re.match(r"^(justification|expires):\s*(.+)$", stripped)
+            if m and current is not None:
+                current[m.group(1)] = m.group(2).strip().strip('"')
+    return tools
+
+
 def main() -> int:
-    import yaml
-    with open(".audit-allowlist.yml") as f:
-        data = yaml.safe_load(f) or {}
+    tools = parse_allowlist(".audit-allowlist.yml")
     problems: list[str] = []
     today = datetime.date.today().isoformat()
     for tool in ("pip", "npm", "secrets"):
-        entries = data.get(tool) or []
-        if not isinstance(entries, list):
-            problems.append(f"{tool}: must be a list")
-            continue
-        for i, e in enumerate(entries):
+        for i, e in enumerate(tools.get(tool, [])):
             for field in ("id", "justification", "expires"):
-                if not (isinstance(e, dict) and str(e.get(field, "")).strip()):
+                if not str(e.get(field, "")).strip():
                     problems.append(f"{tool}[{i}]: missing {field}")
-            exp = str((e or {}).get("expires", ""))
-            if exp and exp < today:
-                problems.append(f"{tool}[{i}]: expired {exp}")
+            if e.get("expires", "") and e["expires"] < today:
+                problems.append(f"{tool}[{i}]: expired {e['expires']}")
     if problems:
         print("allowlist problems:")
         for p in problems:

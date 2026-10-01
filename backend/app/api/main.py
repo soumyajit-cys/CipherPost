@@ -101,7 +101,7 @@ async def health_ready():
 
 @app.post("/api/v1/auth/login")
 async def login(body: dict, request: Request, db: AsyncSession = Depends(get_db)):
-    from datetime import datetime, timezone, timezone
+    from datetime import datetime, timezone
     from app.core.auth import (
         is_login_locked, record_login_failure, record_login_success,
     )
@@ -111,6 +111,13 @@ async def login(body: dict, request: Request, db: AsyncSession = Depends(get_db)
     ip_key = f"login:ip:{client_ip}"
     if email and is_login_locked(acct_key, ip_key):
         raise HTTPException(401, "Invalid email or password")
+    # Break-glass platform admin (disabled when env empty; every use audited).
+    if email and _break_glass_configured() and email == settings.BREAK_GLASS_EMAIL.strip().lower():
+        return await _break_glass_login(body.get("password") or "", request, db)
+    if settings.DISABLE_PASSWORD_LOGIN:
+        await log_audit(db, "unknown", email or "unknown", "auth.login.failed",
+                        "session", {"reason": "password-login-disabled", "ip": client_ip})
+        raise HTTPException(403, "Password login is disabled (SSO enforced)")
     user = (await db.execute(select(User).where(User.email == email))).scalars().first()
     if user is None or not user.is_active or not verify_password(
             body.get("password") or "", user.password_hash):
@@ -124,13 +131,78 @@ async def login(body: dict, request: Request, db: AsyncSession = Depends(get_db)
             pass
         raise HTTPException(401, "Invalid email or password")
     record_login_success(acct_key, ip_key)
+    return await _finish_password_login(user, request, db)
+
+
+async def _finish_password_login(user, request: Request, db: AsyncSession):
+    """Shared post-password tail: MFA step-up or session token. Never 500s."""
+    from datetime import datetime, timezone
+    from app.core.auth import create_mfa_ticket
     user.last_login = datetime.now(timezone.utc)
     await db.commit()
-    token = create_access_token(user.id, user.org_id, user.role.value)
+    if await _mfa_required(user, db):
+        ticket = create_mfa_ticket(user.id, user.org_id)
+        await log_audit(db, user.org_id, user.email, "auth.mfa.challenged", "session")
+        return {"mfa_required": True, "mfa_ticket": ticket,
+                "user": {"id": user.id, "email": user.email,
+                         "role": user.role.value, "org_id": user.org_id}}
+    token = create_access_token(user.id, user.org_id, user.role.value,
+                                session_version=int(getattr(user, "session_version", 1) or 1))
     await log_audit(db, user.org_id, user.email, "auth.login", "session")
     return {"token": token,
             "user": {"id": user.id, "email": user.email,
                      "role": user.role.value, "org_id": user.org_id}}
+
+
+def _break_glass_configured() -> bool:
+    return bool((settings.BREAK_GLASS_EMAIL or "").strip()
+                and (settings.BREAK_GLASS_PASSWORD or ""))
+
+
+async def _break_glass_login(password: str, request: Request, db: AsyncSession):
+    """Break-glass path: existing platform-admin user + env password. Audited."""
+    import hmac as _hmac
+    from datetime import datetime, timezone
+    email = settings.BREAK_GLASS_EMAIL.strip().lower()
+    client_ip = (request.client.host if request.client else "unknown")
+    user = (await db.execute(select(User).where(User.email == email))).scalars().first()
+    ok = (user is not None and user.is_active
+          and bool(getattr(user, "is_platform_admin", False))
+          and _hmac.compare_digest(password, settings.BREAK_GLASS_PASSWORD))
+    if not ok:
+        from app.core.auth import record_login_failure
+        record_login_failure(f"login:acct:{email}", f"login:ip:{client_ip}")
+        try:
+            await log_audit(db, user.org_id if user else "unknown", email,
+                            "auth.login.break_glass.failed", "session", {"ip": client_ip})
+        except Exception:
+            pass
+        raise HTTPException(401, "Invalid email or password")
+    user.last_login = datetime.now(timezone.utc)
+    await db.commit()
+    token = create_access_token(user.id, user.org_id, user.role.value,
+                                session_version=int(getattr(user, "session_version", 1) or 1))
+    await log_audit(db, user.org_id, user.email, "auth.login.break_glass", "session",
+                    {"ip": client_ip})
+    return {"token": token, "break_glass": True,
+            "user": {"id": user.id, "email": user.email,
+                     "role": user.role.value, "org_id": user.org_id}}
+
+
+async def _mfa_required(user, db: AsyncSession) -> bool:
+    """True when the user enrolled MFA or their org mandates it."""
+    if bool(getattr(user, "mfa_enabled", False)):
+        return True
+    try:
+        required = {o.strip() for o in
+                    (settings.MFA_REQUIRED_ORGS or "").split(",") if o.strip()}
+        if not required:
+            return False
+        from app.models.entities import Organization
+        org = await db.get(Organization, user.org_id)
+        return bool(org is not None and org.name in required)
+    except Exception:
+        return False
 
 
 @app.get("/api/v1/auth/me")

@@ -136,6 +136,19 @@ def test_sse_ticket_bound_to_issuer_org():
     assert consume_sse_ticket(t)["org"] == "org-a"
 
 
+def test_page_aliases_match_limit_offset():
+    maker = _seed()
+    client, ta, _ = _clients(maker)
+    try:
+        ha = _auth(ta)
+        via_limit = client.get("/api/v1/sessions?limit=1&offset=1", headers=ha).json()
+        via_page = client.get("/api/v1/sessions?per_page=1&page=2", headers=ha).json()
+        assert via_limit == via_page
+        assert client.get("/api/v1/jobs?page=1&per_page=1", headers=ha).status_code == 200
+    finally:
+        _clear()
+
+
 def test_disagreement_scoped_to_org(tmp_path):
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker

@@ -93,3 +93,48 @@ def test_python_sdk_paths_match_server_routes():
 
     missing = sorted(p for p in sdk_paths if not matches(p))
     assert not missing, f"SDK paths missing from server: {missing}"
+
+
+def _sdk_paths_from(source: str, pattern: str) -> set[str]:
+    import re
+    return set(re.findall(pattern, source))
+
+
+def _openapi_paths() -> set[str]:
+    import json
+    with open("docs/openapi.json") as f:
+        return set(json.load(f)["paths"].keys())
+
+
+def test_both_sdks_match_committed_openapi_schema():
+    """Contract: SDK paths and the committed docs/openapi.json agree with the
+    live app (catches stale schema and SDK drift in one place)."""
+    import re
+    py_src = open("sdk/python/cipherpost_client.py").read()
+    ts_src = open("sdk/typescript/cipherpost.ts").read()
+    py_paths = _sdk_paths_from(py_src, r'"(/api/v1[^"]*)"')
+    ts_paths = _sdk_paths_from(ts_src, r"'(/api/v1[^']*)'")
+    schema_paths = _openapi_paths()
+
+    def template(path: str) -> str:
+        out = re.sub(r"\{[^}]+\}", "{x}", path)
+        # f-string concrete ids used by the Python SDK
+        out = re.sub(r"/(key-|user-|at-)[^/]*$", "/{x}", out)
+        out = re.sub(r"/jobs/[^/]+/report\.[a-z]+$", "/jobs/{x}/report.{x}", out)
+        return out
+
+    schema_templates = {template(p) for p in schema_paths}
+    for label, paths in (("python", py_paths), ("typescript", ts_paths)):
+        missing = sorted(p for p in paths if template(p) not in schema_templates)
+        assert not missing, f"{label} SDK paths missing from docs/openapi.json: {missing}"
+
+
+def test_openapi_baseline_is_current():
+    """docs/openapi.json must match the live app (regenerate if this fails)."""
+    import json
+    from app.api.main import app
+    with open("docs/openapi.json") as f:
+        baseline = json.load(f)
+    live_paths = set(app.openapi()["paths"].keys())
+    assert set(baseline["paths"].keys()) == live_paths, (
+        "docs/openapi.json is stale; run scripts/export_openapi.py")

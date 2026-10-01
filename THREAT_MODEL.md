@@ -73,7 +73,29 @@ Treat every packet, handshake field, and certificate as attacker-controlled.
   `test_phase2_health.py` (degraded health, liveness), `test_phase2_chaos.py`
   (slow: redis/db kill, disk pressure, malformed recovery, burst bounds).
 
-## 5. Residual risks (accepted, documented)
+## 5. Tenancy model and limits (Phase 3)
+
+- Orgs are the isolation boundary: every data row carries `org_id`; every
+  query path filters by the caller's org (systematic A/B suite in
+  `test_phase3_isolation.py`). Cross-org access by ID returns 404, never data.
+- Sensors authenticate with org-scoped agent tokens (`cpat_…`, hashed, shown
+  once, revocable) via `POST /api/v1/ingest/sessions`; the org is stamped from
+  the token and agents cannot choose another org. Backpressure is explicit
+  HTTP 429, not silent drops.
+- Trust boundary: same-cluster direct-Redis mode is for single-tenant
+  deployments only (`CIPHERPOST_SINGLE_TENANT=true`, the default). Remote
+  sensors MUST use the HTTPS ingest endpoint — Redis has no per-org ACLs, so
+  any holder of the Redis URL can read/write all streams. Unstamped sessions
+  in multi-tenant mode are dead-lettered, never default-attributed.
+- Platform admins manage orgs but read tenant data only through audited
+  `POST /api/v1/admin/assume` tokens (reason required, 1 h TTL); silent reads
+  are not possible without that audit trail.
+- Limits: ML drift aggregates are per-org only in multi-tenant mode;
+  single-tenant legacy baseline rows (NULL org) are treated as the one
+  tenant's. Agent heartbeats without org stamps are hidden from non-platform
+  users outside single-tenant mode.
+
+## 6. Residual risks (accepted, documented)
 
 1. **Evasion by fragmentation** — extreme handshake fragmentation across many
    records may parse as `tls-handshake-incomplete` (medium) rather than the

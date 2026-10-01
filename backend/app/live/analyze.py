@@ -228,7 +228,12 @@ class AnalysisWorker:
         except Exception as e:
             log.warning("analyze_session failed %s: %s", sess.five_tuple, e)
             raise
-        # score
+        # score (org stamped first so baseline rows carry it)
+        if isinstance(sess_payload, dict) and sess_payload.get("org_id"):
+            try:
+                sa.org_id = sess_payload["org_id"]
+            except Exception:
+                pass
         scoring = None
         try:
             # RollingBaseline has .score(sa) that also handles refit

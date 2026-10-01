@@ -143,7 +143,9 @@ def drift_from_db(hours_recent: int = 24, days_reference: int = 6,
             def load(since, until=None):
                 q = "SELECT features FROM baseline_features WHERE ts >= :since"
                 params = {"since": since}
-                if org_id:
+                # Single-tenant legacy rows carry NULL org and all belong to
+                # the one tenant; only filter when truly multi-tenant.
+                if org_id and not settings.SINGLE_TENANT:
                     q += " AND org_id = :org"
                     params["org"] = org_id
                 if until is not None:
@@ -185,7 +187,8 @@ def drift_from_db(hours_recent: int = 24, days_reference: int = 6,
                 import json
                 engine = create_engine(settings.DATABASE_URL_SYNC)
                 with engine.connect() as conn:
-                    conn.execute(text("INSERT INTO baseline_features (features) VALUES (:f)"), {"f": json.dumps(feats)})
+                    conn.execute(text("INSERT INTO baseline_features (features, org_id) VALUES (:f, :o)"),
+                                 {"f": json.dumps(feats), "o": getattr(sa, "org_id", None)})
                     conn.commit()
             except Exception:
                 pass

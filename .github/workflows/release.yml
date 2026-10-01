@@ -79,7 +79,7 @@ jobs:
           format: spdx-json
           output-file: sbom-${{ matrix.image }}.spdx.json
       - name: Scan image, fail on criticals
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: cipherpost/${{ matrix.image }}:scan
           format: table

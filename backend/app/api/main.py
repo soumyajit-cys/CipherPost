@@ -1164,8 +1164,6 @@ async def list_findings(
     return out
 
 @app.get("/api/v1/alerts")
-
-@app.get("/api/v1/alerts")
 async def list_alerts(limit: int = Query(50, ge=1, le=200),
                       ctx: AuthContext = Depends(get_current_user),
                       db: AsyncSession = Depends(get_db)):

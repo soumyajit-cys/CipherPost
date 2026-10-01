@@ -45,7 +45,7 @@ def _seed():
                                  total_sessions=1, encrypted_sessions=0,
                                  plaintext_sessions=1, first_seen=now, last_seen=now))
                 s.add(E.Alert(id=f"al-{org}", severity="high", title="t",
-                              five_tuple="x", payload={}, org_id=org))
+                              five_tuple="x", payload={}, org_id=org, ts=now))
                 s.add(E.Suppression(org_id=org, rule_id="r", scope={}, reason="x",
                                     created_by="a", status="approved", created_at=now,
                                     expires_at=datetime(2099, 1, 1)))

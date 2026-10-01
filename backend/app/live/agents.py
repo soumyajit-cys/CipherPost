@@ -84,8 +84,13 @@ class AgentHeartbeat:
             pass
 
 
-def list_agents(r, max_age_seconds: float = 60.0) -> list[dict]:
-    """Agents with a recent heartbeat; stale ones flagged offline."""
+def list_agents(r, max_age_seconds: float = 60.0, org_id: str | None = None,
+                single_tenant: bool = False, is_platform: bool = False) -> list[dict]:
+    """Agents with a recent heartbeat; stale ones flagged offline.
+
+    Org rule (fail closed): same-org agents always visible; unstamped legacy
+    agents visible only in single-tenant mode or to platform admins.
+    """
     out = []
     try:
         keys = r.keys(f"{AGENT_KEY_PREFIX}:*")
@@ -103,6 +108,13 @@ def list_agents(r, max_age_seconds: float = 60.0) -> list[dict]:
             age = now - float(info.get("ts", 0))
             info["age_seconds"] = round(age, 1)
             info["online"] = age <= max_age_seconds
+            agent_org = info.get("org_id")
+            if is_platform or (agent_org is not None and agent_org == org_id):
+                pass
+            elif single_tenant and not agent_org:
+                pass
+            else:
+                continue
             out.append(info)
         except Exception:
             continue

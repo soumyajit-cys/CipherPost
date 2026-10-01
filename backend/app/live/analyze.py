@@ -98,11 +98,14 @@ class AnalysisWorker:
         return self._org_cache
 
     def _persist(self, sa, scoring_result, raw_refs, session_raw_ts,
-                 session_id: str | None = None):
+                 session_id: str | None = None,
+                 payload_org_id: str | None = None):
         """Persist session+findings+shap to Postgres using sync session.
 
-        Idempotent: if `session_id` already exists, returns (id, False) without
-        inserting duplicates. Returns (sess_id, created).
+        Idempotent: if `session_id` already exists, returns (id, False, org)
+        without inserting duplicates. Org resolution (fail closed): the
+        ingest-stamped org wins; otherwise the default org only in explicit
+        single-tenant mode; otherwise raise (dead-letter, never mis-attribute).
         """
         Session = _get_sync_session()
         try:
@@ -110,19 +113,27 @@ class AnalysisWorker:
             sess_id = session_id or uuid.uuid4().hex
             existing = Session.get(SessionModel, sess_id)
             if existing is not None:
-                return sess_id, False
-            # derive job: use LIVE_JOB_TAG as a synthetic job id (ensure exists)
+                return sess_id, False, existing.org_id
+            if payload_org_id:
+                org_id = payload_org_id
+            elif settings.SINGLE_TENANT:
+                org_id = self._default_org_id(Session)
+            else:
+                raise ValueError(
+                    "unstamped session in multi-tenant mode "
+                    "(sensors must use agent tokens via /api/v1/ingest/sessions)")
+            # derive job: per-org synthetic job rows (legacy "live" for default)
             from app.models.entities import AnalysisJob, JobStatus
-            job_id = settings.LIVE_JOB_TAG
-            job = Session.get(AnalysisJob, job_id)
-            # live-ingested data belongs to the default org (single shared sensor)
             default_org_id = self._default_org_id(Session)
+            job_id = (settings.LIVE_JOB_TAG if org_id == default_org_id
+                      else f"{settings.LIVE_JOB_TAG}-{org_id}")
+            job = Session.get(AnalysisJob, job_id)
             if not job:
-                job = AnalysisJob(id=job_id, filename="live-capture", pcap_path="live", status=JobStatus.PROCESSING, file_size=0, org_id=default_org_id)
+                job = AnalysisJob(id=job_id, filename="live-capture", pcap_path="live", status=JobStatus.PROCESSING, file_size=0, org_id=org_id)
                 Session.add(job)
                 Session.commit()
-            elif job.org_id is None and default_org_id:
-                job.org_id = default_org_id
+            elif job.org_id is None and org_id:
+                job.org_id = org_id
             # flow aggregation + regression: compare against best-seen state,
             # then append any proven regression finding before persisting.
             try:

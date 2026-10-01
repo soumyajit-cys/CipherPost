@@ -291,6 +291,51 @@ def reset_revocations() -> None:
 
 
 # --------------------------------------------------------------------------
+# MFA step-up tickets: short-lived (5 min), single-use, scope mfa-verify.
+# Issued after password (or OIDC) when the account needs MFA; exchanged for
+# a session token after a valid TOTP/recovery code. Same burn semantics as
+# SSE tickets.
+# --------------------------------------------------------------------------
+
+_MFA_TICKET_TTL = 300
+_used_mfa_tickets: set[str] = set()
+
+
+def create_mfa_ticket(sub: str, org_id: str) -> str:
+    return create_access_token(sub, org_id, "", expires_in=_MFA_TICKET_TTL,
+                               extra={"scope": "mfa-verify", "typ": "mfa-ticket",
+                                      "jti": secrets.token_hex(8)})
+
+
+def consume_mfa_ticket(token: str) -> dict:
+    claims = decode_token(token)
+    if claims.get("scope") != "mfa-verify":
+        raise ValueError("not an MFA ticket (scope)")
+    jti = claims.get("jti") or ""
+    if not jti:
+        raise ValueError("ticket missing jti")
+    r = _login_redis()
+    key = f"mfa-ticket:{jti}"
+    if r is not None:
+        try:
+            ok = r.set(key, "1", nx=True, ex=_MFA_TICKET_TTL)
+            if not ok:
+                raise ValueError("ticket already used")
+            return claims
+        except ValueError:
+            raise
+        except Exception:
+            pass
+    if jti in _used_mfa_tickets:
+        raise ValueError("ticket already used")
+    _used_mfa_tickets.add(jti)
+    if len(_used_mfa_tickets) > 10_000:
+        _used_mfa_tickets.clear()
+        _used_mfa_tickets.add(jti)
+    return claims
+
+
+# --------------------------------------------------------------------------
 # API keys: `cp_<32 hex>`, only SHA-256 hash stored
 # --------------------------------------------------------------------------
 

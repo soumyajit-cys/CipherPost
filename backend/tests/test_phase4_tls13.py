@@ -195,3 +195,121 @@ def test_probe_local_implicit_tls_with_allow_private(tmp_path):
     import pytest
     with pytest.raises(ValueError, match="rate limited"):
         _p.probe_host("127.0.0.1", ready[0], allow_private=True, starttls=False)
+
+
+# --------------------------------------------------------------------------
+# Rule behavior on crafted hellos (synthetic) + property fuzzing
+# --------------------------------------------------------------------------
+
+def _sa_with_hellos(ch_bytes: bytes | None, sh_bytes: bytes | None):
+    from app.parsing.handshake import parse_client_hello, parse_server_hello
+    from app.parsing.rules import SessionAnalysis
+    from app.parsing.tls_records import TlsParseError
+    sa = SessionAnalysis(session_id="t", protocol="SMTP",
+                         five_tuple="a:1-b:25", is_starttls=False)
+    if ch_bytes is not None:
+        try:
+            sa.client_hello = parse_client_hello(ch_bytes)
+        except TlsParseError:
+            sa.client_hello = None
+    if sh_bytes is not None:
+        try:
+            sa.server_hello = parse_server_hello(sh_bytes)
+            sa.tls_version = sa.server_hello.negotiated_version
+        except TlsParseError:
+            sa.server_hello = None
+    return sa
+
+
+def _rule_ids(sa) -> set[str]:
+    from app.parsing.rules import run_rules
+    run_rules(sa)
+    return {f.rule_id for f in sa.findings}
+
+
+def test_downgrade_sentinel_fires_only_with_higher_offer():
+    from app.parsing.handshake import DOWNGRAD_SENTINEL_TLS12
+    ch = _client_hello_bytes(_versions_ext([0x0304, 0x0303]) + _groups_ext([29]))
+    # sentinel + 1.2 negotiated + 1.3 offered -> CRITICAL
+    sh = _server_hello_bytes(b"\x44" * 24 + DOWNGRAD_SENTINEL_TLS12,
+                             exts=_ext(43, _u16(0x0303)))
+    sa = _sa_with_hellos(ch, sh)
+    assert "downgrade-attack-detected" in _rule_ids(sa)
+    # sentinel consistent with offer (max offered 1.2) -> silent
+    ch2 = _client_hello_bytes(_versions_ext([0x0303]) + _groups_ext([29]))
+    sa2 = _sa_with_hellos(ch2, sh)
+    assert "downgrade-attack-detected" not in _rule_ids(sa2)
+
+
+def test_hrr_mismatch_and_version_downgrade_and_ech():
+    from app.parsing.handshake import HRR_RANDOM
+    ch = _client_hello_bytes(_versions_ext([0x0304]) + _groups_ext([29])
+                             + _sni_ext(b"mail.example.com"))
+    # HRR selecting unoffered group 30 -> medium
+    hrr = _server_hello_bytes(HRR_RANDOM, exts=_ext(51, _u16(30)))
+    sa = _sa_with_hellos(ch, hrr)
+    assert "hrr-group-mismatch" in _rule_ids(sa)
+    # HRR selecting offered group 29 -> silent
+    hrr_ok = _server_hello_bytes(HRR_RANDOM, exts=_ext(51, _u16(29)))
+    assert "hrr-group-mismatch" not in _rule_ids(_sa_with_hellos(ch, hrr_ok))
+    # negotiated 1.0 while 1.3 offered -> suspected downgrade (high)
+    sh_old = _server_hello_bytes(b"\x55" * 32, cipher=0x002F)
+    sa_old = _sa_with_hellos(ch, sh_old)
+    sa_old.tls_version = 0x0301
+    assert "tls-version-downgrade-suspected" in _rule_ids(sa_old)
+    # ECH outer -> info + sni state
+    ch_ech = _client_hello_bytes(_sni_ext(b"public.example.com")
+                                 + _ext(0xFE0D, b"\x00")
+                                 + _versions_ext([0x0304]))
+    sa_ech = _sa_with_hellos(ch_ech, None)
+    assert "ech-observed" in _rule_ids(sa_ech)
+
+
+def test_legacy_groups_and_no_modern_group():
+    ch_dead = _client_hello_bytes(_versions_ext([0x0303]) + _groups_ext([5, 29]))
+    sa = _sa_with_hellos(ch_dead, None)
+    ids = _rule_ids(sa)
+    assert "deprecated-group-offered" in ids
+    ch_only_dead = _client_hello_bytes(_versions_ext([0x0303]) + _groups_ext([5]))
+    assert "no-modern-pfs-group" in _rule_ids(_sa_with_hellos(ch_only_dead, None))
+    assert "no-modern-pfs-group" not in _rule_ids(_sa_with_hellos(ch_dead, None))
+
+
+def test_not_observable_recorded_for_blind_tls13():
+    from app.parsing.rules import SessionAnalysis
+    sa = SessionAnalysis(session_id="t", protocol="SMTP",
+                         five_tuple="a:1-b:25", is_starttls=False)
+    sa.tls_version = 0x0304
+    sa.visibility = {"tls13": True, "cert_chain": "not_observable_tls13"}
+    sa.certs = []
+    sa.chain_result = "parse-error"
+    from app.parsing.rules import run_rules
+    run_rules(sa)
+    assert "untrusted-certificate-chain" not in {f.rule_id for f in sa.findings}
+    assert "expired-certificate" in sa.not_observable
+    assert "untrusted-certificate-chain" in sa.not_observable
+
+
+def test_parsers_never_raise_on_arbitrary_bytes():
+    from hypothesis import given, settings as _hsettings, strategies as st
+    from app.parsing.handshake import parse_client_hello, parse_server_hello
+    from app.parsing.tls_records import TlsParseError
+
+    @_hsettings(max_examples=300, derandomize=True)
+    @given(st.binary(min_size=0, max_size=220))
+    def _client(data: bytes):
+        try:
+            parse_client_hello(data)
+        except TlsParseError:
+            pass
+
+    @_hsettings(max_examples=300, derandomize=True)
+    @given(st.binary(min_size=0, max_size=120))
+    def _server(data: bytes):
+        try:
+            parse_server_hello(data)
+        except TlsParseError:
+            pass
+
+    _client()
+    _server()

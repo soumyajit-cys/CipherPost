@@ -118,9 +118,10 @@ class AnalysisWorker:
                 artifact = (cur or {}).get("artifact", "")
                 if artifact and not str(artifact).startswith("unavailable"):
                     bundle = joblib.load(artifact)
-                    cached.scorer.risk_model = bundle["model"]
-                    cached.scorer._feature_names = bundle["feature_names"]
-                    cached.scorer._trained = True
+                    target = getattr(cached, "scorer", cached)
+                    target.risk_model = bundle["model"]
+                    target._feature_names = bundle["feature_names"]
+                    target._trained = True
                     log.info("loaded promoted model %s for org %s",
                              cur_version, key)
             except Exception as e:

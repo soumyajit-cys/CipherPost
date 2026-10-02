@@ -387,3 +387,24 @@ class FindingFeedback(Base):
     comment: Mapped[str] = mapped_column(Text, default="")
     created_by: Mapped[str] = mapped_column(String(256), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class FingerprintList(Base):
+    """Org-managed allow/deny entries for JA3/JA4 fingerprints (phase 4 task 2).
+
+    CipherPost ships NO fingerprint database (never blocklists by vendor
+    fiat). Organizations import/export their own entries with source/comment
+    metadata. Deny hits raise findings; allow entries are inventory only.
+    """
+
+    __tablename__ = "fp_lists"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_id: Mapped[str] = mapped_column(String(64), ForeignKey("organizations.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(16))  # allow | deny
+    fp_type: Mapped[str] = mapped_column(String(16))  # ja3 | ja4 | ja3s | ja4s
+    value: Mapped[str] = mapped_column(String(128), index=True)
+    source: Mapped[str] = mapped_column(String(256), default="")
+    comment: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(256), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

@@ -11,7 +11,18 @@ cipherpost verify-domain example.com
 cipherpost rules list
 cipherpost rules explain expired-certificate
 cipherpost version
+cipherpost evidence capture.pcap > evidence.json
 ```
+
+## Evidence bundles (audits)
+
+`cipherpost evidence capture.pcap` emits a hash-chained bundle
+(`manifest` + `records`): every record links to the previous SHA-256 so
+tampering is detected on verify. The manifest records `record_count`,
+`root_hash`, tool/rules/mapping versions, and observed vs unobservable
+label tallies. The server exposes the same bundle per completed job at
+`GET /api/v1/jobs/{id}/evidence`. Unobservable items are labeled, never
+filled in.
 
 ## Exit codes
 

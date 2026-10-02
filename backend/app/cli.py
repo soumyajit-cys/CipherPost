@@ -256,6 +256,31 @@ def cmd_verify_domain(args) -> int:
     return EXIT_CLEAN if out.get("status") in ("ok", "not-published") else EXIT_FINDINGS
 
 
+def cmd_probe(args) -> int:
+    from app.proactive.probe import probe_host, CONSENT_NOTICE
+    print(f"consent notice: {CONSENT_NOTICE}", file=sys.stderr)
+    if ":" in args.target and not args.target.startswith("["):
+        host, _, port_s = args.target.rpartition(":")
+    else:
+        host, port_s = args.target, "25"
+    try:
+        port = int(port_s)
+    except ValueError:
+        print("error: target must be host:port", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        out = probe_host(host, port, allow_private=bool(args.allow_private),
+                         starttls=not bool(args.no_starttls))
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return EXIT_USAGE if "invalid" in str(e) or "refusing" in str(e) else EXIT_PARSE
+    except Exception as e:
+        print(f"error: probe failed: {e}", file=sys.stderr)
+        return EXIT_PARSE
+    print(json.dumps(out, indent=2, default=str))
+    return EXIT_CLEAN
+
+
 def cmd_rules(args) -> int:
     catalog = rule_catalog()
     if args.rules_cmd == "list":
@@ -309,6 +334,8 @@ def main(argv=None) -> int:
         return cmd_scan(args)
     if args.cmd == "verify-domain":
         return cmd_verify_domain(args)
+    if args.cmd == "probe":
+        return cmd_probe(args)
     if args.cmd == "rules":
         return cmd_rules(args)
     if args.cmd == "version":

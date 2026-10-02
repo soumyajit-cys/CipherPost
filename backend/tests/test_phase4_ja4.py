@@ -142,3 +142,20 @@ def test_outdated_stack_signal_and_inventory():
     sa2.client_hello = ClientHelloInfo(offered_versions=[0x0304, 0x0303], legacy_version=0x0303)
     run_rules(sa2)
     assert "outdated-client-stack" not in {f.rule_id for f in sa2.findings}
+
+
+def test_fp_list_crud_is_org_scoped():
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from app.core.database import Base
+    import app.models.entities as E
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    S = sessionmaker(bind=engine)()
+    S.add(E.Organization(id="o1", name="a"))
+    S.add(E.FingerprintList(org_id="o1", kind="deny", fp_type="ja4",
+                            value="x", source="s", comment="c", created_by="a"))
+    S.commit()
+    assert S.query(E.FingerprintList).filter_by(org_id="o1").count() == 1
+    assert S.query(E.FingerprintList).filter_by(org_id="o2").count() == 0
+    S.close()

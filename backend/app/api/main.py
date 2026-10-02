@@ -1321,6 +1321,17 @@ async def compliance_summary(framework: str | None = Query(None),
                      "severity": sev.value if hasattr(sev, "value") else str(sev)})
     out = summary_for_findings(live, framework)
     out["suppressed_accepted_risk"] = accepted
+    # Phase 4: checks skipped for lack of observed data (e.g. TLS 1.3 certs).
+    no_counts: dict[str, int] = {}
+    try:
+        srows = (await db.execute(
+            select(Session.details).where(Session.org_id == ctx.org_id))).all()
+        for (details,) in srows:
+            for rid in ((details or {}).get("not_observable") or []):
+                no_counts[rid] = no_counts.get(rid, 0) + 1
+    except Exception:
+        pass
+    out["not_observable"] = no_counts
     return out
 
 

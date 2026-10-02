@@ -2394,6 +2394,49 @@
         "summary": "Get Job"
       }
     },
+    "/api/v1/jobs/{job_id}/evidence": {
+      "get": {
+        "description": "Tamper-evident evidence bundle for a completed job (phase 4 task 6).\n\nHash-chained records (sessions, findings, limitations, suppressions)\nwith manifest counts and label tallies. Unobservable items are labeled,\nnever filled in.",
+        "operationId": "get_evidence_api_v1_jobs__job_id__evidence_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Evidence"
+      }
+    },
     "/api/v1/jobs/{job_id}/findings": {
       "get": {
         "operationId": "get_findings_api_v1_jobs__job_id__findings_get",

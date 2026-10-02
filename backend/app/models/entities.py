@@ -75,6 +75,11 @@ class Session(Base):
     org_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("organizations.id"), nullable=True, index=True)
     details: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Phase 4: TLS fingerprints (JA3/JA4 family). Nullable: older rows predate them.
+    ja3: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    ja4: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    ja3s: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    ja4s: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     job: Mapped[AnalysisJob] = relationship(back_populates="sessions")
     findings: Mapped[list["Finding"]] = relationship(back_populates="session", cascade="all, delete-orphan")

@@ -374,6 +374,10 @@ def rule_ssl_in_plaintext(sa: SessionAnalysis):
 
 def rule_starttls_strip(sa: SessionAnalysis):
     if sa.saw_starttls_offer and not sa.started_tls and not sa.tls_bytes:
+        # Plaintext continuation after the offer (without a 220-ready TLS
+        # upgrade) is the forensic core of STRIPTLS: record how much
+        # application data the client surrendered in the clear.
+        continued = int(getattr(sa, "plaintext_bytes", 0) or 0)
         sa.add(
             "starttls-strip-attempt",
             "Possible STARTTLS stripping",
@@ -385,6 +389,7 @@ def rule_starttls_strip(sa: SessionAnalysis):
             " plaintext (STRIPTLS / STARTTLS downgrade). Clients MUST refuse to continue"
             " when STARTTLS is not honored.",
             "RFC 3207 §4.1.2; OWASP SMTP Transport Security through STARTTLS",
+            plaintext_continuation_bytes=continued,
         )
 
 

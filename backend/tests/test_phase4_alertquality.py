@@ -40,7 +40,7 @@ def _setup():
                                     created_by="a", created_at=now))
             s.add(E.Alert(id="al1", severity="high", title="t",
                           five_tuple="1.1.1.1:1-2.2.2.2:25",
-                          payload=json.dumps({"rule_id": "weak-cipher-suite"}),
+                          payload={"rule_id": "weak-cipher-suite"},
                           org_id="org-a", ts=now))
             await s.commit()
 
@@ -120,7 +120,8 @@ def test_routes_crud_and_specificity_order():
              "owner": "mail-team", "channel": "slack"},
         ])
         routed = d._route_finding({"rule_id": "weak-cipher-suite",
-                                   "five_tuple": "1.1.1.1:1-2.2.2.2:25"})
+                                   "five_tuple": "1.1.1.1:1-2.2.2.2:25",
+                                   "org_id": "org-a"})
         assert routed == {"owner": "mail-team", "channel": "slack"}
     finally:
         _clear()

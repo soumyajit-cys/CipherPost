@@ -196,6 +196,10 @@ class AnalysisWorker:
                          "visibility": getattr(sa, "visibility", {}) or {},
                          "not_observable": list(getattr(sa, "not_observable", None) or [])},
                 created_at=_now,
+                ja3=getattr(sa, "ja3_digest", None),
+                ja4=getattr(sa, "ja4", None),
+                ja3s=getattr(sa, "ja3s_digest", None),
+                ja4s=getattr(sa, "ja4s", None),
             )
             Session.add(sess)
             for f in sa.findings:

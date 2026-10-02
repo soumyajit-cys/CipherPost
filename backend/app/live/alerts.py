@@ -189,9 +189,225 @@ class AlertDispatcher:
 
     def _should_alert(self, finding: dict) -> bool:
         sev = finding.get("max_severity") or finding.get("severity") or "info"
-        if SEV_ORDER.get(sev, 0) < self.min_sev:
+        threshold = self.min_sev
+        try:
+            policy = self._policy_for(finding.get("org_id"))
+            threshold = SEV_ORDER.get(policy.get("min_severity", ""), threshold)
+        except Exception:
+            pass
+        if SEV_ORDER.get(sev, 0) < threshold:
             return False
         return True
+
+    # -- phase 4 task 5: ownership routing, per-org policy, digest, quiet hours
+    _policy_cache: dict = {}
+    _routes_cache: dict = {}
+
+    def _policy_for(self, org_id: str | None) -> dict:
+        """Per-org alert policy (cached 60 s); defaults when absent."""
+        now = time.time()
+        entry = self._policy_cache.get(org_id)
+        if entry is not None and now - entry[0] < 60:
+            return entry[1]
+        policy = {"min_severity": settings.ALERT_MIN_SEVERITY,
+                  "digest": "off", "quiet_start_hour": None,
+                  "quiet_end_hour": None, "quiet_tz": "UTC"}
+        try:
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+            from app.models.entities import AlertPolicy
+            engine = create_engine(settings.DATABASE_URL_SYNC)
+            db = sessionmaker(bind=engine)()
+            try:
+                row = db.get(AlertPolicy, org_id) if org_id else None
+                if row is not None:
+                    policy.update({"min_severity": row.min_severity or policy["min_severity"],
+                                   "digest": row.digest or "off",
+                                   "quiet_start_hour": row.quiet_start_hour,
+                                   "quiet_end_hour": row.quiet_end_hour,
+                                   "quiet_tz": row.quiet_tz or "UTC"})
+            finally:
+                db.close()
+        except Exception as e:
+            log.debug("policy load skipped: %s", e)
+        self._policy_cache[org_id] = (now, policy)
+        return policy
+
+    def _routes_for(self, org_id: str | None) -> list[dict]:
+        now = time.time()
+        entry = self._routes_cache.get(org_id)
+        if entry is not None and now - entry[0] < 60:
+            return entry[1]
+        routes: list[dict] = []
+        try:
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+            from app.models.entities import AlertRoute
+            engine = create_engine(settings.DATABASE_URL_SYNC)
+            db = sessionmaker(bind=engine)()
+            try:
+                for r in db.query(AlertRoute).filter(
+                        AlertRoute.org_id == org_id).all():
+                    routes.append({"match_type": r.match_type,
+                                   "match_value": r.match_value,
+                                   "owner": r.owner, "channel": r.channel})
+            finally:
+                db.close()
+        except Exception as e:
+            log.debug("routes load skipped: %s", e)
+        self._routes_cache[org_id] = (now, routes)
+        return routes
+
+    def _route_finding(self, finding: dict) -> dict:
+        """Most specific route wins (domain > host > rule); never suppresses."""
+        import fnmatch as _fn
+        routes = self._routes_for(finding.get("org_id"))
+        hosts = [finding.get("server") or ""]
+        ft = finding.get("five_tuple") or ""
+        if ft:
+            from app.parsing.reassembly import split_five_tuple as _split
+            _, _, server, _ = _split(ft)
+            hosts.append(server)
+        domains = [finding.get("sni") or ""]
+        for specificity, mtype in (("domain", "domain"), ("host", "host"),
+                                   ("rule", "rule")):
+            _ = specificity
+            for r in routes:
+                if r["match_type"] != mtype:
+                    continue
+                if mtype == "rule" and r["match_value"] == finding.get("rule_id"):
+                    return {"owner": r["owner"], "channel": r["channel"]}
+                if mtype == "host" and any(r["match_value"] == h for h in hosts if h):
+                    return {"owner": r["owner"], "channel": r["channel"]}
+                if mtype == "domain" and any(
+                        _fn.fnmatchcase((d or "").lower(), r["match_value"].lower())
+                        for d in domains if d):
+                    return {"owner": r["owner"], "channel": r["channel"]}
+        return {}
+
+    def _in_quiet(self, policy: dict, now: float | None = None) -> bool:
+        start, end = policy.get("quiet_start_hour"), policy.get("quiet_end_hour")
+        if start is None or end is None or start == end:
+            return False
+        try:
+            from zoneinfo import ZoneInfo
+            tz = ZoneInfo(policy.get("quiet_tz") or "UTC")
+        except Exception:
+            tz = None
+        import datetime as _dt
+        hour = _dt.datetime.fromtimestamp(now or time.time(), tz).hour if tz else \
+            _dt.datetime.utcfromtimestamp(now or time.time()).hour
+        if start < end:
+            return start <= hour < end
+        return hour >= start or hour < end  # overnight window
+
+    def _digest_bucket(self, org_id: str | None, period: str) -> str:
+        return f"digest:{org_id or 'none'}:{period}"
+
+    def _current_period(self, digest: str, now: float | None = None) -> str:
+        import datetime as _dt
+        ts = _dt.datetime.fromtimestamp(now or time.time(), _dt.timezone.utc)
+        if digest == "weekly":
+            iso = ts.isocalendar()
+            return f"{iso[0]}-W{iso[1]:02d}"
+        return ts.strftime("%Y-%m-%d")
+
+    def _stash_digest(self, finding: dict, org_id: str | None, period: str,
+                      bucket: str = "digest") -> None:
+        import json as _jj
+        if bucket == "digest":
+            key = self._digest_bucket(org_id, self._current_period(
+                "daily" if period in ("daily", "off") else "weekly"))
+        else:
+            key = f"quiet:{org_id or 'none'}"
+        try:
+            raw = self.r.get(key)
+            items = _jj.loads(raw) if raw else []
+        except Exception:
+            items = []
+        items.append({"rule_id": finding.get("rule_id"),
+                      "severity": finding.get("max_severity") or finding.get("severity"),
+                      "title": finding.get("title"),
+                      "five_tuple": finding.get("five_tuple"),
+                      "ts": finding.get("ts", time.time())})
+        if len(items) > 200:
+            items = items[-200:]
+            try:
+                self.gossip.counters.inc("digest_dropped")
+            except Exception:
+                pass
+        try:
+            self.r.setex(key, 8 * 86400, _jj.dumps(items))
+            self.r.sadd("digest:orgs", org_id or "none")
+        except Exception as e:
+            log.debug("digest stash skipped: %s", e)
+
+    def _flush_digests(self, now: float | None = None) -> int:
+        """Emit due digest summaries (schedule rollover) and quiet-held items
+        once quiet hours end. Critical alerts never enter buckets."""
+        import json as _jj
+        now = now if now is not None else time.time()
+        flushed = 0
+        try:
+            orgs = [o.decode() if isinstance(o, bytes) else o
+                    for o in (self.r.smembers("digest:orgs") or [])]
+        except Exception:
+            orgs = []
+        for org in orgs:
+            org_id = None if org == "none" else org
+            policy = self._policy_for(org_id)
+            digest = policy.get("digest", "off")
+            buckets = []
+            if digest in ("daily", "weekly"):
+                # Yesterday's / last week's bucket is due once the period turns.
+                current = self._current_period(digest, now)
+                buckets.append((f"digest:{org}:{current}", False))
+                prev = self._current_period(digest, now - 86400)
+                if prev != current:
+                    buckets.append((f"digest:{org}:{prev}", True))
+            # Quiet-held items flush when quiet ends.
+            buckets.append((f"quiet:{org}", not self._in_quiet(policy, now)))
+            for bkey, due in buckets:
+                if not due:
+                    continue
+                try:
+                    raw = self.r.get(bkey)
+                except Exception:
+                    continue
+                if not raw:
+                    continue
+                try:
+                    items = _jj.loads(raw)
+                except Exception:
+                    items = []
+                try:
+                    self.r.delete(bkey)
+                except Exception:
+                    pass
+                if items:
+                    self._dispatch_digest(org_id, items)
+                    flushed += 1
+        return flushed
+
+    def _dispatch_digest(self, org_id: str | None, items: list[dict]) -> None:
+        from collections import Counter
+        counts = Counter(i.get("rule_id", "?") for i in items)
+        order = {"info": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
+        top_sev = max((i.get("severity", "info") for i in items),
+                      key=lambda s: order.get(s, 0), default="info")
+        summary = ", ".join(f"{rule} x{n}" for rule, n in counts.most_common(8))
+        self._dispatch({
+            "rule_id": "digest-summary",
+            "severity": top_sev,
+            "title": f"Alert digest: {len(items)} findings ({summary})",
+            "description": (" Rolled-up non-critical findings for the period. "
+                            "Critical alerts always bypass digests and quiet hours."),
+            "five_tuple": "",
+            "protocol": "",
+            "org_id": org_id,
+            "risk_score": None,
+            "findings": [],
+        })
 
     _sup_cache: dict = {}
 

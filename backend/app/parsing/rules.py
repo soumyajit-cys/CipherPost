@@ -429,7 +429,7 @@ def rule_alpn_missing(sa: SessionAnalysis):
 
 def rule_legacy_groups(sa: SessionAnalysis):
     """Deprecated named groups offered or (worse) selected. IANA marks curves
-    1..25 deprecated; a negotiated deprecated group is HIGH, offered-only LOW
+    1..22 deprecated; a negotiated deprecated group is HIGH, offered-only LOW
     (client capability, not server fault). GREASE is never analyzed."""
     from app.parsing.handshake import (
         DEPRECATED_GROUPS, MODERN_FS_GROUPS, strip_grease, group_name,
@@ -448,7 +448,7 @@ def rule_legacy_groups(sa: SessionAnalysis):
             Severity.HIGH,
             f"Deprecated group {group_name(selected)} negotiated",
             "The server selected a key-exchange group IANA marks deprecated"
-            " (curves 1..25). Renegotiate with a modern group (X25519, FFDHE,"
+            " (curves 1..22). Renegotiate with a modern group (X25519, FFDHE,"
             " or a hybrid post-quantum group).",
             "RFC 8422-bis; IANA TLS Supported Groups registry",
             group=group_name(selected),
@@ -463,7 +463,7 @@ def rule_legacy_groups(sa: SessionAnalysis):
                 g in MODERN_FS_GROUPS for g in strip_grease(ch.supported_groups))
             else Severity.LOW,
             "Deprecated groups in ClientHello",
-            "The client offers IANA-deprecated groups (curves 1..25). "
+            "The client offers IANA-deprecated groups (curves 1..22). "
             f"Offered: {[group_name(g) for g in offered]}. "
             "The server should prefer modern groups.",
             "RFC 8422-bis; IANA TLS Supported Groups registry",

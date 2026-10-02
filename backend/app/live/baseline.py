@@ -187,8 +187,24 @@ def drift_from_db(hours_recent: int = 24, days_reference: int = 6,
             recent = load(now - timedelta(hours=hours_recent))
             reference = load(now - timedelta(days=days_reference),
                              now - timedelta(hours=hours_recent))
-            return compute_drift(reference, recent, FEATURE_NAMES,
-                                 float(getattr(settings, "DRIFT_Z_THRESHOLD", 3.0)))
+            out = compute_drift(reference, recent, FEATURE_NAMES,
+                                float(getattr(settings, "DRIFT_Z_THRESHOLD", 3.0)))
+            # Best-effort metric for Prometheus (alerts on drift_psi_max).
+            try:
+                import redis as _redis
+                import json as _jj
+                _r = _redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+                _key = "cipherpost:metrics:analysis"
+                try:
+                    _cur = _jj.loads(_r.get(_key) or "{}")
+                except Exception:
+                    _cur = {}
+                _cur["drift_psi_max"] = float(out.get("psi_max", 0.0) or 0.0)
+                _cur["ts"] = __import__("time").time()
+                _r.setex(_key, 60, _jj.dumps(_cur))
+            except Exception:
+                pass
+            return out
     except Exception as e:
         log.debug("drift check skipped: %s", e)
         return {"verdict": "error", "features": [], "drifted": [], "error": str(e)[:200]}

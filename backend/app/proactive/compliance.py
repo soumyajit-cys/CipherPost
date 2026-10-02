@@ -28,144 +28,33 @@ Sources consulted:
 from __future__ import annotations
 
 import fnmatch
+import json
+import logging
+from pathlib import Path
 
-FRAMEWORKS = {
-    "PCI-DSS-4.0": {
-        "title": "PCI DSS v4.0.1",
-        "source": "PCI SSC, PCI DSS v4.0.1 (Mar 2024), Requirement 4.2 / 4.2.1",
-        "url": "https://www.pcisecuritystandards.org/document_library",
-    },
-    "ISO-27001-2022": {
-        "title": "ISO/IEC 27001:2022 Annex A",
-        "source": "ISO/IEC 27001:2022, controls A.8.20 / A.8.21 / A.8.24",
-        "url": "https://www.iso.org/standard/27001",
-    },
-    "NIST-CSF-2.0": {
-        "title": "NIST Cybersecurity Framework 2.0",
-        "source": "NIST CSF 2.0, PR.DS-02 (data-in-transit protected)",
-        "url": "https://doi.org/10.6028/NIST.CSWP.29",
-    },
-    "OWASP-TLS": {
-        "title": "OWASP TLS Cheat Sheet",
-        "source": "OWASP Cheat Sheet Series, Transport Layer Security (2023)",
-        "url": "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html",
-    },
-    "CERT-In": {
-        "title": "CERT-In TLS guidance",
-        "source": "CERT-In advisories/guidelines on secure TLS deployment; confirm current advisory ID",
-        "url": "https://www.cert-in.org.in",
-    },
-}
+log = logging.getLogger("cipherpost.proactive.compliance")
+
+_MAPPING_VERSION = 1
 
 
-def _m(framework: str, control: str, note: str = "") -> dict:
-    meta = FRAMEWORKS[framework]
-    return {"framework": framework, "control": control,
-            "framework_title": meta["title"], "note": note, "url": meta["url"]}
+def _load_mapping() -> dict:
+    """Load versioned mapping data (single source of truth for tags)."""
+    path = Path(__file__).resolve().parent / "compliance_data" / "mapping-v1.json"
+    try:
+        doc = json.loads(path.read_text())
+    except Exception as e:
+        log.warning("compliance mapping missing (%s): tags will be empty", e)
+        return {"frameworks": {}, "rules": {}}
+    return doc
 
 
-# rule_id pattern -> compliance tags
-RULE_COMPLIANCE: dict[str, list[dict]] = {
-    # --- deprecated protocol versions -------------------------------------
-    "tls-version-*": [
-        _m("PCI-DSS-4.0", "4.2.1", "TLS 1.2 or higher required; SSL/early TLS prohibited for PAN"),
-        _m("ISO-27001-2022", "A.8.24", "Use of cryptography: deprecated protocols violate policy"),
-        _m("NIST-CSF-2.0", "PR.DS-02", "Data-in-transit protection requires current TLS"),
-        _m("OWASP-TLS", "protocol-versions", "Use TLS 1.2+ only"),
-        _m("CERT-In", "tls-configuration", "Disable SSLv2/v3, TLS 1.0/1.1 per current advisory"),
-    ],
-    # --- weak / export / RC4 / 3DES / non-AEAD bulk ciphers ----------------
-    "weak-cipher-suite": [
-        _m("PCI-DSS-4.0", "4.2", "Strong cryptography required in transit"),
-        _m("ISO-27001-2022", "A.8.24", "Approved cipher suites only"),
-        _m("OWASP-TLS", "cipher-suites", "Prefer AEAD suites; no weak ciphers"),
-        _m("CERT-In", "tls-configuration", "Disable weak cipher suites"),
-    ],
-    "export-grade-cipher": [
-        _m("PCI-DSS-4.0", "4.2", "Export-grade cryptography is not strong cryptography"),
-        _m("ISO-27001-2022", "A.8.24", "Prohibited cipher suites in use"),
-        _m("NIST-CSF-2.0", "PR.DS-02", "Weak transport encryption"),
-        _m("OWASP-TLS", "cipher-suites", "EXPORT suites must be disabled"),
-    ],
-    "rc4-cipher": [
-        _m("PCI-DSS-4.0", "4.2", "RC4 is not strong cryptography (RFC 7465)"),
-        _m("ISO-27001-2022", "A.8.24", "Prohibited cipher in use"),
-        _m("OWASP-TLS", "cipher-suites", "RC4 prohibited"),
-    ],
-    "3des-cipher": [
-        _m("PCI-DSS-4.0", "4.2", "3DES provides only ~112-bit effective strength; migrate to AES-GCM"),
-        _m("ISO-27001-2022", "A.8.24", "Legacy cipher should be phased out"),
-        _m("NIST-CSF-2.0", "PR.DS-02", "SWEET32 (CVE-2016-2183) exposure on long-lived sessions"),
-    ],
-    "non-aead-bulk-cipher": [
-        _m("PCI-DSS-4.0", "4.2", "Prefer authenticated encryption for PAN in transit"),
-        _m("OWASP-TLS", "cipher-suites", "Use AEAD suites (GCM/ChaCha20-Poly1305)"),
-    ],
-    "unknown-cipher-suite": [
-        _m("ISO-27001-2022", "A.8.21", "Unreviewed network-service configuration"),
-    ],
-    # --- forward secrecy ----------------------------------------------------
-    "non-pfs-key-exchange": [
-        _m("PCI-DSS-4.0", "4.2", "Lack of PFS weakens long-term confidentiality of PAN"),
-        _m("ISO-27001-2022", "A.8.24", "Key management: static key exchange discouraged"),
-        _m("OWASP-TLS", "cipher-suites", "Prefer ECDHE for forward secrecy"),
-    ],
-    "client-no-pfs-suites": [
-        _m("OWASP-TLS", "cipher-suites", "Clients should offer ECDHE suites"),
-        _m("ISO-27001-2022", "A.8.21", "Client configuration review"),
-    ],
-    # --- certificates ---------------------------------------------------------
-    "expired-certificate": [
-        _m("PCI-DSS-4.0", "4.2", "Expired certificates break trust validation of encrypted channels"),
-        _m("ISO-27001-2022", "A.8.24", "Certificate lifecycle management failure"),
-        _m("NIST-CSF-2.0", "PR.DS-02", "Unverifiable transport endpoint"),
-    ],
-    "certificate-not-yet-valid": [
-        _m("ISO-27001-2022", "A.8.24", "Certificate lifecycle / clock-sync issue"),
-    ],
-    "self-signed-certificate": [
-        _m("PCI-DSS-4.0", "4.2", "Self-signed certs are not trusted for PAN transmission"),
-        _m("ISO-27001-2022", "A.8.24", "Certificates must chain to a trusted CA"),
-        _m("OWASP-TLS", "certificates", "Use publicly trusted CA certificates"),
-    ],
-    "untrusted-certificate-chain": [
-        _m("PCI-DSS-4.0", "4.2", "Untrusted chain defeats MITM protection"),
-        _m("ISO-27001-2022", "A.8.24", "Trust anchor management failure"),
-        _m("CERT-In", "tls-configuration", "Deploy CA-signed certificates from trusted roots"),
-    ],
-    "weak-signature-algorithm": [
-        _m("PCI-DSS-4.0", "4.2", "SHA-1/MD5 signatures are forgeable (Shattered, CVE-2017-7494)"),
-        _m("ISO-27001-2022", "A.8.24", "Approved signature algorithms only (SHA-256+)"),
-        _m("OWASP-TLS", "certificates", "SHA-256 minimum"),
-    ],
-    "short-public-key": [
-        _m("PCI-DSS-4.0", "4.2", "RSA < 2048-bit is not strong cryptography"),
-        _m("ISO-27001-2022", "A.8.24", "Minimum key lengths not met"),
-        _m("NIST-CSF-2.0", "PR.DS-02", "NIST SP 800-57 key-size guidance"),
-    ],
-    # --- transport policy ------------------------------------------------------
-    "plaintext-mail-protocol": [
-        _m("PCI-DSS-4.0", "4.2", "PAN must not traverse open networks unencrypted"),
-        _m("ISO-27001-2022", "A.8.20", "Network controls must enforce encryption"),
-        _m("NIST-CSF-2.0", "PR.DS-02", "Unprotected data in transit (RFC 8314)"),
-        _m("CERT-In", "tls-configuration", "Enforce TLS for mail submission/access"),
-    ],
-    "starttls-strip-attempt": [
-        _m("PCI-DSS-4.0", "4.2", "Active downgrade defeats transport encryption"),
-        _m("ISO-27001-2022", "A.8.20", "Network attack indicator (STRIPTLS)"),
-        _m("NIST-CSF-2.0", "PR.DS-02", "Downgrade-attack exposure; consider MTA-STS/DANE"),
-    ],
-    "no-tls-on-implicit-port": [
-        _m("PCI-DSS-4.0", "4.2", "Implicit-TLS ports must carry TLS (RFC 8314)"),
-        _m("ISO-27001-2022", "A.8.21", "Service misconfiguration on secure port"),
-    ],
-    "tls-handshake-incomplete": [
-        _m("ISO-27001-2022", "A.8.20", "Anomalous transport behavior; investigate"),
-    ],
-    "alpn-not-negotiated": [
-        _m("OWASP-TLS", "protocol-versions", "ALPN hygiene on shared ports"),
-    ],
-}
+_DOC = _load_mapping()
+FRAMEWORKS: dict = _DOC.get("frameworks", {})
+RULE_COMPLIANCE: dict[str, list[dict]] = _DOC.get("rules", {})
+
+
+def mapping_version() -> int:
+    return int(_DOC.get("mapping_version", 0))
 
 
 def compliance_for(rule_id: str) -> list[dict]:

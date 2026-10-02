@@ -9,13 +9,9 @@ from __future__ import annotations
 
 
 def server_of(five_tuple: str) -> str:
-    try:
-        sep = "->" if "->" in five_tuple else "-"
-        right = five_tuple.split(sep, 1)[1]
-        host, _, port = right.rpartition(":")
-        return f"{host}:{port}"
-    except Exception:
-        return five_tuple or "unknown"
+    from app.parsing.reassembly import split_five_tuple as _split
+    _client, server, _port = _split(five_tuple or "")
+    return f"{server}:{_port}" if server else (five_tuple or "unknown")
 
 
 def grouped_time_split(items: list, group_key, time_key, test_frac: float = 0.2,

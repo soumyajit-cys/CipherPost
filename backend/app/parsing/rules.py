@@ -65,6 +65,12 @@ class SessionAnalysis:
     started_tls: bool = False
     tls_bytes: int = 0
     findings: list[Finding] = field(default_factory=list)
+    # Phase 4: TLS 1.3 visibility model. Records exactly what was observable;
+    # rules that need unobserved data skip via not_observable (never guess).
+    #   {"tls13": bool, "cert_chain": "observed"|"not_observable_tls13"|"absent",
+    #    "sni": "observed"|"absent"|"ech_outer", "hrr": bool, ...}
+    visibility: dict = field(default_factory=dict)
+    not_observable: list[str] = field(default_factory=list)  # skipped rule_ids
 
     def add(self, rule_id, rule_name, severity, title, description, reference, **evidence):
         self.findings.append(Finding(

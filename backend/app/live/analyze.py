@@ -85,6 +85,49 @@ class AnalysisWorker:
         self._org_scorers: dict[str, object] = {}
         self._org_model_versions: dict[str, str | None] = {}
 
+    def _scorer_for(self, org_id: str | None):
+        """Org-scoped scorer: loads the org's promoted risk model if present.
+
+        Falls back to the shared default scorer (rules-derived ranking only).
+        Refreshes when the registry version changes. Never raises.
+        """
+        key = org_id or "global"
+        if not hasattr(self, "_org_scorers"):
+            self._org_scorers = {}
+            self._org_model_versions = {}
+        try:
+            from app.ml import registry as _reg
+            cur = _reg.org_current(key if key != "global" else None)
+            cur_version = (cur or {}).get("version")
+        except Exception:
+            cur, cur_version = None, None
+        cached = self._org_scorers.get(key)
+        if cached is not None and self._org_model_versions.get(key) == cur_version:
+            return cached
+        if cached is None:
+            try:
+                from app.live.baseline import RollingBaseline
+                cached = RollingBaseline()
+            except Exception:
+                from app.ml.ml_engine import SessionScorer
+                cached = SessionScorer()
+            self._org_scorers[key] = cached
+        if cur_version and self._org_model_versions.get(key) != cur_version:
+            try:
+                import joblib
+                artifact = (cur or {}).get("artifact", "")
+                if artifact and not str(artifact).startswith("unavailable"):
+                    bundle = joblib.load(artifact)
+                    cached.scorer.risk_model = bundle["model"]
+                    cached.scorer._feature_names = bundle["feature_names"]
+                    cached.scorer._trained = True
+                    log.info("loaded promoted model %s for org %s",
+                             cur_version, key)
+            except Exception as e:
+                log.warning("promoted model load failed for org %s: %s", key, e)
+        self._org_model_versions[key] = cur_version
+        return cached
+
     def _signal(self, signum, frame):
         log.info("signal %s", signum)
         self._stop.set()

@@ -60,11 +60,18 @@ def _coerce_der(cert) -> bytes | None:
                 return _x509.load_pem_x509_certificate(cert).public_bytes(_ser.Encoding.DER)
             return cert
         if hasattr(cert, "public_bytes"):
-            import ssl as _ssl
+            import _ssl as _sslmod
             from cryptography import x509 as _x509
             from cryptography.hazmat.primitives import serialization as _ser
-            pem = cert.public_bytes(_ssl.PEM)
-            return _x509.load_pem_x509_certificate(pem).public_bytes(_ser.Encoding.DER)
+            for enc in (_sslmod.ENCODING_PEM, _sslmod.ENCODING_DER):
+                try:
+                    blob = cert.public_bytes(enc)
+                    if enc == _sslmod.ENCODING_PEM:
+                        return _x509.load_pem_x509_certificate(blob).public_bytes(
+                            _ser.Encoding.DER)
+                    return bytes(blob)
+                except Exception:
+                    continue
     except Exception:
         pass
     return None

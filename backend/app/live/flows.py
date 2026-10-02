@@ -90,6 +90,22 @@ def update_flow(db, org_id: str | None, sess_payload: dict,
         if flow.first_seen is None or now < _as_aware(flow.first_seen):
             flow.first_seen = now
         flow.last_seen = now
+        new_fingerprints: list[str] = []
+        if fingerprints:
+            seen_fps = dict(flow.fingerprints or {})
+            for fp in fingerprints:
+                if not fp:
+                    continue
+                if fp in seen_fps:
+                    seen_fps[fp] = seen_fps[fp] + 1 if isinstance(seen_fps[fp], int) else 1
+                else:
+                    seen_fps[fp] = 1
+                    # "new fingerprint appeared": only meaningful with history.
+                    if (flow.total_sessions or 0) > 3:
+                        new_fingerprints.append(fp)
+            flow.fingerprints = seen_fps
+        # Transient (not a column): lets callers react without schema churn.
+        flow.new_fingerprints = new_fingerprints
         return flow, regression
     except Exception as e:
         log.debug("flow update skipped: %s", e)

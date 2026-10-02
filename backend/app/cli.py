@@ -285,6 +285,42 @@ def cmd_probe(args) -> int:
     return EXIT_CLEAN
 
 
+def cmd_evidence(args) -> int:
+    """Offline evidence bundle: scan a PCAP, emit a hash-chained bundle."""
+    import os
+    if not os.path.exists(args.pcap):
+        print(f"error: no such file: {args.pcap}", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        report = scan_pcap(args.pcap, trust_store=args.trust_store)
+    except FileNotFoundError:
+        print(f"error: no such file: {args.pcap}", file=sys.stderr)
+        return EXIT_USAGE
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return EXIT_PARSE
+    from app.reporting.evidence import build_bundle
+    try:
+        from app.proactive.compliance import mapping_version as _mv
+        mapping = _mv()
+    except Exception:
+        mapping = 0
+    flat_findings = []
+    for s in report["sessions"]:
+        for f in s.get("findings", []):
+            flat_findings.append({**f, "session": s.get("five_tuple"),
+                                  "observed": True})
+    bundle = build_bundle(
+        {"filename": report["pcap"], "sessions": report["sessions"],
+         "findings": flat_findings, "limitations": []},
+        suppressions=[],
+        retention={},
+        versions={"tool": version(), "rules": "static", "mapping": mapping},
+    )
+    print(json.dumps(bundle, indent=2, default=str))
+    return EXIT_CLEAN
+
+
 def cmd_rules(args) -> int:
     catalog = rule_catalog()
     if args.rules_cmd == "list":
@@ -321,6 +357,9 @@ def build_parser() -> "argparse.ArgumentParser":
                     help="permit private/loopback targets (lab only)")
     pr.add_argument("--no-starttls", action="store_true",
                     help="skip SMTP STARTTLS and handshake TLS directly")
+    ev = sub.add_parser("evidence", help="Emit a tamper-evident evidence bundle for a PCAP")
+    ev.add_argument("pcap")
+    ev.add_argument("--trust-store", default=None)
     rl = sub.add_parser("rules", help="List/explain detection rules")
     rl.add_argument("rules_cmd", nargs="?", default="list")
     rl.add_argument("rule_id", nargs="?")
@@ -340,6 +379,8 @@ def main(argv=None) -> int:
         return cmd_verify_domain(args)
     if args.cmd == "probe":
         return cmd_probe(args)
+    if args.cmd == "evidence":
+        return cmd_evidence(args)
     if args.cmd == "rules":
         return cmd_rules(args)
     if args.cmd == "version":

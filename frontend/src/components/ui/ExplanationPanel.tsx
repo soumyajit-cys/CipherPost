@@ -68,6 +68,9 @@ export function ExplanationPanel({
       <div className="mt-4 rounded border border-base-700/60 bg-base-900 px-3 py-2 text-[11px] leading-relaxed text-base-400">
         <span className="font-semibold text-base-300">How to read:</span> bar length = SHAP magnitude for this session. Bars to the right of center pushed the score higher; bars to the left pulled it lower. Method <CodeBlock className="text-[10px]">shap.TreeExplainer</CodeBlock> · values are relative within this session.
       </div>
+      <div className="mt-2 rounded border border-sev-medium/40 bg-sev-medium/10 px-3 py-2 text-[11px] leading-relaxed text-sev-medium">
+        These bars show <span className="font-semibold">what drove this score</span> — never evidence of a vulnerability. Every prioritization links back to the rule findings above; ML reorders review queues only.
+      </div>
     </div>
   )
 }

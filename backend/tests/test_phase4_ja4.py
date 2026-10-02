@@ -72,6 +72,88 @@ def test_truncated_hello_fingerprints_gracefully():
     assert "000000000000" in J.ja4(empty)
 
 
+def test_pq_offered_negotiated_and_hrr():
+    from app.parsing.handshake import pq_status, is_pq_group
+    assert is_pq_group(4588) and is_pq_group(513)
+    assert not is_pq_group(29) and not is_pq_group(25497)
+    s = pq_status([29, 4588], 4588)
+    assert s["offered_pq"] and s["negotiated_pq"]
+    assert s["selected"] == "X25519MLKEM768 (hybrid PQ)"
+    s2 = pq_status([29, 4588], 29)
+    assert s2["offered_pq"] and not s2["negotiated_pq"]
+    # HRR flow: server asks for a different group than offered highlights gap
+    s3 = pq_status([4588], 29)
+    assert s3["offered_pq"] and not s3["negotiated_pq"]
+    s4 = pq_status([29], None)
+    assert not s4["offered_pq"] and not s4["negotiated_pq"]
+
+
+def test_quantum_posture_api_aggregates_org():
+    import asyncio
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+    from app.core.database import Base
+    import app.models.entities as E
+    from datetime import datetime, timezone
+    engine = create_async_engine("sqlite+aiosqlite://")
+    maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async def _init():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        async with maker() as s:
+            s.add(E.Organization(id="org-a", name="a"))
+            s.add(E.AnalysisJob(id="j", filename="x", pcap_path="x",
+                                 status=E.JobStatus.COMPLETED, org_id="org-a"))
+            pq_yes = {"offered_pq": True, "negotiated_pq": True,
+                      "offered": ["x25519", "X25519MLKEM768 (hybrid PQ)"],
+                      "selected": "X25519MLKEM768 (hybrid PQ)"}
+            pq_gap = {"offered_pq": True, "negotiated_pq": False,
+                      "offered": ["X25519MLKEM768 (hybrid PQ)"], "selected": "x25519"}
+            s.add(E.Session(id="s1", job_id="j", protocol="SMTP",
+                            five_tuple="1.1.1.1:1-2.2.2.2:25", src_ip="a", dst_ip="b",
+                            src_port=1, dst_port=25, org_id="org-a",
+                            details={"pq": pq_yes}))
+            s.add(E.Session(id="s2", job_id="j", protocol="SMTP",
+                            five_tuple="1.1.1.1:2-3.3.3.3:25", src_ip="a", dst_ip="c",
+                            src_port=1, dst_port=25, org_id="org-a",
+                            details={"pq": pq_gap}))
+            s.add(E.Session(id="s3", job_id="j", protocol="SMTP",
+                            five_tuple="9.9.9.9:1-8.8.8.8:25", src_ip="x", dst_ip="y",
+                            src_port=1, dst_port=25, org_id="org-b",
+                            details={"pq": pq_yes}))
+            await s.commit()
+
+    asyncio.get_event_loop().run_until_complete(_init())
+    from app.api.main import app
+    from app.core.database import get_db
+    from app.core.auth import get_current_user, AuthContext
+    from fastapi.testclient import TestClient
+
+    async def _db():
+        async with maker() as s:
+            yield s
+
+    async def _user():
+        return AuthContext(user_id="u", email="a@x", org_id="org-a",
+                           role="analyst", via="jwt")
+
+    app.dependency_overrides[get_db] = _db
+    app.dependency_overrides[get_current_user] = _user
+    try:
+        client = TestClient(app, raise_server_exceptions=False)
+        r = client.get("/api/v1/posture/quantum")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["policy"] == "informational"
+        assert body["org"]["total"] == 2  # org-b session excluded
+        assert body["org"]["pq_negotiated"] == 1
+        assert body["org"]["servers_unable"] == ["3.3.3.3"]
+        assert body["attention"] == []  # informational: no findings, no list
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
+
+
 def test_ja4s_and_ja3s_from_server_hello():
     from app.parsing import ja4 as J
     from app.parsing.handshake import ServerHelloInfo

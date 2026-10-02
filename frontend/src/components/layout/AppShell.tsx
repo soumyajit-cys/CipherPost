@@ -11,6 +11,7 @@ const NAV = [
   { to: '/app/suppressions', label: 'Suppressions', end: false },
   { to: '/app/flows', label: 'Flows', end: false },
   { to: '/app/feedback', label: 'Precision', end: false },
+  { to: '/app/quality', label: 'Quality', end: false },
 ]
 
 function LiveIndicator() {

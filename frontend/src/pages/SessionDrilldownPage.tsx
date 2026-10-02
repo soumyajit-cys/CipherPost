@@ -44,6 +44,17 @@ export default function SessionDrilldownPage() {
             {data.tlsVersion ? ` negotiated ${data.tlsVersion} · ` : ' no TLS negotiated · '}
             <SeverityBadge severity={data.maxSeverity} />
           </p>
+          {data.visibility?.cert_chain === 'not_observable_tls13' && (
+            <p className="mt-1.5 inline-block rounded border border-sev-medium/50 bg-sev-medium/10 px-2 py-0.5 text-[11px] text-sev-medium">
+              TLS 1.3 — certificate contents are encrypted on the wire and not observable.
+              Certificate checks report not-observable here, never pass/fail.
+            </p>
+          )}
+          {data.visibility?.sni === 'ech_outer' && (
+            <p className="mt-1.5 inline-block rounded border border-base-500/50 px-2 py-0.5 text-[11px] text-base-300">
+              ECH outer observed — inner SNI is encrypted and not observable.
+            </p>
+          )}
         </div>
         <ScoreGauge score={data.riskScore} size="md" />
       </div>

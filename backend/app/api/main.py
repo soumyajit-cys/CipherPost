@@ -1740,6 +1740,55 @@ async def ml_versions(ctx: AuthContext = Depends(get_current_user)):
     return {"current": current_version(), "history": history()}
 
 
+@app.get("/api/v1/posture/quantum")
+async def quantum_posture(days: int = Query(30, ge=1, le=90),
+                          ctx: AuthContext = Depends(get_current_user),
+                          db: AsyncSession = Depends(get_db)):
+    """Post-quantum posture per flow and org (INFORMATIONAL, never a finding).
+
+    Reports the share of sessions that negotiated a hybrid PQ group, the share
+    where the client offered PQ but the server did not select it, and servers
+    that appear unable to support PQ. With PQ_POLICY=warn, unable servers are
+    additionally listed for migration attention.
+    """
+    from app.live.flows import parse_five_tuple
+    rows = (await db.execute(
+        select(Session.five_tuple, Session.details).where(
+            Session.org_id == ctx.org_id))).all()
+    flows: dict[str, dict] = {}
+    for ft, details in rows:
+        pq = (details or {}).get("pq") or {}
+        try:
+            client, server, port = parse_five_tuple(ft or "")
+        except Exception:
+            continue
+        key = f"{client}->{server}:{port}"
+        f = flows.setdefault(key, {"flow": key, "server": server,
+                                   "total": 0, "pq_negotiated": 0,
+                                   "pq_offered_not_selected": 0})
+        f["total"] += 1
+        if pq.get("negotiated_pq"):
+            f["pq_negotiated"] += 1
+        elif pq.get("offered_pq"):
+            f["pq_offered_not_selected"] += 1
+    out = []
+    for f in flows.values():
+        total = f["total"] or 1
+        out.append({**f,
+                    "pq_share": round(f["pq_negotiated"] / total, 3),
+                    "offered_not_selected_share": round(
+                        f["pq_offered_not_selected"] / total, 3),
+                    "server_appears_unable": (
+                        f["pq_negotiated"] == 0 and f["pq_offered_not_selected"] > 0)})
+    out.sort(key=lambda f: (f["server_appears_unable"], f["pq_share"]))
+    unable = [f for f in out if f["server_appears_unable"]]
+    return {"policy": settings.PQ_POLICY, "flows": out,
+            "org": {"total": sum(f["total"] for f in out),
+                    "pq_negotiated": sum(f["pq_negotiated"] for f in out),
+                    "servers_unable": sorted({f["server"] for f in unable})},
+            "attention": unable if settings.PQ_POLICY == "warn" else []}
+
+
 @app.get("/api/v1/ml/drift")
 async def ml_drift(ctx: AuthContext = Depends(require_roles("analyst"))):
     """Rolling-baseline drift check: recent-24h vs prior-6d feature means (org-scoped)."""

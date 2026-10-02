@@ -408,3 +408,40 @@ class FingerprintList(Base):
     comment: Mapped[str] = mapped_column(Text, default="")
     created_by: Mapped[str] = mapped_column(String(256), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class AlertRoute(Base):
+    """Ownership routing (phase 4 task 5): rule/host/domain -> owner + channel.
+
+    First matching route (most specific match_type wins: domain > host > rule)
+    tags the alert; routing never suppresses.
+    """
+
+    __tablename__ = "alert_routes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_id: Mapped[str] = mapped_column(String(64), ForeignKey("organizations.id"), index=True)
+    match_type: Mapped[str] = mapped_column(String(16))  # rule | host | domain
+    match_value: Mapped[str] = mapped_column(String(256), index=True)
+    owner: Mapped[str] = mapped_column(String(256), default="")
+    channel: Mapped[str] = mapped_column(String(64), default="")
+    created_by: Mapped[str] = mapped_column(String(256), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class AlertPolicy(Base):
+    """Per-org alert policy (phase 4 task 5): severity threshold, quiet hours,
+    digest mode. One row per org; absent row means defaults."""
+
+    __tablename__ = "alert_policy"
+
+    org_id: Mapped[str] = mapped_column(String(64), ForeignKey("organizations.id"),
+                                        primary_key=True)
+    min_severity: Mapped[str] = mapped_column(String(16), default="high")
+    quiet_start_hour: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    quiet_end_hour: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    quiet_tz: Mapped[str] = mapped_column(String(64), default="UTC")
+    digest: Mapped[str] = mapped_column(String(16), default="off")  # off|daily|weekly
+    updated_by: Mapped[str] = mapped_column(String(256), default="")
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                        nullable=True)

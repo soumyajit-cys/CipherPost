@@ -708,6 +708,7 @@ ALL_RULES: list[Callable[[SessionAnalysis], None]] = [
     rule_tls_version_downgrade,
     rule_ech_present,
     rule_legacy_compression,
+    rule_outdated_client_stack,
 ]
 
 

@@ -43,3 +43,79 @@ def test_evidence_bundle_roundtrip_and_tamper(tmp_path):
     # unobservable items labeled as such in the bundle
     manifest_labels = bundle["manifest"].get("labels", {})
     assert manifest_labels.get("unobservable", 0) >= 0
+
+
+def test_cli_evidence_bundle_verifies():
+    import json
+    import subprocess
+    import sys
+    proc = subprocess.run(
+        [sys.executable, "-m", "app.cli", "evidence",
+         "../tests/fixtures/smtp_tls12_starttls.pcap"],
+        capture_output=True, text=True, cwd="backend",
+        env={**__import__("os").environ, "PYTHONPATH": "backend"})
+    assert proc.returncode == 0, proc.stderr
+    bundle = json.loads(proc.stdout)
+    assert bundle["manifest"]["record_count"] == len(bundle["records"])
+    from app.reporting.evidence import verify_bundle
+    assert verify_bundle(bundle)["ok"] is True
+
+
+def test_compliance_summary_and_evidence_api():
+    import asyncio
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+    from app.core.database import Base
+    import app.models.entities as E
+    from datetime import datetime, timezone
+    engine = create_async_engine("sqlite+aiosqlite://")
+    maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async def _init():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        async with maker() as s:
+            now = datetime.now(timezone.utc)
+            s.add(E.Organization(id="org-a", name="a"))
+            s.add(E.AnalysisJob(id="j1", filename="x.pcap", pcap_path="x",
+                                status=E.JobStatus.COMPLETED, org_id="org-a",
+                                created_at=now))
+            s.add(E.Session(id="s1", job_id="j1", protocol="SMTP",
+                            five_tuple="1.1.1.1:1-2.2.2.2:25", src_ip="a", dst_ip="b",
+                            src_port=1, dst_port=25, org_id="org-a", created_at=now,
+                            details={"not_observable": []}))
+            s.add(E.Finding(session_id="s1", rule_id="expired-certificate",
+                            rule_name="w", severity=E.Severity.HIGH, title="t",
+                            description="d", reference="", created_at=now))
+            await s.commit()
+
+    asyncio.get_event_loop().run_until_complete(_init())
+    from app.api.main import app
+    from app.core.database import get_db
+    from app.core.auth import get_current_user, AuthContext
+    from fastapi.testclient import TestClient
+
+    async def _db():
+        async with maker() as s:
+            yield s
+
+    async def _user():
+        return AuthContext(user_id="u", email="a@x", org_id="org-a",
+                           role="analyst", via="jwt")
+
+    app.dependency_overrides[get_db] = _db
+    app.dependency_overrides[get_current_user] = _user
+    try:
+        client = TestClient(app, raise_server_exceptions=False)
+        comp = client.get("/api/v1/compliance/summary")
+        assert comp.status_code == 200, comp.text
+        assert comp.json()["mapping_version"] == 1
+        ev = client.get("/api/v1/jobs/j1/evidence")
+        assert ev.status_code == 200, ev.text
+        bundle = ev.json()
+        assert bundle["manifest"]["record_count"] == len(bundle["records"])
+        assert bundle["manifest"]["versions"]["mapping"] == 1
+        from app.reporting.evidence import verify_bundle
+        assert verify_bundle(bundle)["ok"] is True
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)

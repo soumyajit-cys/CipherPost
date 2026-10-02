@@ -89,6 +89,12 @@ export default function FleetOverviewPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
+        <div className="xl:col-span-2">
+          <DriftPanel />
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
         <Panel title="Posture trend" subtitle="higher = more at-risk · updates live" className="xl:col-span-2">
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={data.postureTrend} margin={{ left: -16, right: 8, top: 6 }}>

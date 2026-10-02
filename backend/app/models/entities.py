@@ -343,6 +343,8 @@ class MailFlow(Base):
     best_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
     first_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Phase 4: observed fingerprints {fp: {count, first_seen}} + allow/deny hits.
+    fingerprints: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)
 
     __table_args__ = (Index("ix_mail_flows_org_seen", "org_id", "last_seen"),
                       Index("ix_mail_flows_org_server", "org_id", "server_host"))

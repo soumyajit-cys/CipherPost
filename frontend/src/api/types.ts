@@ -145,6 +145,14 @@ export interface SessionDetail extends SessionSummary {
   timeline: TimelineEvent[]
   shap: ShapRow[]
   ruleMlAgreement: 'agrees' | 'disagrees-ml-more-severe' | 'disagrees-rules-more-severe'
+  visibility?: {
+    tls13?: boolean
+    cert_chain?: string
+    sni?: string
+    hrr?: boolean
+    offered_groups?: number[]
+    selected_group?: number | null
+  } | null
 }
 
 export interface FleetSummary {

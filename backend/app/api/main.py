@@ -2502,6 +2502,39 @@ async def get_report(job_id: str, fmt: str,
         raise HTTPException(500, "PDF generation failed (WeasyPrint unavailable)")
 
 
+@app.get("/api/v1/jobs/{job_id}/evidence")
+async def get_evidence(job_id: str,
+                       ctx: AuthContext = Depends(get_current_user),
+                       db: AsyncSession = Depends(get_db)):
+    """Tamper-evident evidence bundle for a completed job (phase 4 task 6).
+
+    Hash-chained records (sessions, findings, limitations, suppressions)
+    with manifest counts and label tallies. Unobservable items are labeled,
+    never filled in.
+    """
+    job = await _get_org_job(job_id, ctx, db)
+    if job.status != JobStatus.COMPLETED:
+        raise HTTPException(409, "Job not yet completed")
+    from app.reporting.generator import build_report_data
+    from app.reporting.evidence import build_bundle
+    from app.proactive.compliance import mapping_version as _mv
+    analyses, scores = await _load_analysis_from_db(job_id, db)
+    report = build_report_data(analyses, scores, job.filename)
+    sups = await _active_suppressions(db, ctx.org_id)
+    bundle = build_bundle(
+        report,
+        suppressions=[{"rule_id": getattr(s, "rule_id", ""),
+                       "reason": getattr(s, "reason", "")} for s in sups],
+        retention={"sessions_days": settings.RETENTION_SESSIONS_DAYS,
+                   "legal_hold": False},
+        versions={"tool": settings.APP_VERSION, "rules": "static",
+                  "mapping": _mv()},
+    )
+    await log_audit(db, ctx.org_id, ctx.email, "report.evidence", job.filename,
+                    {"job_id": job_id, "records": bundle["manifest"]["record_count"]})
+    return bundle
+
+
 async def _load_analysis_from_db(job_id: str, db):
     """Load SessionAnalysis objects from DB for report generation."""
     from app.parsing.rules import SessionAnalysis, Finding as RuleFinding

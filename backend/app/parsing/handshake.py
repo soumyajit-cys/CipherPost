@@ -129,6 +129,8 @@ class ServerHelloInfo:
     selected_group: int | None = None   # ext 51 KeyShareServerHello
     is_hrr: bool = False
     downgrade_sentinel: str | None = None  # None | "tls12" | "tls11"
+    extension_ids: list[int] = field(default_factory=list)  # all, in order
+    alpn: list[str] = field(default_factory=list)           # ext 16 selected
     raw: bytes = b""
 
 
@@ -220,6 +222,7 @@ def parse_client_hello(data: bytes) -> ClientHelloInfo:
         raise TlsParseError("client hello truncated in extensions")
     exts_data = buf[pos:pos+exts_len]
     for etype, edata in _parse_extensions(exts_data):
+        info.extension_ids.append(etype)
         if etype == EXT_SNI:  # SNI
             if len(edata) >= 5:
                 name_list_len = int.from_bytes(edata[0:2], "big")
@@ -275,6 +278,10 @@ def parse_client_hello(data: bytes) -> ClientHelloInfo:
             info.early_data_offered = True
         elif etype == EXT_ECH_OUTER:
             info.ech_outer = True
+        elif etype == 11:  # ec_point_formats
+            if len(edata) >= 1:
+                flen = edata[0]
+                info.ec_point_formats = list(edata[1:1+flen])
     # GREASE is signal, never evidence: count it, analysis views strip it.
     info.grease_count = sum(1 for v in (info.cipher_suites + info.supported_groups +
                                         info.offered_versions + info.key_share_groups)
@@ -328,11 +335,17 @@ def parse_server_hello(data: bytes) -> ServerHelloInfo:
         return info
     exts_data = buf[pos:pos+exts_len]
     for etype, edata in _parse_extensions(exts_data):
+        info.extension_ids.append(etype)
         if etype == 43 and len(edata) == 2:
             info.supported_versions_ext = int.from_bytes(edata[0:2], "big")
         elif etype == EXT_KEY_SHARE and len(edata) == 2:
             # KeyShareServerHello: selected group u16 (no key exchange bytes).
             info.selected_group = int.from_bytes(edata[0:2], "big")
+        elif etype == EXT_ALPN and len(edata) >= 4:
+            # ServerHello ALPN: u16 list len, u8 len, single protocol.
+            alen = int.from_bytes(edata[0:2], "big")
+            if alen >= 1 and 3 + edata[2] <= len(edata):
+                info.alpn.append(edata[3:3+edata[2]].decode(errors="replace"))
     if info.supported_versions_ext is not None:
         info.negotiated_version = info.supported_versions_ext
     return info

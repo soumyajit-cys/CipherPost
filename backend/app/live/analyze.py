@@ -317,8 +317,11 @@ class AnalysisWorker:
                 pass
         scoring = None
         try:
-            # RollingBaseline has .score(sa) that also handles refit
-            scoring = self.scorer.score(sa) if hasattr(self.scorer, "score") else None
+            # Per-org scorer: promoted analyst-label models stay within
+            # their org; everyone else shares the default ranking scorer.
+            scorer = self._scorer_for(
+                sess_payload.get("org_id") if isinstance(sess_payload, dict) else None)
+            scoring = scorer.score(sa) if hasattr(scorer, "score") else None
         except Exception as e:
             log.debug("scoring failed: %s", e)
         # persist (idempotent on deterministic session id)

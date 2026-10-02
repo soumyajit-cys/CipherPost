@@ -50,6 +50,26 @@ def _check_connected_public(sock: socket.socket, host: str) -> None:
     raise ValueError(f"refusing private target {host} ({ip}) without allow_private")
 
 
+def _coerce_der(cert) -> bytes | None:
+    """Normalize _ssl.Certificate objects, PEM, or DER to DER bytes."""
+    try:
+        if isinstance(cert, bytes):
+            if cert.startswith(b"-----BEGIN"):
+                from cryptography import x509 as _x509
+                from cryptography.hazmat.primitives import serialization as _ser
+                return _x509.load_pem_x509_certificate(cert).public_bytes(_ser.Encoding.DER)
+            return cert
+        if hasattr(cert, "public_bytes"):
+            import ssl as _ssl
+            from cryptography import x509 as _x509
+            from cryptography.hazmat.primitives import serialization as _ser
+            pem = cert.public_bytes(_ssl.PEM)
+            return _x509.load_pem_x509_certificate(pem).public_bytes(_ser.Encoding.DER)
+    except Exception:
+        pass
+    return None
+
+
 def probe_host(host: str, port: int = 25, timeout: float = CONNECT_TIMEOUT,
                allow_private: bool = False, starttls: bool = True) -> dict:
     """TLS-handshake the target and return chain metadata. Raises on refusal."""
@@ -78,11 +98,11 @@ def probe_host(host: str, port: int = 25, timeout: float = CONNECT_TIMEOUT,
         tls = ctx.wrap_socket(raw, server_hostname=host)
         try:
             chain = tls.getpeercert(binary_form=True)
-            chain_all = [chain] if chain else []
+            chain_all = [_coerce_der(chain)] if chain else []
             try:
                 unverified = tls._sslobj.get_unverified_chain()  # type: ignore[attr-defined]
                 if unverified:
-                    chain_all = unverified
+                    chain_all = [_coerce_der(c) for c in unverified]
             except Exception:
                 pass
             from cryptography import x509 as _x509

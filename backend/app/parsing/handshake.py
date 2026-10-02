@@ -21,6 +21,68 @@ TLS_VERSION_NAMES = {
     0x0304: "TLS1.3",
 }
 
+# Extension IDs (RFC 8446 §4.2, RFC 8701, RFC 8744, draft-ietf-tls-esni).
+EXT_SNI = 0
+EXT_SUPPORTED_GROUPS = 10
+EXT_SIG_ALGS = 13
+EXT_ALPN = 16
+EXT_EARLY_DATA = 42
+EXT_SUPPORTED_VERSIONS = 43
+EXT_PSK_KEX_MODES = 45
+EXT_KEY_SHARE = 51
+EXT_RENEGOTIATION_INFO = 0xFF01
+EXT_ECH_OUTER = 0xFE0D
+
+# HelloRetryRequest random (RFC 8446 §4.1.3) and downgrade sentinels.
+HRR_RANDOM = bytes.fromhex(
+    "CF21AD74E59A611BE1D8C021E65B891C2A211167ABB8C5E079E09E2C8A8339C")
+DOWNGRAD_SENTINEL_TLS12 = bytes.fromhex("444F574E47524401")
+DOWNGRAD_SENTINEL_TLS11 = bytes.fromhex("444F574E47524400")
+
+
+def is_grease(value: int) -> bool:
+    """GREASE values (RFC 8701): 0x0A0A, 0x1A1A, ... 0xFAFA. Never analyzed."""
+    return (value & 0x0F0F) == 0x0A0A and 0x0A0A <= value <= 0xFAFA
+
+
+def strip_grease(values: list[int]) -> list[int]:
+    return [v for v in values if not is_grease(v)]
+
+
+# Named elliptic-curve / FFDHE / hybrid group IDs (IANA TLS Supported Groups
+# registry, "Recommended" column; retrieved 2026-10-02 from
+# https://www.iana.org/assignments/tls-parameters/tls-parameters-8.csv).
+# Hybrid post-quantum groups: RFC 10024 codepoints.
+GROUP_X25519 = 29
+GROUP_X448 = 30
+GROUP_FFDHE2048 = 256
+HYBRID_PQ_GROUPS = {
+    4587: "SecP256r1MLKEM768",   # 0x11EB, RFC 10024
+    4588: "X25519MLKEM768",      # 0x11EC, RFC 10024 (Recommended=Y)
+    4589: "SecP384r1MLKEM1024",  # 0x11ED, RFC 10024
+    4585: "SecP256r1MLKEM512",   # draft-rosomakho (not standardized)
+    4586: "MLKEM512X25519",      # draft-rosomakho (not standardized)
+}
+PURE_PQ_GROUPS = {512: "MLKEM512", 513: "MLKEM768", 514: "MLKEM1024"}  # RFC draft-ietf-tls-mlkem
+OBSOLETE_KYBER_DRAFTS = {25497: "X25519Kyber768Draft00", 25498: "SecP256r1Kyber768Draft00"}
+# IANA marks named curves 1..25 "D" (deprecated/discouraged, RFC 8422-bis work).
+DEPRECATED_GROUPS = set(range(1, 26))
+# Modern forward-secret groups: ECDHE curves, FFDHE 2048+, hybrids.
+MODERN_FS_GROUPS = {29, 30, 256, 257, 258, 259, 260} | set(HYBRID_PQ_GROUPS)
+
+
+def group_name(gid: int) -> str:
+    if gid in HYBRID_PQ_GROUPS:
+        return HYBRID_PQ_GROUPS[gid] + " (hybrid PQ)"
+    if gid in PURE_PQ_GROUPS:
+        return PURE_PQ_GROUPS[gid] + " (pure PQ)"
+    if gid in OBSOLETE_KYBER_DRAFTS:
+        return OBSOLETE_KYBER_DRAFTS[gid] + " (obsolete draft)"
+    names = {29: "x25519", 30: "x448", 23: "secp256r1", 24: "secp384r1",
+             25: "secp521r1", 256: "ffdhe2048", 257: "ffdhe3072",
+             258: "ffdhe4096", 259: "ffdhe6144", 260: "ffdhe8192"}
+    return names.get(gid, f"0x{gid:04x}")
+
 
 class HandshakeParser:
     def __init__(self, data: bytes, max_certs: int = 32, max_cert_size: int = 64 * 1024):

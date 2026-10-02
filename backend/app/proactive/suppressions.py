@@ -42,14 +42,8 @@ def _finding_ports(finding: dict) -> list[int]:
     ft = str(finding.get("five_tuple", "") or "")
     if ft and ":" in ft:
         from app.parsing.reassembly import split_five_tuple as _split
-        _, _, sport = _split(ft)
-        try:
-            cport = int(ft.split("->" if "->" in ft else "-", 1)[0].rpartition(":")[2])
-            ports.append(cport)
-        except Exception:
-            pass
-        if sport:
-            ports.append(sport)
+        _, cport, _, sport = _split(ft)
+        ports.extend([p for p in (cport, sport) if p])
     return ports
 
 

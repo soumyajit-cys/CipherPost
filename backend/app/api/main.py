@@ -1607,6 +1607,132 @@ async def export_feedback(format: str = Query("json"),
     return {"labels": data}
 
 
+# --- fingerprints: inventory + org allow/deny lists (phase 4 task 2) ------
+
+@app.get("/api/v1/fingerprints")
+async def fingerprint_inventory(fp_type: str = Query("ja4"),
+                                limit: int = Query(100, ge=1, le=500),
+                                ctx: AuthContext = Depends(get_current_user),
+                                db: AsyncSession = Depends(get_db)):
+    """Inventory of client/server TLS fingerprints by org (no vendor database;
+    matching against YOUR allow/deny lists only)."""
+    if fp_type not in ("ja3", "ja4", "ja3s", "ja4s"):
+        raise HTTPException(400, "fp_type must be ja3|ja4|ja3s|ja4s")
+    col = {"ja3": Session.ja3, "ja4": Session.ja4,
+           "ja3s": Session.ja3s, "ja4s": Session.ja4s}[fp_type]
+    rows = (await db.execute(
+        select(col, func.count()).where(Session.org_id == ctx.org_id,
+                                        col.is_not(None))
+        .group_by(col).order_by(func.count().desc()).limit(limit))).all()
+    return [{"fingerprint": fp, "sessions": n} for fp, n in rows]
+
+
+@app.get("/api/v1/fp-lists")
+async def list_fp_lists(ctx: AuthContext = Depends(require_roles("analyst")),
+                        db: AsyncSession = Depends(get_db)):
+    from app.models.entities import FingerprintList
+    rows = (await db.execute(
+        select(FingerprintList).where(FingerprintList.org_id == ctx.org_id)
+        .order_by(FingerprintList.id.desc()))).scalars().all()
+    return [{"id": r.id, "kind": r.kind, "fp_type": r.fp_type, "value": r.value,
+             "source": r.source, "comment": r.comment, "created_by": r.created_by,
+             "created_at": r.created_at.isoformat() if r.created_at else None}
+            for r in rows]
+
+
+@app.post("/api/v1/fp-lists")
+async def create_fp_list(body: dict,
+                         ctx: AuthContext = Depends(require_roles("analyst")),
+                         db: AsyncSession = Depends(get_db)):
+    from app.models.entities import FingerprintList
+    kind = (body.get("kind") or "").strip()
+    fp_type = (body.get("fp_type") or "").strip()
+    value = (body.get("value") or "").strip()
+    if kind not in ("allow", "deny") or fp_type not in ("ja3", "ja4", "ja3s", "ja4s"):
+        raise HTTPException(400, "kind must be allow|deny, fp_type ja3|ja4|ja3s|ja4s")
+    if not value or len(value) > 128:
+        raise HTTPException(400, "value is required (max 128 chars)")
+    row = FingerprintList(org_id=ctx.org_id, kind=kind, fp_type=fp_type,
+                          value=value, source=str(body.get("source", ""))[:256],
+                          comment=str(body.get("comment", ""))[:2000],
+                          created_by=ctx.email)
+    db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    await log_audit(db, ctx.org_id, ctx.email, "fplist.create", value,
+                    {"kind": kind, "fp_type": fp_type})
+    return {"id": row.id, "kind": kind, "fp_type": fp_type, "value": value}
+
+
+@app.delete("/api/v1/fp-lists/{entry_id}")
+async def delete_fp_list(entry_id: int,
+                         ctx: AuthContext = Depends(require_roles("analyst")),
+                         db: AsyncSession = Depends(get_db)):
+    from app.models.entities import FingerprintList
+    row = await db.get(FingerprintList, entry_id)
+    if row is None or row.org_id != ctx.org_id:
+        raise HTTPException(404, "List entry not found")
+    await db.delete(row)
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "fplist.delete", row.value, {})
+    return {"status": "deleted"}
+
+
+@app.get("/api/v1/fp-lists/export")
+async def export_fp_lists(format: str = Query("json"),
+                          ctx: AuthContext = Depends(require_roles("analyst")),
+                          db: AsyncSession = Depends(get_db)):
+    from app.models.entities import FingerprintList
+    rows = (await db.execute(
+        select(FingerprintList).where(FingerprintList.org_id == ctx.org_id)
+        .order_by(FingerprintList.id.asc()))).scalars().all()
+    data = [{"kind": r.kind, "fp_type": r.fp_type, "value": r.value,
+             "source": r.source, "comment": r.comment} for r in rows]
+    if format == "csv":
+        import csv as _csv
+        import io as _io
+        buf = _io.StringIO()
+        w = _csv.DictWriter(buf, fieldnames=["kind", "fp_type", "value",
+                                             "source", "comment"])
+        w.writeheader()
+        w.writerows(data)
+        return Response(buf.getvalue(), media_type="text/csv",
+                        headers={"Content-Disposition":
+                                 "attachment; filename=fp-lists.csv"})
+    return {"entries": data}
+
+
+@app.post("/api/v1/fp-lists/import")
+async def import_fp_lists(body: dict,
+                          ctx: AuthContext = Depends(require_roles("analyst")),
+                          db: AsyncSession = Depends(get_db)):
+    from app.models.entities import FingerprintList
+    entries = body.get("entries")
+    if not isinstance(entries, list) or len(entries) > 1000:
+        raise HTTPException(400, "entries must be a list (max 1000)")
+    added = 0
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        if e.get("kind") not in ("allow", "deny"):
+            continue
+        if e.get("fp_type") not in ("ja3", "ja4", "ja3s", "ja4s"):
+            continue
+        value = str(e.get("value", "")).strip()
+        if not value or len(value) > 128:
+            continue
+        db.add(FingerprintList(org_id=ctx.org_id, kind=e["kind"],
+                               fp_type=e["fp_type"], value=value,
+                               source=str(e.get("source", ""))[:256],
+                               comment=str(e.get("comment", ""))[:2000],
+                               created_by=ctx.email))
+        added += 1
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "fplist.import", "entries",
+                    {"added": added})
+    return {"added": added}
+
+
 @app.get("/api/v1/ml/versions")
 async def ml_versions(ctx: AuthContext = Depends(get_current_user)):
     """Model registry: which versions scored what (track 5)."""

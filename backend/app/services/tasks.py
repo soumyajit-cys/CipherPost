@@ -119,6 +119,10 @@ def process_analysis_job(self, job_id: str):
                     ) if sa.findings else None
                 ),
                 created_at=_now,
+                ja3=getattr(sa, "ja3_digest", None),
+                ja4=getattr(sa, "ja4", None),
+                ja3s=getattr(sa, "ja3s_digest", None),
+                ja4s=getattr(sa, "ja4s", None),
             )
             Session.add(sess)
 

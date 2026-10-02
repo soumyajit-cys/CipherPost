@@ -777,6 +777,10 @@ class AlertDispatcher:
             if time.time() - last_transport > settings.TRANSPORT_RECHECK_INTERVAL_SECONDS:
                 last_transport = time.time()
                 self._transport_sweep()
+            try:
+                self._flush_digests()
+            except Exception as e:
+                log.debug("digest flush failed: %s", e)
             items = self.consumer.poll_raw(timeout_ms=800)
             # Flush grouped alerts whose hold window expired, even on idle polls.
             try:

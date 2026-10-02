@@ -31,9 +31,10 @@ def flow_id(org_id: str | None, client: str, server: str,
 
 
 def parse_five_tuple(five_tuple: str) -> tuple[str, str, int]:
-    """Split 'c-ip:c-port-s-ip:s-port' into (client, server, server_port)."""
+    """Split into (client, server, server_port)."""
     from app.parsing.reassembly import split_five_tuple as _split
-    return _split(five_tuple or "")
+    client, _cport, server, sport = _split(five_tuple or "")
+    return client, server, sport
 
 
 def update_flow(db, org_id: str | None, sess_payload: dict,

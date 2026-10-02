@@ -1,0 +1,3 @@
+# Test-only dependencies (never shipped in images).
+# hypothesis: property/fuzz tests for parsers (Phase 4).
+hypothesis==6.168.3

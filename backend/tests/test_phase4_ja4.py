@@ -78,7 +78,8 @@ def test_ja4s_and_ja3s_from_server_hello():
     sh = ServerHelloInfo(negotiated_version=0x0304, cipher_suite=0x1301,
                          extension_ids=[43, 51], alpn=["h2"])
     fp = J.ja4s(sh)
-    assert fp.startswith("s13") and "_1301_" in fp
+    # JA4S field name, but the leading marker is the transport like JA4.
+    assert fp.startswith("t13") and "_1301_" in fp
     assert len(fp.split("_")) == 3  # EXPERIMENTAL layout documented in ja4.py
     assert len(J.ja3s_digest(sh)) == 32
 

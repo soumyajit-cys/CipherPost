@@ -43,3 +43,16 @@ suppression_id]}`. SARIF follows schema 2.1.0 for GitHub code scanning.
 `scan` and `rules` never touch the network. `verify-domain` performs live
 DNS/HTTPS only for the named domain and reports `dns-error` honestly when
 offline. The CLI never imports fastapi/redis/sqlalchemy/celery (tested).
+
+## Opt-in active probe (authorized hosts only)
+
+```bash
+cipherpost probe mail.example.com:25
+cipherpost probe mail.example.com:993 --no-starttls
+```
+
+Prints the presented chain as JSON for joining to passive TLS 1.3 data by
+host. Consent notice prints on every run: only probe hosts you own or have
+written permission to test. Safeguards: 10 s timeouts, one probe per host per
+60 s, private/loopback ranges blocked unless `--allow-private` (lab only),
+no server-side probe API exists by design. See `docs/what-we-cannot-see.md`.

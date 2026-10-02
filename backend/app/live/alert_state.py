@@ -27,18 +27,17 @@ def _warn_fallback_once(msg: str) -> None:
 
 
 def server_host_of(finding: dict) -> str:
-    """Extract the server side of a five_tuple 'c1:p1-s1:p2' or explicit host."""
+    """Extract the server side of a five_tuple or explicit host field."""
     for k in ("server", "mx_host", "host", "dst_ip"):
         v = finding.get(k)
         if v:
             return str(v)
     ft = str(finding.get("five_tuple", "") or "")
-    if "-" in ft and ":" in ft:
-        try:
-            server = ft.split("-", 1)[1]
-            return server.rsplit(":", 1)[0]
-        except Exception:
-            pass
+    if ft and ":" in ft:
+        from app.parsing.reassembly import split_five_tuple as _split
+        _client, server, _port = _split(ft)
+        if server:
+            return server
     return ft or "unknown"
 
 

@@ -43,10 +43,13 @@ def parse_five_tuple(five_tuple: str) -> tuple[str, str, int]:
 
 def update_flow(db, org_id: str | None, sess_payload: dict,
                 tls_version: str | None, cipher: str | None,
-                encrypted: bool, seen_at=None) -> tuple[object, dict | None]:
+                encrypted: bool, seen_at=None,
+                fingerprints: list[str] | None = None) -> tuple[object, dict | None]:
     """Upsert the flow row. Returns (flow_row, regression_finding|None).
 
     Never raises (retention of flow stats must not break session persistence).
+    New fingerprints for established flows are recorded in
+    flow.fingerprints and counted via the caller's gossip.
     """
     from app.models.entities import MailFlow
     try:

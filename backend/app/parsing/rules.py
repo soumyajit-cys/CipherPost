@@ -671,6 +671,13 @@ ALL_RULES: list[Callable[[SessionAnalysis], None]] = [
     rule_no_tls_on_tls_port,
     rule_handshake_incomplete,
     rule_unknown_cipher,
+    rule_legacy_groups,
+    rule_no_modern_pfs_group,
+    rule_downgrade_sentinel,
+    rule_hrr_anomaly,
+    rule_tls_version_downgrade,
+    rule_ech_present,
+    rule_legacy_compression,
 ]
 
 

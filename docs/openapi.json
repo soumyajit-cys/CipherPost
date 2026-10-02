@@ -1500,6 +1500,62 @@
         "summary": "Set Finding Hold"
       }
     },
+    "/api/v1/fingerprints": {
+      "get": {
+        "description": "Inventory of client/server TLS fingerprints by org (no vendor database;\nmatching against YOUR allow/deny lists only).",
+        "operationId": "fingerprint_inventory_api_v1_fingerprints_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "fp_type",
+            "required": false,
+            "schema": {
+              "default": "ja4",
+              "title": "Fp Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Fingerprint Inventory"
+      }
+    },
     "/api/v1/fleet/trend": {
       "get": {
         "description": "Posture trend bucketed by hour from live sessions.",
@@ -1714,6 +1770,196 @@
           }
         ],
         "summary": "Flow History"
+      }
+    },
+    "/api/v1/fp-lists": {
+      "get": {
+        "operationId": "list_fp_lists_api_v1_fp_lists_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Fp Lists"
+      },
+      "post": {
+        "operationId": "create_fp_list_api_v1_fp_lists_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Fp List"
+      }
+    },
+    "/api/v1/fp-lists/export": {
+      "get": {
+        "operationId": "export_fp_lists_api_v1_fp_lists_export_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "json",
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Fp Lists"
+      }
+    },
+    "/api/v1/fp-lists/import": {
+      "post": {
+        "operationId": "import_fp_lists_api_v1_fp_lists_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Import Fp Lists"
+      }
+    },
+    "/api/v1/fp-lists/{entry_id}": {
+      "delete": {
+        "operationId": "delete_fp_list_api_v1_fp_lists__entry_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Fp List"
       }
     },
     "/api/v1/health": {
@@ -2536,6 +2782,116 @@
         "summary": "Ml Drift"
       }
     },
+    "/api/v1/ml/promote": {
+      "post": {
+        "description": "Promote a candidate that passes the gate (margin + no FP regression).",
+        "operationId": "ml_promote_api_v1_ml_promote_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ml Promote"
+      }
+    },
+    "/api/v1/ml/retrain": {
+      "post": {
+        "description": "Train a candidate on analyst labels (on-demand). Never auto-promotes.",
+        "operationId": "ml_retrain_api_v1_ml_retrain_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ml Retrain"
+      }
+    },
+    "/api/v1/ml/rollback": {
+      "post": {
+        "description": "One-click rollback to the previous model version.",
+        "operationId": "ml_rollback_api_v1_ml_rollback_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ml Rollback"
+      }
+    },
+    "/api/v1/ml/status": {
+      "get": {
+        "description": "Trustworthy-ML status: ranking-only vs active, label counts, version.",
+        "operationId": "ml_status_api_v1_ml_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ml Status"
+      }
+    },
     "/api/v1/ml/versions": {
       "get": {
         "description": "Model registry: which versions scored what (track 5).",
@@ -2618,6 +2974,52 @@
           }
         ],
         "summary": "Create Org"
+      }
+    },
+    "/api/v1/posture/quantum": {
+      "get": {
+        "description": "Post-quantum posture per flow and org (INFORMATIONAL, never a finding).\n\nReports the share of sessions that negotiated a hybrid PQ group, the share\nwhere the client offered PQ but the server did not select it, and servers\nthat appear unable to support PQ. With PQ_POLICY=warn, unable servers are\nadditionally listed for migration attention.",
+        "operationId": "quantum_posture_api_v1_posture_quantum_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Quantum Posture"
       }
     },
     "/api/v1/sessions": {

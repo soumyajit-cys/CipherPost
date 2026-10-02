@@ -164,6 +164,11 @@ class Settings(BaseSettings):
     DRIFT_Z_THRESHOLD: float = 3.0
     DRIFT_MIN_FEATURES: int = 3
 
+    # --- trustworthy ML (phase 4 task 4) ------------------------------------
+    MIN_ANALYST_LABELS_PER_CLASS: int = 50  # below: ranking-only mode
+    ML_PROMOTE_MARGIN_F1: float = 0.02  # candidate must beat current by this
+    TRAINING_OPT_IN_ORGS: str = ""  # comma-separated orgs sharing a global model
+
     # --- multi-tenancy (phase 3 task 2) -------------------------------------
     # Single-tenant mode preserves the legacy behavior (unstamped sessions go
     # to the default org). Multi-org deployments MUST set this to false and

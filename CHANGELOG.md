@@ -6,6 +6,22 @@ Versioning is semantic; `backend/app/VERSION` is the single source of truth.
 
 ## [Unreleased]
 
+### Compliance and evidence (Phase 4 task 6)
+
+- Compliance tags load from versioned data (`mapping-v1.json`,
+  `mapping_version == 1`, exposed on `/api/v1/compliance/summary`); all
+  Phase 4 rules mapped with framework provenance on every tag.
+- Hash-chained evidence bundles (`manifest` + `records`, tamper-detected)
+  via `cipherpost evidence` and `GET /api/v1/jobs/{id}/evidence`;
+  unobservable items labeled, never filled in.
+
+### v1.0 gate (Phase 4 task 8 — NOT READY)
+
+- `docs/v1-readiness.md`: honest gate assessment. Phase 4 ships as 0.4.0-RC
+  material; v1.0 is blocked on external pilots, a 30-day live run, kind
+  install, real-IdP SSO, and registry/sign verification (all listed, none
+  claimed).
+
 ### Alert quality (Phase 4 task 5 — measured, no unjustified severity changes)
 
 - Per-rule precision (analyst labels only; null without labels), alert volume,

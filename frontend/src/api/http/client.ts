@@ -177,6 +177,7 @@ export const httpClient: ApiClient = {
       timeline: [],
       shap: shap.filter((x) => x.session_id === s.id).map((x) => ({ feature: x.feature, value: x.value, impact: x.impact, method: x.method })),
       ruleMlAgreement: 'agrees' as const,
+      visibility: ((s.details as Record<string, unknown> | null)?.visibility ?? null) as SessionDetail['visibility'],
     }))
 
     const findingsOut = findings.map((f) => {

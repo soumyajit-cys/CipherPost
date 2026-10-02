@@ -1733,6 +1733,305 @@ async def import_fp_lists(body: dict,
     return {"added": added}
 
 
+# --- alert routing, policy, quality, explain (phase 4 task 5) --------------
+
+@app.get("/api/v1/alert-routes")
+async def list_alert_routes(ctx: AuthContext = Depends(require_roles("analyst")),
+                            db: AsyncSession = Depends(get_db)):
+    from app.models.entities import AlertRoute
+    rows = (await db.execute(
+        select(AlertRoute).where(AlertRoute.org_id == ctx.org_id)
+        .order_by(AlertRoute.id.asc()))).scalars().all()
+    return [{"id": r.id, "match_type": r.match_type, "match_value": r.match_value,
+             "owner": r.owner, "channel": r.channel} for r in rows]
+
+
+@app.post("/api/v1/alert-routes")
+async def create_alert_route(body: dict,
+                             ctx: AuthContext = Depends(require_roles("admin")),
+                             db: AsyncSession = Depends(get_db)):
+    from app.models.entities import AlertRoute
+    mtype = (body.get("match_type") or "").strip()
+    value = (body.get("match_value") or "").strip()
+    if mtype not in ("rule", "host", "domain") or not value or len(value) > 256:
+        raise HTTPException(400, "match_type must be rule|host|domain with a value")
+    row = AlertRoute(org_id=ctx.org_id, match_type=mtype, match_value=value,
+                     owner=str(body.get("owner", ""))[:256],
+                     channel=str(body.get("channel", ""))[:64],
+                     created_by=ctx.email)
+    db.add(row)
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "alertroute.create", value,
+                    {"match_type": mtype})
+    return {"id": row.id}
+
+
+@app.delete("/api/v1/alert-routes/{route_id}")
+async def delete_alert_route(route_id: int,
+                             ctx: AuthContext = Depends(require_roles("admin")),
+                             db: AsyncSession = Depends(get_db)):
+    from app.models.entities import AlertRoute
+    row = await db.get(AlertRoute, route_id)
+    if row is None or row.org_id != ctx.org_id:
+        raise HTTPException(404, "Route not found")
+    await db.delete(row)
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "alertroute.delete",
+                    row.match_value, {})
+    return {"status": "deleted"}
+
+
+@app.get("/api/v1/alert-policy")
+async def get_alert_policy(ctx: AuthContext = Depends(require_roles("analyst")),
+                           db: AsyncSession = Depends(get_db)):
+    from app.models.entities import AlertPolicy
+    row = await db.get(AlertPolicy, ctx.org_id)
+    if row is None:
+        return {"min_severity": settings.ALERT_MIN_SEVERITY, "digest": "off",
+                "quiet_start_hour": None, "quiet_end_hour": None, "quiet_tz": "UTC"}
+    return {"min_severity": row.min_severity, "digest": row.digest,
+            "quiet_start_hour": row.quiet_start_hour,
+            "quiet_end_hour": row.quiet_end_hour, "quiet_tz": row.quiet_tz}
+
+
+@app.put("/api/v1/alert-policy")
+async def set_alert_policy(body: dict,
+                           ctx: AuthContext = Depends(require_roles("admin")),
+                           db: AsyncSession = Depends(get_db)):
+    from datetime import datetime, timezone
+    from app.models.entities import AlertPolicy
+    sev = (body.get("min_severity") or "high").strip()
+    if sev not in ("info", "low", "medium", "high", "critical"):
+        raise HTTPException(400, "min_severity must be info|low|medium|high|critical")
+    digest = (body.get("digest") or "off").strip()
+    if digest not in ("off", "daily", "weekly"):
+        raise HTTPException(400, "digest must be off|daily|weekly")
+    row = await db.get(AlertPolicy, ctx.org_id)
+    if row is None:
+        row = AlertPolicy(org_id=ctx.org_id)
+        db.add(row)
+    row.min_severity = sev
+    row.digest = digest
+    for f in ("quiet_start_hour", "quiet_end_hour"):
+        if body.get(f) is None:
+            setattr(row, f, None)
+        else:
+            try:
+                v = int(body[f])
+                if not 0 <= v <= 23:
+                    raise ValueError()
+                setattr(row, f, v)
+            except Exception:
+                raise HTTPException(400, f"{f} must be 0-23 or null")
+    row.quiet_tz = str(body.get("quiet_tz") or "UTC")[:64]
+    row.updated_by = ctx.email
+    row.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await log_audit(db, ctx.org_id, ctx.email, "alertpolicy.update", "policy",
+                    {"min_severity": sev, "digest": digest})
+    return {"status": "saved"}
+
+
+@app.get("/api/v1/alerts/quality")
+async def alert_quality(ctx: AuthContext = Depends(require_roles("analyst")),
+                        db: AsyncSession = Depends(get_db)):
+    """Per-rule alert quality from measured data (no intuition).
+
+    precision comes ONLY from analyst labels; rules without labels report
+    precision null (insufficient data) rather than a guess. Volume, alert
+    counts, suppression counts, and time-to-acknowledge are measured.
+    """
+    from app.models.entities import FindingFeedback, Suppression
+    from app.proactive.suppressions import filter_active
+    from datetime import datetime, timezone
+    # findings per rule (org)
+    frows = (await db.execute(
+        select(Finding.rule_id, Finding.id, Finding.created_at)
+        .join(Session, Finding.session_id == Session.id)
+        .where(Session.org_id == ctx.org_id))).all()
+    by_rule: dict[str, dict] = {}
+    finding_created = {}
+    for rule_id, fid, created in frows:
+        d = by_rule.setdefault(rule_id, {"findings": 0, "alerts": 0,
+                                         "confirmed": 0, "false_positive": 0,
+                                         "accepted_risk": 0, "suppressed": 0,
+                                         "tta_hours": []})
+        d["findings"] += 1
+        finding_created[fid] = created
+    # alerts per rule from payloads
+    try:
+        arows = (await db.execute(text(
+            "SELECT payload FROM alerts WHERE org_id = :org LIMIT 5000"),
+            {"org": ctx.org_id})).all()
+        import json as _jj
+        for (payload,) in arows:
+            try:
+                p = _jj.loads(payload) if isinstance(payload, str) else (payload or {})
+                rule = p.get("rule_id") or "unknown"
+            except Exception:
+                rule = "unknown"
+            by_rule.setdefault(rule, {"findings": 0, "alerts": 0,
+                                      "confirmed": 0, "false_positive": 0,
+                                      "accepted_risk": 0, "suppressed": 0,
+                                      "tta_hours": []})["alerts"] += 1
+    except Exception:
+        pass
+    # labels per rule + time-to-acknowledge
+    fbrows = (await db.execute(
+        select(FindingFeedback).where(FindingFeedback.org_id == ctx.org_id))).scalars().all()
+    for fb in fbrows:
+        d = by_rule.setdefault(fb.rule_id, {"findings": 0, "alerts": 0,
+                                            "confirmed": 0, "false_positive": 0,
+                                            "accepted_risk": 0, "suppressed": 0,
+                                            "tta_hours": []})
+        if fb.verdict in d:
+            d[fb.verdict] += 1
+        created = finding_created.get(fb.finding_id)
+        if created is not None and fb.created_at is not None:
+            try:
+                c0 = created if getattr(created, "tzinfo", None) else \
+                    created.replace(tzinfo=timezone.utc)
+                c1 = fb.created_at if getattr(fb.created_at, "tzinfo", None) else \
+                    fb.created_at.replace(tzinfo=timezone.utc)
+                d["tta_hours"].append(round((c1 - c0).total_seconds() / 3600, 2))
+            except Exception:
+                pass
+    # suppressions per rule (active only)
+    sup_rows = (await db.execute(
+        select(Suppression).where(Suppression.org_id == ctx.org_id))).scalars().all()
+    for s in filter_active(sup_rows, datetime.now(timezone.utc)):
+        by_rule.setdefault(s.rule_id, {"findings": 0, "alerts": 0,
+                                       "confirmed": 0, "false_positive": 0,
+                                       "accepted_risk": 0, "suppressed": 0,
+                                       "tta_hours": []})["suppressed"] += 1
+    out = []
+    for rule_id, d in sorted(by_rule.items(),
+                             key=lambda kv: kv[1]["alerts"] + kv[1]["findings"],
+                             reverse=True):
+        denom = d["confirmed"] + d["false_positive"]
+        ttas = d.pop("tta_hours")
+        out.append({"rule_id": rule_id, "findings": d["findings"],
+                    "alerts": d["alerts"], "confirmed": d["confirmed"],
+                    "false_positive": d["false_positive"],
+                    "accepted_risk": d["accepted_risk"],
+                    "suppressed": d["suppressed"],
+                    "precision": (round(d["confirmed"] / denom, 3)
+                                  if denom else None),
+                    "tta_hours_median": (sorted(ttas)[len(ttas) // 2] if ttas else None),
+                    "needs_review": d["alerts"] >= 10 and denom == 0})
+    return {"rules": out,
+            "note": "precision is null without analyst labels; needs_review "
+                    "flags high-volume rules awaiting labels, not verdicts."}
+
+
+@app.get("/api/v1/alerts/{alert_id}/explain")
+async def explain_alert(alert_id: str,
+                        ctx: AuthContext = Depends(get_current_user),
+                        db: AsyncSession = Depends(get_db)):
+    """Explain this alert: rule rationale, exact evidence, standards refs, and
+    remediation snippets ONLY where verified from official docs (cited)."""
+    import json as _jj
+    try:
+        rows = (await db.execute(text(
+            "SELECT severity, title, five_tuple, payload, org_id FROM alerts "
+            "WHERE id = :i"), {"i": alert_id})).all()
+    except Exception:
+        rows = []
+    if not rows:
+        raise HTTPException(404, "Alert not found")
+    sev, title, ft, payload, org = rows[0]
+    if org != ctx.org_id:
+        raise HTTPException(404, "Alert not found")
+    try:
+        p = _jj.loads(payload) if isinstance(payload, str) else (payload or {})
+    except Exception:
+        p = {}
+    rule_id = p.get("rule_id") or "unknown"
+    try:
+        from app.cli import rule_catalog
+        rationale = next((r for r in rule_catalog() if r["rule_id"] == rule_id), {})
+    except Exception:
+        rationale = {}
+    return {"alert_id": alert_id, "severity": sev, "title": title,
+            "five_tuple": ft, "rule_id": rule_id,
+            "rationale": {"title": rationale.get("title", title),
+                          "description": rationale.get("description", ""),
+                          "reference": rationale.get("reference", "")},
+            "evidence": p,
+            "remediation": _remediation_for(rule_id),
+            "owner": (p.get("routing") or {}).get("owner"),
+            "channel": (p.get("routing") or {}).get("channel")}
+
+
+def _remediation_for(rule_id: str) -> dict:
+    """Copyable remediation ONLY for syntax verified from official docs.
+
+    Each snippet cites doc URL + retrieval date. Verified 2026-10-02 against
+    https://www.postfix.org/TLS_README.html (current). Unverified cases
+    return an explicit pointer instead of a snippet — never a guess.
+    Exim/Exchange/Dovecot/Sendmail snippets are intentionally absent
+    (not verified).
+    """
+    postfix_src = ("https://www.postfix.org/TLS_README.html "
+                   "(retrieved 2026-10-02)")
+    verified = {
+        "tls-version-tls1-0": {
+            "verified": True,
+            "source": postfix_src,
+            "postfix": ("# Legacy syntax (all versions):\n"
+                        "smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1\n"
+                        "# Preferred with Postfix >= 3.6:\n"
+                        "smtpd_tls_mandatory_protocols = >=TLSv1.2"),
+        },
+        "tls-version-tls1-1": {
+            "verified": True,
+            "source": postfix_src,
+            "postfix": ("# Legacy syntax (all versions):\n"
+                        "smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1\n"
+                        "# Preferred with Postfix >= 3.6:\n"
+                        "smtpd_tls_mandatory_protocols = >=TLSv1.2"),
+        },
+        "plaintext-mail-protocol": {
+            "verified": True,
+            "source": postfix_src,
+            "postfix": ("# Require TLS before accepting mail (server side):\n"
+                        "smtpd_tls_security_level = encrypt"),
+        },
+        "weak-cipher-suite": {
+            "verified": True,
+            "source": postfix_src,
+            "postfix": ("smtpd_tls_mandatory_ciphers = high\n"
+                        "smtpd_tls_mandatory_exclude_ciphers = aNULL, MD5"),
+        },
+        "rc4-cipher": {
+            "verified": True,
+            "source": postfix_src,
+            "postfix": ("smtpd_tls_mandatory_ciphers = high\n"
+                        "smtpd_tls_mandatory_exclude_ciphers = aNULL, MD5"),
+        },
+        "non-aead-bulk-cipher": {
+            "verified": True,
+            "source": postfix_src,
+            "postfix": ("smtpd_tls_mandatory_ciphers = high\n"
+                        "smtpd_tls_mandatory_exclude_ciphers = aNULL, MD5"),
+        },
+        "starttls-strip-attempt": {
+            "verified": True,
+            "source": postfix_src,
+            "postfix": ("# Sending side: refuse to deliver without TLS so a\n"
+                        "# stripped STARTTLS cannot silently downgrade:\n"
+                        "smtp_tls_security_level = encrypt\n"
+                        "# (per-destination via the TLS policy table; do NOT set\n"
+                        "#  as a global default for Internet mail — see doc)"),
+        },
+    }
+    if rule_id in verified:
+        return verified[rule_id]
+    return {"verified": False,
+            "note": "No remediation snippet verified from official docs for "
+                    "this rule yet — see the rationale and references above."}
+
+
 @app.get("/api/v1/ml/versions")
 async def ml_versions(ctx: AuthContext = Depends(get_current_user)):
     """Model registry: which versions scored what (track 5)."""

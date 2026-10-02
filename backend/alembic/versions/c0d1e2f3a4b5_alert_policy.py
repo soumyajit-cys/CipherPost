@@ -30,6 +30,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_alert_routes_org_id'), 'alert_routes', ['org_id'], unique=False)
+    op.create_index(op.f('ix_alert_routes_match_value'), 'alert_routes', ['match_value'], unique=False)
     op.create_table('alert_policy',
     sa.Column('org_id', sa.String(length=64), nullable=False),
     sa.Column('min_severity', sa.String(length=16), nullable=False),
@@ -46,5 +47,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table('alert_policy')
+    op.drop_index(op.f('ix_alert_routes_match_value'), table_name='alert_routes')
     op.drop_index(op.f('ix_alert_routes_org_id'), table_name='alert_routes')
     op.drop_table('alert_routes')

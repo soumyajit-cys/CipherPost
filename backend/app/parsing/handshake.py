@@ -300,6 +300,8 @@ def parse_server_hello(data: bytes) -> ServerHelloInfo:
         info.downgrade_sentinel = "tls12"
     elif info.server_random[24:] == DOWNGRAD_SENTINEL_TLS11:
         info.downgrade_sentinel = "tls11"
+    if pos + 1 > len(buf):
+        raise TlsParseError("server hello truncated sid length")
     sid_len = buf[pos]
     pos += 1
     if pos + sid_len > len(buf):

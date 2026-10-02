@@ -10,7 +10,8 @@ from __future__ import annotations
 
 def server_of(five_tuple: str) -> str:
     try:
-        right = five_tuple.split("-", 1)[1]
+        sep = "->" if "->" in five_tuple else "-"
+        right = five_tuple.split(sep, 1)[1]
         host, _, port = right.rpartition(":")
         return f"{host}:{port}"
     except Exception:

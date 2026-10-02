@@ -113,6 +113,8 @@ class ClientHelloInfo:
     ech_outer: bool = False                                     # ext 0xfe0d
     compression: list[int] = field(default_factory=list)
     grease_count: int = 0
+    extension_ids: list[int] = field(default_factory=list)      # all, in order
+    ec_point_formats: list[int] = field(default_factory=list)   # ext 11
     raw: bytes = b""
 
 

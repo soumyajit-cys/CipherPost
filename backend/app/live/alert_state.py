@@ -35,7 +35,7 @@ def server_host_of(finding: dict) -> str:
     ft = str(finding.get("five_tuple", "") or "")
     if ft and ":" in ft:
         from app.parsing.reassembly import split_five_tuple as _split
-        _client, server, _port = _split(ft)
+        _client, _cport, server, _port = _split(ft)
         if server:
             return server
     return ft or "unknown"

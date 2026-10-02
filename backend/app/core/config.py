@@ -172,6 +172,11 @@ class Settings(BaseSettings):
     INGEST_MAX_QUEUE: int = 5000  # 429 backpressure above this stream length
     INGEST_MAX_BATCH: int = 200
 
+    # --- post-quantum posture (phase 4 task 3: informational by default) -----
+    # informational: posture reporting only, never a finding.
+    # warn: flows whose servers appear PQ-unable are listed for attention.
+    PQ_POLICY: str = "informational"
+
     # --- suppressions (phase 2 task 3) --------------------------------------
     SUPPRESSION_REQUIRE_APPROVAL: bool = True  # analyst requests, admin approves
     SUPPRESSION_DEFAULT_DAYS: int = 90

@@ -39,3 +39,13 @@ def test_random_split_would_leak_same_data():
     from app.ml.splits import leakage_report
     rep = leakage_report(train, test, lambda m: m["server"])
     assert rep["clean"] is False  # same servers on both sides
+
+
+def test_split_five_tuple_contract():
+    from app.parsing.reassembly import split_five_tuple, format_five_tuple
+    assert split_five_tuple("10.0.0.1:5000-10.0.0.2:25") == ("10.0.0.1", 5000, "10.0.0.2", 25)
+    assert split_five_tuple("10.0.0.1:5000->10.0.0.2:25") == ("10.0.0.1", 5000, "10.0.0.2", 25)
+    assert split_five_tuple("garbage") == ("", 0, "", 0)
+    assert split_five_tuple("") == ("", 0, "", 0)
+    # round-trips with the canonical formatter
+    assert split_five_tuple(format_five_tuple("b", 2, "a", 1)) == ("a", 1, "b", 2)

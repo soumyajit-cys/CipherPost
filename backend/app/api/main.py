@@ -1303,7 +1303,7 @@ async def compliance_summary(framework: str | None = Query(None),
     Suppressed findings are excluded by default and counted separately as
     "accepted risk" (pass include_suppressed=true to include them normally).
     """
-    from app.proactive.compliance import summary_for_findings, FRAMEWORKS
+    from app.proactive.compliance import summary_for_findings, FRAMEWORKS, mapping_version
     if framework and framework not in FRAMEWORKS:
         raise HTTPException(400, f"Unknown framework. Choose from {sorted(FRAMEWORKS)}")
     q = select(Finding.rule_id, Finding.severity, Session.five_tuple).join(
@@ -1332,6 +1332,7 @@ async def compliance_summary(framework: str | None = Query(None),
     except Exception:
         pass
     out["not_observable"] = no_counts
+    out["mapping_version"] = mapping_version()
     return out
 
 

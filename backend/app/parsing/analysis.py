@@ -114,6 +114,29 @@ def analyze_session(sess: Session, trust_store: str | None = None) -> SessionAna
     else:
         sa.chain_result = "no-cert"
 
+    # Phase 4: TLS 1.3 visibility model — record exactly what was observable.
+    # The Certificate message is encrypted in TLS 1.3, so unless real X.509
+    # certs parsed from observed bytes, cert verdicts are not observable.
+    from app.parsing.rules import certs_usable
+    is_tls13 = sa.tls_version == 0x0304
+    observed_certs = certs_usable(sa)
+    ch = sa.client_hello
+    if ch is not None and ch.ech_outer:
+        sni_state = "ech_outer"
+    elif ch is not None and ch.sni:
+        sni_state = "observed"
+    else:
+        sni_state = "absent"
+    sa.visibility = {
+        "tls13": bool(is_tls13),
+        "cert_chain": ("observed" if observed_certs
+                       else ("not_observable_tls13" if is_tls13 else "absent")),
+        "sni": sni_state,
+        "hrr": bool(sa.server_hello is not None and sa.server_hello.is_hrr),
+        "offered_groups": list(getattr(ch, "supported_groups", None) or []),
+        "selected_group": getattr(sa.server_hello, "selected_group", None),
+    }
+
     run_rules(sa)
     return sa
 

@@ -701,6 +701,37 @@ class AlertDispatcher:
                 self.consumer.ack(entry_id)
                 _bus.clear_attempts(self.r, self.consumer.stream, entry_id)
                 return
+            # Phase 4 task 5: per-org policy (digest/quiet) before grouping.
+            # Critical alerts always bypass quiet hours and digests.
+            sev_now = finding.get("max_severity") or finding.get("severity") or "info"
+            if SEV_ORDER.get(sev_now, 0) < SEV_ORDER.get("critical", 4):
+                policy = self._policy_for(finding.get("org_id"))
+                if self._in_quiet(policy):
+                    self._stash_digest(finding, finding.get("org_id"),
+                                       policy.get("digest", "off"), bucket="quiet")
+                    try:
+                        self.gossip.counters.inc("alerts_quiet_held")
+                    except Exception:
+                        pass
+                    self.consumer.ack(entry_id)
+                    _bus.clear_attempts(self.r, self.consumer.stream, entry_id)
+                    return
+                if policy.get("digest", "off") in ("daily", "weekly"):
+                    self._stash_digest(finding, finding.get("org_id"),
+                                       policy["digest"])
+                    try:
+                        self.gossip.counters.inc("alerts_digested")
+                    except Exception:
+                        pass
+                    self.consumer.ack(entry_id)
+                    _bus.clear_attempts(self.r, self.consumer.stream, entry_id)
+                    return
+            # Ownership routing tags (never suppresses).
+            try:
+                finding = dict(finding)
+                finding["routing"] = self._route_finding(finding)
+            except Exception:
+                pass
             # Group by root cause; dispatch any groups whose hold expired.
             self.groups.add(finding)
             for grouped in self.groups.flush_expired():

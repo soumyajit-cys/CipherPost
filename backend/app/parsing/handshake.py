@@ -285,7 +285,16 @@ def parse_server_hello(data: bytes) -> ServerHelloInfo:
     pos += 2
     if pos + 32 > len(buf):
         raise TlsParseError("server hello truncated random")
+    info.server_random = bytes(buf[pos:pos+32])
     pos += 32
+    # HelloRetryRequest (RFC 8446 §4.1.3) and downgrade sentinels share the
+    # random field; both are observable passively and never guessed.
+    if info.server_random == HRR_RANDOM:
+        info.is_hrr = True
+    elif info.server_random[24:] == DOWNGRAD_SENTINEL_TLS12:
+        info.downgrade_sentinel = "tls12"
+    elif info.server_random[24:] == DOWNGRAD_SENTINEL_TLS11:
+        info.downgrade_sentinel = "tls11"
     sid_len = buf[pos]
     pos += 1
     if pos + sid_len > len(buf):

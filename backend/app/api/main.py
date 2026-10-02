@@ -1740,6 +1740,100 @@ async def ml_versions(ctx: AuthContext = Depends(get_current_user)):
     return {"current": current_version(), "history": history()}
 
 
+def _sync_db():
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    engine = create_engine(settings.DATABASE_URL_SYNC)
+    return sessionmaker(bind=engine)()
+
+
+@app.get("/api/v1/ml/status")
+async def ml_status(ctx: AuthContext = Depends(require_roles("analyst"))):
+    """Trustworthy-ML status: ranking-only vs active, label counts, version."""
+    from app.ml import retraining as _rt
+    from app.ml import registry as _reg
+    db = _sync_db()
+    try:
+        entries = _rt.build_analyst_dataset(ctx.org_id, db)
+    finally:
+        try:
+            db.close()
+        except Exception:
+            pass
+    ok, reason = _rt.check_threshold(entries)
+    cur = _reg.org_current(ctx.org_id)
+    return {"mode": "active" if (ok and cur) else "ranking-only",
+            "reason": "" if (ok and cur) else reason or "no promoted model",
+            "analyst_labels": len(entries),
+            "min_per_class": _rt.min_per_class(),
+            "current": cur,
+            "notice": ("ML reorders review queues only; every prioritization links "
+                       "to supporting rule findings.")}
+
+
+@app.post("/api/v1/ml/retrain")
+async def ml_retrain(ctx: AuthContext = Depends(require_roles("admin")),
+                     db: AsyncSession = Depends(get_db)):
+    """Train a candidate on analyst labels (on-demand). Never auto-promotes."""
+    from app.ml import retraining as _rt
+    sync_db = _sync_db()
+    try:
+        out = _rt.train_candidate(ctx.org_id, sync_db)
+    finally:
+        try:
+            sync_db.close()
+        except Exception:
+            pass
+    await log_audit(db, ctx.org_id, ctx.email, "ml.retrain", out.get("version", ""),
+                    {"status": out.get("status")})
+    return out
+
+
+@app.post("/api/v1/ml/promote")
+async def ml_promote(body: dict,
+                     ctx: AuthContext = Depends(require_roles("admin")),
+                     db: AsyncSession = Depends(get_db)):
+    """Promote a candidate that passes the gate (margin + no FP regression)."""
+    from app.ml import retraining as _rt
+    from app.ml import registry as _reg
+    version = (body.get("version") or "").strip()
+    if not version:
+        raise HTTPException(400, "version is required")
+    sync_db = _sync_db()
+    try:
+        hist = {e.get("version"): e for e in _reg.org_history(ctx.org_id, limit=20)}
+    finally:
+        try:
+            sync_db.close()
+        except Exception:
+            pass
+    cand = hist.get(version)
+    if cand is None or cand.get("status") != "candidate":
+        raise HTTPException(404, "Candidate not found")
+    ok, reason = _rt.promotion_gate(ctx.org_id, cand,
+                                    _rt.current_metrics_for(ctx.org_id))
+    if not ok:
+        await log_audit(db, ctx.org_id, ctx.email, "ml.promote.rejected",
+                        version, {"reason": reason})
+        return {"status": "rejected", "reason": reason}
+    promoted = _reg.promote_candidate(ctx.org_id, version, reason)
+    await log_audit(db, ctx.org_id, ctx.email, "ml.promote", version, {"reason": reason})
+    return {"status": "promoted", "entry": promoted}
+
+
+@app.post("/api/v1/ml/rollback")
+async def ml_rollback(ctx: AuthContext = Depends(require_roles("admin")),
+                      db: AsyncSession = Depends(get_db)):
+    """One-click rollback to the previous model version."""
+    from app.ml import registry as _reg
+    target = _reg.rollback_org(ctx.org_id)
+    if target is None:
+        raise HTTPException(404, "No prior version to restore")
+    await log_audit(db, ctx.org_id, ctx.email, "ml.rollback",
+                    target.get("version", ""), {})
+    return {"status": "rolled back", "entry": target}
+
+
 @app.get("/api/v1/posture/quantum")
 async def quantum_posture(days: int = Query(30, ge=1, le=90),
                           ctx: AuthContext = Depends(get_current_user),

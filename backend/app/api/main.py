@@ -1864,13 +1864,22 @@ async def get_fleet_summary(job_id: str,
     total = len(sessions)
     avg_score = sum(s.risk_score or 0 for s in sessions) / total
     sev_dist = {}
+    not_observable: dict[str, int] = {}
+    tls13_sessions = 0
     for s in sessions:
         sev_dist[s.max_severity or "none"] = sev_dist.get(s.max_severity or "none", 0) + 1
+        details = s.details or {}
+        if (details.get("visibility") or {}).get("tls13"):
+            tls13_sessions += 1
+        for rid in (details.get("not_observable") or []):
+            not_observable[rid] = not_observable.get(rid, 0) + 1
     return {
         "total_sessions": total,
         "fleet_score": round(avg_score, 1),
         "anomaly_count": sum(1 for s in sessions if s.is_anomaly),
         "severity_distribution": sev_dist,
+        "visibility": {"tls13_sessions": tls13_sessions,
+                       "not_observable": not_observable},
         "sessions": [
             {"five_tuple": s.five_tuple, "protocol": s.protocol,
              "risk_score": s.risk_score, "is_anomaly": s.is_anomaly,

@@ -151,6 +151,15 @@ def analyze_session(sess: Session, trust_store: str | None = None) -> SessionAna
             sa.visibility["ja4s"] = sa.ja4s
     except Exception:
         pass
+    # Phase 4 task 3: post-quantum posture facts (observation only).
+    try:
+        from app.parsing.handshake import pq_status
+        ch, sh = sa.client_hello, sa.server_hello
+        sa.pq = pq_status(getattr(ch, "supported_groups", None) if ch else None,
+                          getattr(sh, "selected_group", None) if sh else None)
+    except Exception:
+        sa.pq = {"offered": [], "selected": None,
+                 "offered_pq": False, "negotiated_pq": False}
 
     run_rules(sa)
     return sa

@@ -33,9 +33,11 @@ EXT_KEY_SHARE = 51
 EXT_RENEGOTIATION_INFO = 0xFF01
 EXT_ECH_OUTER = 0xFE0D
 
-# HelloRetryRequest random (RFC 8446 §4.1.3) and downgrade sentinels.
+# HelloRetryRequest random (RFC 8446 §4.1.3; value verified against
+# https://www.rfc-editor.org/rfc/rfc8446.txt on 2026-10-02) and downgrade
+# sentinels (same section: last 8 bytes DOWNGRD\x01 for TLS 1.2, \x00 below).
 HRR_RANDOM = bytes.fromhex(
-    "CF21AD74E59A611BE1D8C021E65B891C2A211167ABB8C5E079E09E2C8A8339C")
+    "CF21AD74E59A6111BE1D8C021E65B891C2A211167ABB8C5E079E09E2C8A8339C")
 DOWNGRAD_SENTINEL_TLS12 = bytes.fromhex("444F574E47524401")
 DOWNGRAD_SENTINEL_TLS11 = bytes.fromhex("444F574E47524400")
 

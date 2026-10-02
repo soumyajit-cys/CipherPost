@@ -100,6 +100,14 @@ class ClientHelloInfo:
     alpn: list[str] = field(default_factory=list)
     supported_groups: list[int] = field(default_factory=list)
     has_supported_versions: bool = False
+    # Phase 4: TLS 1.3 visibility fields (all best-effort, never raise).
+    key_share_groups: list[int] = field(default_factory=list)  # ext 51 offered
+    sig_algs: list[int] = field(default_factory=list)          # ext 13
+    psk_kex_modes: list[int] = field(default_factory=list)    # ext 45
+    early_data_offered: bool = False                            # ext 42
+    ech_outer: bool = False                                     # ext 0xfe0d
+    compression: list[int] = field(default_factory=list)
+    grease_count: int = 0
     raw: bytes = b""
 
 
@@ -109,6 +117,11 @@ class ServerHelloInfo:
     legacy_version: int | None = None
     cipher_suite: int | None = None
     supported_versions_ext: int | None = None
+    # Phase 4: server random (sentinels/HRR), selected group, HRR flag.
+    server_random: bytes = b""
+    selected_group: int | None = None   # ext 51 KeyShareServerHello
+    is_hrr: bool = False
+    downgrade_sentinel: str | None = None  # None | "tls12" | "tls11"
     raw: bytes = b""
 
 

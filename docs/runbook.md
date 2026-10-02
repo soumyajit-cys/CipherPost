@@ -62,3 +62,13 @@ first for every incident (queues, DLQ depths, drops).
 - Means: tracked certificates expiring within `CERT_EXPIRY_WARN_DAYS`.
 - Confirm: `GET /api/v1/certs/expiring?days=30`.
 - Fix: rotate the cert; alerts dedup for 24h per fingerprint (`expiry_alerted_at`).
+
+## Feature-drift (CipherPostFeatureDrift)
+
+- Means: feature-distribution PSI > 0.5 for 15m — either a real network
+  change (new mail cluster, TLS policy rollout) or a data-quality problem
+  (parser regression, clock skew).
+- Confirm: `GET /api/v1/ml/drift` shows per-feature PSI/z sorted worst-first;
+  compare `psi` leaders against recent change windows.
+- Fix: for real traffic shifts, retrain baselines (`POST /api/v1/ml/retrain`);
+  for parser regressions, fix the parser and re-run the corpus eval.

@@ -138,7 +138,7 @@ class AnalysisWorker:
             # flow aggregation + regression: compare against best-seen state,
             # then append any proven regression finding before persisting.
             try:
-                from app.live.flows import update_flow
+                from app.live.flows import update_flow, _deny_list_hit
                 _proto = sa.protocol.value if hasattr(sa.protocol, "value") else str(sa.protocol)
                 _tls_name = getattr(sa, "negotiated_version_name", None)
                 _encrypted = _tls_name is not None

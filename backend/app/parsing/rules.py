@@ -422,6 +422,191 @@ def rule_alpn_missing(sa: SessionAnalysis):
         )
 
 
+def rule_legacy_groups(sa: SessionAnalysis):
+    """Deprecated named groups offered or (worse) selected. IANA marks curves
+    1..25 deprecated; a negotiated deprecated group is HIGH, offered-only LOW
+    (client capability, not server fault). GREASE is never analyzed."""
+    from app.parsing.handshake import (
+        DEPRECATED_GROUPS, MODERN_FS_GROUPS, strip_grease, group_name,
+        HYBRID_PQ_GROUPS, PURE_PQ_GROUPS, OBSOLETE_KYBER_DRAFTS,
+    )
+    ch, sh = sa.client_hello, sa.server_hello
+    if ch is None:
+        return
+    offered = [g for g in strip_grease(ch.supported_groups)
+               if g in DEPRECATED_GROUPS]
+    selected = getattr(sh, "selected_group", None) if sh else None
+    if selected in DEPRECATED_GROUPS:
+        sa.add(
+            "deprecated-group-negotiated",
+            "Deprecated key-exchange group negotiated",
+            Severity.HIGH,
+            f"Deprecated group {group_name(selected)} negotiated",
+            "The server selected a key-exchange group IANA marks deprecated"
+            " (curves 1..25). Renegotiate with a modern group (X25519, FFDHE,"
+            " or a hybrid post-quantum group).",
+            "RFC 8422-bis; IANA TLS Supported Groups registry",
+            group=group_name(selected),
+        )
+    elif offered:
+        sa.add(
+            "deprecated-group-offered",
+            "Client offers only deprecated groups" if not any(
+                g in MODERN_FS_GROUPS for g in strip_grease(ch.supported_groups)) else
+            "Client offers deprecated groups",
+            Severity.MEDIUM if not any(
+                g in MODERN_FS_GROUPS for g in strip_grease(ch.supported_groups))
+            else Severity.LOW,
+            "Deprecated groups in ClientHello",
+            "The client offers IANA-deprecated groups (curves 1..25). "
+            f"Offered: {[group_name(g) for g in offered]}. "
+            "The server should prefer modern groups.",
+            "RFC 8422-bis; IANA TLS Supported Groups registry",
+            groups=[group_name(g) for g in offered],
+        )
+
+
+def rule_no_modern_pfs_group(sa: SessionAnalysis):
+    """Client offers groups but none capable of modern forward secrecy."""
+    from app.parsing.handshake import MODERN_FS_GROUPS, strip_grease, group_name
+    ch = sa.client_hello
+    if ch is None or not ch.supported_groups:
+        return
+    offered = strip_grease(ch.supported_groups)
+    if offered and not any(g in MODERN_FS_GROUPS for g in offered):
+        sa.add(
+            "no-modern-pfs-group",
+            "No modern forward-secrecy group offered",
+            Severity.MEDIUM,
+            "Client offers no modern PFS-capable group",
+            "The ClientHello offers key-exchange groups but none of X25519,"
+            " X448, FFDHE-2048+, or hybrid post-quantum groups. Sessions will"
+            " negotiate weaker/legacy key exchange.",
+            "OWASP TLS Cheat Sheet §'use forward secrecy'",
+            offered=[group_name(g) for g in offered],
+        )
+
+
+def rule_downgrade_sentinel(sa: SessionAnalysis):
+    """RFC 8446 §4.1.3 downgrade protection: server random sentinel means the
+    server also supports a higher version than negotiated. CRITICAL only when
+    the client actually offered higher (proven); otherwise silent."""
+    sh, ch = sa.server_hello, sa.client_hello
+    if sh is None or not sh.downgrade_sentinel:
+        return
+    offered_max = max(ch.offered_versions) if ch and ch.offered_versions else None
+    negotiated = sa.tls_version
+    if (offered_max is not None and negotiated is not None
+            and offered_max > negotiated):
+        sa.add(
+            "downgrade-attack-detected",
+            "TLS downgrade attack detected",
+            Severity.CRITICAL,
+            "Server downgrade sentinel with higher version offered",
+            f"The server random carries the {sh.downgrade_sentinel} downgrade"
+            f" sentinel while the client offered {hex(offered_max)} but only"
+            f" {hex(negotiated)} was negotiated. This is the RFC 8446 active-"
+            "downgrade signal: investigate for MITM immediately.",
+            "RFC 8446 §4.1.3",
+            sentinel=sh.downgrade_sentinel,
+        )
+
+
+def rule_hrr_anomaly(sa: SessionAnalysis):
+    """HelloRetryRequest is normal; a selected group the client never offered
+    is not (server confusion or tampering)."""
+    from app.parsing.handshake import strip_grease, group_name
+    sh, ch = sa.server_hello, sa.client_hello
+    if sh is None or not sh.is_hrr:
+        return
+    selected = sh.selected_group
+    offered = strip_grease(ch.supported_groups) if ch else []
+    if selected is not None and offered and selected not in offered:
+        sa.add(
+            "hrr-group-mismatch",
+            "HelloRetryRequest selects unoffered group",
+            Severity.MEDIUM,
+            "HRR requests a group the client never offered",
+            f"The HelloRetryRequest selects {group_name(selected)} which was"
+            " not in the ClientHello supported_groups. Normal servers only"
+            " request offered groups; investigate server state or tampering.",
+            "RFC 8446 §4.1.4",
+            selected=group_name(selected),
+        )
+
+
+def rule_tls_version_downgrade(sa: SessionAnalysis):
+    """Negotiated version below the client's best offer. HIGH only for
+    ≤1.1 (attack-plausible); 1.3→1.2 is an INFO posture note (server may
+    simply lack 1.3) — never called an attack without evidence."""
+    ch = sa.client_hello
+    if ch is None or not ch.offered_versions or sa.tls_version is None:
+        return
+    best = max(ch.offered_versions)
+    if sa.tls_version >= best:
+        return
+    if sa.tls_version <= 0x0302 and best >= 0x0303:
+        sa.add(
+            "tls-version-downgrade-suspected",
+            "Negotiated version below best offer",
+            Severity.HIGH,
+            "Server negotiated below the client's best offer",
+            f"Client offered up to {hex(best)} but {hex(sa.tls_version)} was"
+            " negotiated. A legacy-only server is possible, but so is active"
+            " version downgrade — verify the server's configured versions.",
+            "RFC 8446 §4.1.3; RFC 8996",
+            offered=hex(best), negotiated=hex(sa.tls_version),
+        )
+    elif sa.tls_version == 0x0303 and best == 0x0304:
+        sa.add(
+            "tls13-not-negotiated",
+            "TLS 1.3 offered but 1.2 negotiated",
+            Severity.INFO,
+            "Server does not negotiate TLS 1.3",
+            "The client offered TLS 1.3 but the server negotiated 1.2. Usually"
+            " a server that has not enabled 1.3 yet — a hardening opportunity,"
+            " not evidence of attack.",
+            "RFC 8446",
+        )
+
+
+def rule_ech_present(sa: SessionAnalysis):
+    """Encrypted Client Hello outer observed: inner SNI is not observable."""
+    ch = sa.client_hello
+    if ch is not None and ch.ech_outer:
+        sa.add(
+            "ech-observed",
+            "Encrypted Client Hello in use",
+            Severity.INFO,
+            "ECH outer ClientHello observed",
+            "The client used Encrypted Client Hello (RFC 8744, ext 0xfe0d):"
+            " the inner SNI and parameters are encrypted and NOT observable"
+            " passively. Certificate/host attribution for this session is"
+            " limited to the outer (public) name.",
+            "RFC 8744 (draft-ietf-tls-esni)",
+            outer_sni=ch.sni,
+        )
+
+
+def rule_legacy_compression(sa: SessionAnalysis):
+    """TLS 1.3 forbids compression; offering anything but null with 1.3 is odd."""
+    ch = sa.client_hello
+    if ch is None or sa.tls_version != 0x0304:
+        return
+    if ch.compression and ch.compression != [0]:
+        sa.add(
+            "legacy-compression-offered",
+            "Non-null compression with TLS 1.3",
+            Severity.LOW,
+            "Client offers legacy compression",
+            "TLS 1.3 forbids compression (RFC 8446 §9.2); the ClientHello"
+            " offered compression methods anyway. Likely a legacy stack,"
+            " worth noting for client inventory.",
+            "RFC 8446 §9.2",
+            offered=ch.compression,
+        )
+
+
 def rule_unknown_cipher(sa: SessionAnalysis):
     if sa.cipher_iana and sa.cipher_meta is None:
         sa.add(

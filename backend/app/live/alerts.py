@@ -446,9 +446,8 @@ class AlertDispatcher:
         independently with one retry; per-channel status is recorded in
         Postgres (alert_deliveries) and failures never block other channels."""
         from app.live.alert_state import group_key_of
-        # Severity gate only; grouping/dedup handled below via shared state.
-        sev = finding.get("max_severity") or finding.get("severity") or "info"
-        if SEV_ORDER.get(sev, 0) < self.min_sev:
+        # Severity gate (per-org policy aware); grouping/dedup below via shared state.
+        if not self._should_alert(finding):
             return
         dedup_key = group_key_of(finding)
         if not self.state.check_and_set_dedup(dedup_key):

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 def server_of(five_tuple: str) -> str:
     from app.parsing.reassembly import split_five_tuple as _split
-    _client, server, _port = _split(five_tuple or "")
+    _client, _cport, server, _port = _split(five_tuple or "")
     return f"{server}:{_port}" if server else (five_tuple or "unknown")
 
 

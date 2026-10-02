@@ -86,6 +86,10 @@ SUMMARY_TEMPLATE = Template("""<!DOCTYPE html>
 </div>
 {% endfor %}
 {% endif %}
+{% if limitations %}
+<h2>Limitations — what could not be observed</h2>
+<ul>{% for item in limitations %}<li>{{ item }}</li>{% endfor %}</ul>
+{% endif %}
 <footer>CipherPost v0.1.0 — AI-assisted passive network forensic analysis | Rules: NIST SP 800-52r2 / OWASP</footer>
 </body></html>""")
 
@@ -182,7 +186,7 @@ def generate_html(analyses, scores=None, filename="pcap") -> str:
         medium=data["severity_counts"].get("medium", 0),
         fleet_score=fleet_score, fleet_score_class=fleet_class,
         sessions=sessions_for_template, findings=findings_for_template,
-        shap_details=data["shap_details"],
+        shap_details=data["shap_details"], limitations=data["limitations"],
     )
 
 

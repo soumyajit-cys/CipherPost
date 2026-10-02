@@ -59,3 +59,11 @@ groups:
         annotations:
           summary: "Certificates expiring within the forecast window"
           runbook: "docs/runbook.md#cert-expiry"
+
+      - alert: CipherPostFeatureDrift
+        expr: cipherpost_analysis_drift_psi_max > 0.5
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Feature distribution drift (PSI > 0.5): traffic change or parser regression"
+          runbook: "docs/runbook.md#feature-drift"

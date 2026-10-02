@@ -142,10 +142,17 @@ class AnalysisWorker:
                 _proto = sa.protocol.value if hasattr(sa.protocol, "value") else str(sa.protocol)
                 _tls_name = getattr(sa, "negotiated_version_name", None)
                 _encrypted = _tls_name is not None
+                _fps = [f for f in (getattr(sa, "ja4", None), getattr(sa, "ja4s", None)) if f]
                 _flow, _regression = update_flow(
                     Session, org_id,
                     {"five_tuple": sa.five_tuple, "protocol": _proto},
-                    _tls_name, getattr(sa, "cipher", None), _encrypted)
+                    _tls_name, getattr(sa, "cipher", None), _encrypted,
+                    fingerprints=_fps)
+                for _fp in (getattr(_flow, "new_fingerprints", None) or []):
+                    try:
+                        self.gossip.counters.inc("flow_new_fingerprints")
+                    except Exception:
+                        pass
                 if _regression:
                     from app.parsing.rules import Finding as _RuleFinding
                     sa.findings.append(_RuleFinding(

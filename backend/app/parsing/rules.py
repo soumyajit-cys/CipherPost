@@ -593,6 +593,31 @@ def rule_ech_present(sa: SessionAnalysis):
         )
 
 
+def rule_outdated_client_stack(sa: SessionAnalysis):
+    """Fingerprint-level signal: the offered stack predates TLS 1.2 entirely.
+
+    Uses the ClientHello's best offer (not the negotiated version, which has
+    its own rules). INFO: client inventory signal, not a server fault."""
+    ch = sa.client_hello
+    if ch is None:
+        return
+    offered = [v for v in (ch.offered_versions or []) if v is not None]
+    if not offered and ch.legacy_version is not None:
+        offered = [ch.legacy_version]
+    if offered and max(offered) <= 0x0302:
+        sa.add(
+            "outdated-client-stack",
+            "Client stack predates TLS 1.2",
+            Severity.INFO,
+            "ClientHello offers nothing newer than TLS 1.1",
+            "The client's best TLS offer predates TLS 1.2. The server side is"
+            " not at fault; track the client for upgrades. (Cipher-suite and"
+            " negotiated-version rules assess the session itself.)",
+            "RFC 8996",
+            best_offered=hex(max(offered)),
+        )
+
+
 def rule_legacy_compression(sa: SessionAnalysis):
     """TLS 1.3 forbids compression; offering anything but null with 1.3 is odd."""
     ch = sa.client_hello

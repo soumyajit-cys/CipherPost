@@ -148,6 +148,22 @@ def build_report_data(analyses: list[SessionAnalysis],
     if not_observable:
         skipped = ", ".join(f"{rid} x{n}" for rid, n in sorted(not_observable.items()))
         limitations.append(f"Skipped for lack of observed data: {skipped}.")
+    # Phase 4 task 3: post-quantum posture is INFORMATIONAL, never a finding.
+    pq_total = pq_negotiated = pq_offered_gap = 0
+    for a in analyses:
+        pq = getattr(a, "pq", None) or {}
+        if not isinstance(pq, dict) or not pq:
+            continue
+        pq_total += 1
+        if pq.get("negotiated_pq"):
+            pq_negotiated += 1
+        elif pq.get("offered_pq"):
+            pq_offered_gap += 1
+    pq_posture = {"sessions_seen": pq_total, "negotiated_hybrid": pq_negotiated,
+                  "offered_not_selected": pq_offered_gap,
+                  "note": "Post-quantum groups are posture information, not "
+                          "vulnerabilities. No finding is raised for their "
+                          "absence or presence."}
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "filename": filename,
@@ -160,6 +176,7 @@ def build_report_data(analyses: list[SessionAnalysis],
         "shap_details": shap_details,
         "visibility": {"tls13_sessions": tls13_sessions,
                        "not_observable": not_observable},
+        "pq_posture": pq_posture,
         "limitations": limitations,
     }
 

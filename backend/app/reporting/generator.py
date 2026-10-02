@@ -124,6 +124,26 @@ def build_report_data(analyses: list[SessionAnalysis],
                                   for c in s.shap_contributions[:10]]
             })
     fleet_score = sum(r["posture"] for r in session_rows) / max(1, len(session_rows))
+    # Phase 4: visibility roll-up — which checks could not run and why.
+    not_observable: dict[str, int] = {}
+    tls13_sessions = 0
+    for a in analyses:
+        vis = getattr(a, "visibility", None) or {}
+        if vis.get("tls13"):
+            tls13_sessions += 1
+        for rid in (getattr(a, "not_observable", None) or []):
+            not_observable[rid] = not_observable.get(rid, 0) + 1
+    limitations = []
+    if tls13_sessions:
+        limitations.append(
+            f"{tls13_sessions} TLS 1.3 session(s): certificate contents are "
+            "encrypted on the wire and not passively observable. Certificate "
+            "rules report not-observable (never pass/fail) for these sessions; "
+            "use `cipherpost probe host:port` (authorized hosts only) to record "
+            "their chains out-of-band.")
+    if not_observable:
+        skipped = ", ".join(f"{rid} x{n}" for rid, n in sorted(not_observable.items()))
+        limitations.append(f"Skipped for lack of observed data: {skipped}.")
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "filename": filename,
@@ -134,6 +154,9 @@ def build_report_data(analyses: list[SessionAnalysis],
         "sessions": session_rows,
         "findings": all_findings,
         "shap_details": shap_details,
+        "visibility": {"tls13_sessions": tls13_sessions,
+                       "not_observable": not_observable},
+        "limitations": limitations,
     }
 
 

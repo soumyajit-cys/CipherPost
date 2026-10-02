@@ -131,3 +131,18 @@ def test_training_data_never_crosses_orgs():
     rows_b = _rt.build_analyst_dataset("ob", S)
     assert all(r["session_id"] == "sob" for r in rows_b)
     S.close()
+
+
+def test_org_scorers_are_isolated_instances():
+    from app.live import analyze as _am
+
+    class W(_am.AnalysisWorker):
+        def __init__(self):
+            self._org_scorers = {}
+            self._org_model_versions = {}
+
+    w = W()
+    a = w._scorer_for("org-a")
+    b = w._scorer_for("org-b")
+    assert a is not b  # separate baselines; no shared training state
+    assert w._scorer_for("org-a") is a  # cached, not rebuilt

@@ -286,6 +286,12 @@ def build_parser() -> "argparse.ArgumentParser":
     sc.add_argument("--trust-store", default=None)
     vd = sub.add_parser("verify-domain", help="MTA-STS/DANE posture for a domain")
     vd.add_argument("domain")
+    pr = sub.add_parser("probe", help="Opt-in active TLS probe of a named host (consent required)")
+    pr.add_argument("target", help="host:port you are authorized to test")
+    pr.add_argument("--allow-private", action="store_true",
+                    help="permit private/loopback targets (lab only)")
+    pr.add_argument("--no-starttls", action="store_true",
+                    help="skip SMTP STARTTLS and handshake TLS directly")
     rl = sub.add_parser("rules", help="List/explain detection rules")
     rl.add_argument("rules_cmd", nargs="?", default="list")
     rl.add_argument("rule_id", nargs="?")

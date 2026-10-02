@@ -136,6 +136,20 @@ def analyze_session(sess: Session, trust_store: str | None = None) -> SessionAna
         "offered_groups": list(getattr(ch, "supported_groups", None) or []),
         "selected_group": getattr(sa.server_hello, "selected_group", None),
     }
+    # Phase 4 task 2: fingerprints (best-effort, never raise).
+    try:
+        from app.parsing import ja4 as _ja4
+        if sa.client_hello is not None:
+            sa.ja3 = _ja4.ja3(sa.client_hello)
+            sa.ja3_digest = _ja4.ja3_digest(sa.client_hello)
+            sa.ja4 = _ja4.ja4(sa.client_hello)
+            sa.visibility["ja4"] = sa.ja4
+        if sa.server_hello is not None:
+            sa.ja3s = _ja4.ja3s(sa.server_hello)
+            sa.ja4s = _ja4.ja4s(sa.server_hello)
+            sa.visibility["ja4s"] = sa.ja4s
+    except Exception:
+        pass
 
     run_rules(sa)
     return sa

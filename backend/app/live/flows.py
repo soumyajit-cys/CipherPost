@@ -118,6 +118,38 @@ def _as_aware(dt):
     return dt
 
 
+_deny_cache: dict = {}
+
+
+def _deny_list_hit(db, org_id: str | None, fps: dict[str, str | None]) -> str | None:
+    """Return 'fp_type:value' if any session fingerprint is on the org's deny
+    list, else None. Cached 60 s; empty/missing list means no match (fail open
+    only in the sense that nothing is blocked without operator configuration).
+    """
+    import time as _time
+    wanted = {k: v for k, v in (fps or {}).items() if v}
+    if not wanted or not org_id:
+        return None
+    now = _time.time()
+    entry = _deny_cache.get(org_id)
+    if entry is None or now - entry[0] > 60:
+        from app.models.entities import FingerprintList
+        try:
+            rows = db.query(FingerprintList).filter(
+                FingerprintList.org_id == org_id,
+                FingerprintList.kind == "deny").all()
+            denied = {(r.fp_type, r.value) for r in rows}
+        except Exception:
+            denied = set()
+        entry = (now, denied)
+        _deny_cache[org_id] = entry
+    _, denied = entry
+    for fp_type, value in wanted.items():
+        if (fp_type, value) in denied:
+            return f"{fp_type}:{value}"
+    return None
+
+
 def detect_regression(flow, tls_version: str | None, encrypted: bool) -> dict | None:
     """Compare a new session against stored best-seen state."""
     prev_total = flow.total_sessions or 0

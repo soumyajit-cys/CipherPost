@@ -116,6 +116,7 @@
         "client-no-pfs-suites",
         "non-aead-bulk-cipher",
         "non-pfs-key-exchange",
+        "outdated-client-stack",
         "rc4-cipher",
         "tls-version-tls1-0"
       ],
@@ -146,6 +147,7 @@
         "export-grade-cipher",
         "non-aead-bulk-cipher",
         "non-pfs-key-exchange",
+        "outdated-client-stack",
         "rc4-cipher",
         "self-signed-certificate",
         "tls-version-sslv3",

@@ -6,6 +6,20 @@ Versioning is semantic; `backend/app/VERSION` is the single source of truth.
 
 ## [Unreleased]
 
+### Alert quality (Phase 4 task 5 — measured, no unjustified severity changes)
+
+- Per-rule precision (analyst labels only; null without labels), alert volume,
+  time-to-acknowledge, and suppression counts at `GET /api/v1/alerts/quality`
+  plus a dashboard page. High-volume rules without labels are flagged
+  `needs_review`, never auto-downgraded: with no pilot label data in the repo,
+  changing severities would be intuition, not evidence. No rule severities
+  were changed in this phase for that reason.
+- Ownership routing (rule/host/domain → owner/channel), per-org severity
+  policy, digest mode (daily/weekly), and quiet hours (critical always
+  bypasses) in the dispatcher; `GET /api/v1/alerts/{id}/explain` with rule
+  rationale, exact evidence, and remediation snippets only where verified
+  from official docs (Postfix TLS_README, retrieved 2026-10-02).
+
 ## [0.3.0] - 2026-10-02 (Phase 3: adoption by outside organizations — in progress)
 
 ### Added (Phase 3 workstream — each item tested, see report)

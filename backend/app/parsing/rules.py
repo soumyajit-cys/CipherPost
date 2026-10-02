@@ -204,6 +204,8 @@ def rule_export_cipher(sa: SessionAnalysis):
 
 
 def rule_cert_expired(sa: SessionAnalysis):
+    if not require_usable_certs(sa, "expired-certificate"):
+        return
     for ci, cert in enumerate(sa.certs):
         if not cert or not cert.expired:
             continue
@@ -222,6 +224,8 @@ def rule_cert_expired(sa: SessionAnalysis):
 
 
 def rule_cert_not_yet_valid(sa: SessionAnalysis):
+    if not require_usable_certs(sa, "certificate-not-yet-valid"):
+        return
     for ci, cert in enumerate(sa.certs):
         if cert and cert.not_yet_valid:
             sa.add(
@@ -237,6 +241,8 @@ def rule_cert_not_yet_valid(sa: SessionAnalysis):
 
 
 def rule_cert_self_signed(sa: SessionAnalysis):
+    if not require_usable_certs(sa, "self-signed-certificate"):
+        return
     for ci, cert in enumerate(sa.certs):
         if cert and cert.is_self_signed and ci == 0:
             sa.add(
@@ -253,6 +259,8 @@ def rule_cert_self_signed(sa: SessionAnalysis):
 
 
 def rule_chain_untrusted(sa: SessionAnalysis):
+    if not require_usable_certs(sa, "untrusted-certificate-chain"):
+        return
     if sa.chain_result in ("untrusted", "invalid-sig", "hostname-mismatch", "expired",
                            "not-yet-valid", "parse-error"):
         if sa.chain_result == "untrusted":
@@ -283,6 +291,8 @@ def rule_chain_untrusted(sa: SessionAnalysis):
 
 
 def rule_weak_signature(sa: SessionAnalysis):
+    if not require_usable_certs(sa, "weak-signature-algorithm"):
+        return
     for ci, cert in enumerate(sa.certs):
         if cert and cert.weak_signature:
             sa.add(
@@ -300,6 +310,8 @@ def rule_weak_signature(sa: SessionAnalysis):
 
 
 def rule_short_key(sa: SessionAnalysis):
+    if not require_usable_certs(sa, "short-public-key"):
+        return
     for ci, cert in enumerate(sa.certs):
         if cert and cert.short_key:
             sa.add(
@@ -484,6 +496,40 @@ def run_rules(sa: SessionAnalysis) -> list[Finding]:
         except Exception:
             continue
     return sa.findings
+
+
+# Phase 4: certificate observability. On TLS 1.3 the Certificate message is
+# encrypted, so a passive observer sees no usable certs. Rules that need
+# certificates must skip (recorded in sa.not_observable) rather than pass or
+# fail on unobserved data. A cert counts as observed only if it actually
+# parsed as X.509 (valid dates + real subject).
+CERT_RULE_IDS = (
+    "expired-certificate",
+    "certificate-not-yet-valid",
+    "self-signed-certificate",
+    "untrusted-certificate-chain",
+    "weak-signature-algorithm",
+    "short-public-key",
+)
+
+
+def certs_usable(sa: SessionAnalysis) -> bool:
+    for c in sa.certs or []:
+        if (c is not None and c.not_before is not None
+                and (c.subject_cn or "") not in ("", "<unparseable>", "<oid missing>")):
+            return True
+    return False
+
+
+def require_usable_certs(sa: SessionAnalysis, rule_id: str) -> bool:
+    """False + record when a cert rule must skip (TLS 1.3, nothing observed)."""
+    if certs_usable(sa):
+        return True
+    if (sa.visibility or {}).get("tls13"):
+        if rule_id not in sa.not_observable:
+            sa.not_observable.append(rule_id)
+        return False
+    return True
 
 
 def max_severity(findings: list[Finding]) -> str | None:

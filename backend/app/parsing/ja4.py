@@ -87,7 +87,12 @@ def _alpn2(alpn: list[str]) -> str:
 
 
 def ja3(ch: ClientHelloInfo) -> str:
-    """Classic JA3: version,ciphers,extensions,curves,point-formats."""
+    """Classic JA3: version,ciphers,extensions,curves,point-formats.
+
+    Deliberately ORDER-SENSITIVE (offered order, GREASE stripped) — that is
+    the classic JA3 behavior and its known brittleness. Use JA4 when order
+    should not matter.
+    """
     ver = max(strip_grease(ch.offered_versions) or [ch.legacy_version or 0])
     parts = [
         str(ver),

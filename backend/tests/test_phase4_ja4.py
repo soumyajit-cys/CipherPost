@@ -40,12 +40,11 @@ def test_ja4_shape_and_grease_invariance():
 
 def test_ja4_ordering_rules():
     from app.parsing import ja4 as J
-    # extension ORDER must not matter (sorted), but cipher order must not
-    # matter either (sorted) while SNI presence must (d vs i).
+    # JA4 sorts extensions; classic JA3 preserves offered order.
     a = _ch(exts=(0, 10, 16, 43, 13))
     b = _ch(exts=(13, 43, 16, 10, 0))
     assert J.ja4(a) == J.ja4(b)
-    assert J.ja3(a) == J.ja3(b)
+    assert J.ja3(a) != J.ja3(b)  # JA3 is order-sensitive by design
     no_sni = _ch(sni=None)
     assert J.ja4(no_sni)[3] == "i"
     assert J.ja4(no_sni) != J.ja4(a)

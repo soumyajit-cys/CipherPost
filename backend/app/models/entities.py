@@ -78,8 +78,8 @@ class Session(Base):
     # Phase 4: TLS fingerprints (JA3/JA4 family). Nullable: older rows predate them.
     ja3: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     ja4: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
-    ja3s: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    ja4s: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    ja3s: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    ja4s: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
     job: Mapped[AnalysisJob] = relationship(back_populates="sessions")
     findings: Mapped[list["Finding"]] = relationship(back_populates="session", cascade="all, delete-orphan")

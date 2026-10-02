@@ -185,7 +185,9 @@ class AnalysisWorker:
                 overall_finding_count=len(sa.findings),
                 max_severity= max((f.severity for f in sa.findings), key=lambda s: {"info":0,"low":1,"medium":2,"high":3,"critical":4}.get(s,0), default=None) if sa.findings else None,
                 org_id=org_id,
-                details={"raw_refs": raw_refs or [], "live_ts": session_raw_ts},
+                details={"raw_refs": raw_refs or [], "live_ts": session_raw_ts,
+                         "visibility": getattr(sa, "visibility", {}) or {},
+                         "not_observable": list(getattr(sa, "not_observable", None) or [])},
                 created_at=_now,
             )
             Session.add(sess)

@@ -79,6 +79,11 @@ class AnalysisWorker:
             log.warning("RollingBaseline init failed, fallback to SessionScorer: %s", e)
             from app.ml.ml_engine import SessionScorer
             self.scorer = SessionScorer()
+        # Phase 4: per-org scorers (risk models trained on one org's feedback
+        # are never used for another org). Anomaly baselines are per-org too
+        # because each RollingBaseline only ever sees its org's sessions.
+        self._org_scorers: dict[str, object] = {}
+        self._org_model_versions: dict[str, str | None] = {}
 
     def _signal(self, signum, frame):
         log.info("signal %s", signum)

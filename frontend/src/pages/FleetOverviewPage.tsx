@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, CartesianGrid } from 'recharts'
 import { useFleetDrill } from '@/hooks/useApi'
@@ -5,6 +6,34 @@ import { ErrorState, EmptyState, LoadingState, Panel, Stat } from '@/components/
 import { SeverityBadge, CodeBlock } from '@/components/ui/primitives'
 import { formatDateTime } from '@/lib/utils'
 import { SEVERITY_ORDER, type SeverityLabel } from '@/api'
+
+function DriftPanel() {
+  const [drift, setDrift] = useState<{ verdict?: string; psi_max?: number; drifted?: string[] } | null>(null)
+  useEffect(() => {
+    let live = true
+    const base = (import.meta as any).env?.VITE_API_BASE_URL ?? '/api/v1'
+    const t = localStorage.getItem('cipherpost_token')
+    fetch(`${base}/ml/drift`, { headers: t ? { Authorization: `Bearer ${t}` } : {} })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => live && setDrift(d))
+      .catch(() => {})
+    return () => { live = false }
+  }, [])
+  if (!drift || drift.verdict === 'insufficient-data' || drift.verdict === 'no-data') return null
+  const bad = drift.verdict === 'drift'
+  return (
+    <Panel
+      title="Feature drift"
+      subtitle={`PSI max ${drift.psi_max ?? '—'} · verdict: ${drift.verdict ?? 'unknown'}`}
+    >
+      <p className={`text-[12px] ${bad ? 'text-sev-medium' : 'text-base-300'}`}>
+        {bad
+          ? `Shifted features: ${(drift.drifted ?? []).slice(0, 5).join(', ') || '—'}. See runbook → feature-drift.`
+          : 'Feature distributions stable vs baseline window.'}
+      </p>
+    </Panel>
+  )
+}
 
 const SEV_COLORS: Record<SeverityLabel, string> = {
   critical: '#f43f5e', high: '#f97316', medium: '#eab308', low: '#3b82f6', info: '#8b9cb5', none: '#64748b',

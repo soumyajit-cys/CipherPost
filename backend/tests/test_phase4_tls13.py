@@ -290,6 +290,22 @@ def test_not_observable_recorded_for_blind_tls13():
     assert "untrusted-certificate-chain" in sa.not_observable
 
 
+def test_limitations_flow_into_reports():
+    from app.reporting.generator import build_report_data, generate_html
+    from app.parsing.rules import SessionAnalysis
+    sa = SessionAnalysis(session_id="t", protocol="SMTP",
+                         five_tuple="a:1-b:25", is_starttls=False)
+    sa.tls_version = 0x0304
+    sa.visibility = {"tls13": True, "cert_chain": "not_observable_tls13"}
+    sa.not_observable = ["expired-certificate", "untrusted-certificate-chain"]
+    data = build_report_data([sa], None, filename="synthetic-tls13.pcap")
+    assert data["visibility"]["tls13_sessions"] == 1
+    assert data["visibility"]["not_observable"]["expired-certificate"] == 1
+    assert any("not passively observable" in item for item in data["limitations"])
+    html = generate_html([sa], None, filename="synthetic-tls13.pcap")
+    assert "Limitations" in html and "not-observable" in html
+
+
 def test_parsers_never_raise_on_arbitrary_bytes():
     from hypothesis import given, settings as _hsettings, strategies as st
     from app.parsing.handshake import parse_client_hello, parse_server_hello

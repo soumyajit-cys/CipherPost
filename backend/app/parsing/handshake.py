@@ -321,6 +321,9 @@ def parse_server_hello(data: bytes) -> ServerHelloInfo:
     for etype, edata in _parse_extensions(exts_data):
         if etype == 43 and len(edata) == 2:
             info.supported_versions_ext = int.from_bytes(edata[0:2], "big")
+        elif etype == EXT_KEY_SHARE and len(edata) == 2:
+            # KeyShareServerHello: selected group u16 (no key exchange bytes).
+            info.selected_group = int.from_bytes(edata[0:2], "big")
     if info.supported_versions_ext is not None:
         info.negotiated_version = info.supported_versions_ext
     return info

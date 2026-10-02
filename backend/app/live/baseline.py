@@ -90,6 +90,24 @@ class RollingBaseline:
             self._trained = True
             self._last_refit = time.time()
 
+def _psi(expected: "np.ndarray", actual: "np.ndarray", bins: int = 10) -> float:
+    """Population Stability Index between two 1-D samples (epsilon-smoothed)."""
+    import numpy as _np
+    try:
+        lo = float(_np.min([expected.min(), actual.min()]))
+        hi = float(_np.max([expected.max(), actual.max()]))
+        if lo == hi:
+            return 0.0
+        edges = _np.linspace(lo, hi, bins + 1)
+        e_hist, _ = _np.histogram(expected, bins=edges)
+        a_hist, _ = _np.histogram(actual, bins=edges)
+        e_p = (e_hist + 0.5) / (len(expected) + 0.5 * bins)
+        a_p = (a_hist + 0.5) / (len(actual) + 0.5 * bins)
+        return float(_np.sum((a_p - e_p) * _np.log(a_p / e_p)))
+    except Exception:
+        return 0.0
+
+
 def compute_drift(reference: np.ndarray, recent: np.ndarray,
                   feature_names: list[str], z_threshold: float = 3.0) -> dict:
     """Compare recent-window feature means vs a reference window.
@@ -101,7 +119,8 @@ def compute_drift(reference: np.ndarray, recent: np.ndarray,
     user-facing finding. Pure function over arrays: unit-testable.
     """
     import math
-    out = {"features": [], "drifted": [], "verdict": "ok"}
+    out = {"features": [], "drifted": [], "verdict": "ok", "psi": [],
+           "psi_max": 0.0}
     if reference.shape[0] < 5 or recent.shape[0] < 5:
         out["verdict"] = "insufficient-data"
         return out
@@ -113,11 +132,16 @@ def compute_drift(reference: np.ndarray, recent: np.ndarray,
         shift = float(rec_mean[i] - ref_mean[i]) if i < len(rec_mean) else 0.0
         z = shift / std if std > 1e-9 else 0.0
         flagged = abs(z) >= z_threshold and abs(shift) > 1e-9
+        psi = _psi(reference[:, i], recent[:, i])
         out["features"].append({"feature": name, "ref_mean": float(ref_mean[i]),
                                 "recent_mean": float(rec_mean[i]),
-                                "z": round(z, 3), "drifted": bool(flagged)})
+                                "z": round(z, 3), "drifted": bool(flagged),
+                                "psi": round(psi, 4)})
         if flagged:
             out["drifted"].append(name)
+        out["psi"].append({"feature": name, "psi": round(psi, 4)})
+    out["psi"].sort(key=lambda e: e["psi"], reverse=True)
+    out["psi_max"] = round(out["psi"][0]["psi"] if out["psi"] else 0.0, 4)
     # verdict needs several features to move (single-feature moves are usually
     # policy rollouts, e.g. one cipher disabled fleet-wide)
     min_features = int(getattr(settings, "DRIFT_MIN_FEATURES", 3))

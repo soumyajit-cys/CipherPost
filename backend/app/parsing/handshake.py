@@ -89,6 +89,29 @@ def group_name(gid: int) -> str:
     return names.get(gid, f"0x{gid:04x}")
 
 
+def is_pq_group(gid: int) -> bool:
+    """Hybrid or pure post-quantum group (obsolete drafts excluded)."""
+    return gid in HYBRID_PQ_GROUPS or gid in PURE_PQ_GROUPS
+
+
+def pq_status(offered_groups: list[int] | None,
+              selected_group: int | None) -> dict:
+    """Classify offered vs negotiated PQ posture. Pure observation, no verdict.
+
+    Returns {offered: [names], selected: name|None,
+             offered_pq: bool, negotiated_pq: bool}.
+    """
+    offered = [g for g in (offered_groups or []) if not is_grease(g)]
+    offered_pq = [g for g in offered if is_pq_group(g)]
+    sel = selected_group
+    return {
+        "offered": [group_name(g) for g in offered],
+        "selected": group_name(sel) if sel is not None else None,
+        "offered_pq": bool(offered_pq),
+        "negotiated_pq": bool(sel is not None and is_pq_group(sel)),
+    }
+
+
 class HandshakeParser:
     def __init__(self, data: bytes, max_certs: int = 32, max_cert_size: int = 64 * 1024):
         self.data = data

@@ -93,6 +93,17 @@ def extract_features(sa: SessionAnalysis) -> dict[str, float]:
         feats[f"rule_{rule_prefix}"] = float(any(
             f.rule_id.startswith(rule_prefix) for f in sa.findings
         ))
+    # Catch-all for newer rules (phase 4+: downgrade-*, hrr-*, tls13-*,
+    # ech-*, outdated-*, transport-*, denied-*, mta-*, dane-*) so the model
+    # sees their signal without schema churn per rule.
+    _known = ("tls-version", "rc4", "export", "non-pfs",
+              "non-aead", "self-signed", "untrusted", "expired",
+              "weak-signature", "short-key", "starttls-strip",
+              "plaintext-mail", "weak-cipher", "3des", "no-tls-on-implicit",
+              "unknown-cipher", "no-pfs-suites")
+    feats["rule_other"] = float(any(
+        not f.rule_id.startswith(_known) for f in sa.findings
+    ))
     return feats
 
 

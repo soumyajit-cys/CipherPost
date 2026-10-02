@@ -68,9 +68,12 @@ HYBRID_PQ_GROUPS = {
 PURE_PQ_GROUPS = {512: "MLKEM512", 513: "MLKEM768", 514: "MLKEM1024"}  # RFC draft-ietf-tls-mlkem
 OBSOLETE_KYBER_DRAFTS = {25497: "X25519Kyber768Draft00", 25498: "SecP256r1Kyber768Draft00"}
 # IANA marks named curves 1..25 "D" (deprecated/discouraged, RFC 8422-bis work).
-DEPRECATED_GROUPS = set(range(1, 26))
-# Modern forward-secret groups: ECDHE curves, FFDHE 2048+, hybrids.
-MODERN_FS_GROUPS = {29, 30, 256, 257, 258, 259, 260} | set(HYBRID_PQ_GROUPS)
+# Curves 1..22 are long dead (sect163* etc.); 23..25 (secp256r1/384r1/521r1)
+# remain ubiquitous and NIST-approved, so only 1..22 count as "deprecated"
+# for findings. All of 23,24,25 plus modern groups are PFS-capable.
+DEPRECATED_GROUPS = set(range(1, 23))
+# Modern forward-secret groups: standard ECDHE curves, FFDHE 2048+, hybrids.
+MODERN_FS_GROUPS = {23, 24, 25, 29, 30, 256, 257, 258, 259, 260} | set(HYBRID_PQ_GROUPS)
 
 
 def group_name(gid: int) -> str:

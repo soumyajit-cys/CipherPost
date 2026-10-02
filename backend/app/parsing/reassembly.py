@@ -377,11 +377,11 @@ def format_five_tuple(ip1, p1, ip2, p2) -> str:
     return f"{ip2}:{p2}->{ip1}:{p1}"
 
 
-def split_five_tuple(five_tuple: str) -> tuple[str, str, int]:
+def split_five_tuple(five_tuple: str) -> tuple[str, int, str, int]:
     """Split 'client-ip:client-port->server-ip:server-port'.
 
-    Never raises: malformed input yields ("", "", 0). Single source of truth
-    for the directional format (see format_five_tuple).
+    Never raises: malformed input yields ("", 0, "", 0). Single source of
+    truth for the directional format (see format_five_tuple).
     """
     try:
         left, _, right = five_tuple.partition("->")
@@ -389,6 +389,6 @@ def split_five_tuple(five_tuple: str) -> tuple[str, str, int]:
             left, _, right = five_tuple.partition("-")
         c_ip, _, c_port = left.rpartition(":")
         s_ip, _, s_port = right.rpartition(":")
-        return c_ip, s_ip.lstrip(">"), int(s_port)
+        return c_ip, int(c_port), s_ip.lstrip(">"), int(s_port)
     except Exception:
-        return "", "", 0
+        return "", 0, "", 0

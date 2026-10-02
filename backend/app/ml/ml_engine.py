@@ -73,17 +73,27 @@ class RiskGradientBoost:
               feature_names: list[str], random_state: int = 42):
         if len(X) < 4:
             return self._fallback(y)
+        import numpy as _np
+        classes, counts = _np.unique(y, return_counts=True)
+        can_stratify = len(classes) > 1 and int(counts.min()) >= 2
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=random_state, stratify=y if sum(y) > 1 else None
+            X, y, test_size=0.2, random_state=random_state,
+            stratify=y if can_stratify else None,
         )
         self.clf = HistGradientBoostingClassifier(
             max_iter=200, learning_rate=0.1, max_depth=4,
             min_samples_leaf=2, random_state=random_state
         )
         self.clf.fit(X_train, y_train)
-        if X_test.shape[0] > 2 and len(set(y_test)) > 1:
-            self.calibrated = CalibratedClassifierCV(self.clf, cv=3, method="isotonic")
-            self.calibrated.fit(X_train, y_train)
+        # Calibrate only when every class supports the folds (fail safe, not loud).
+        train_classes, train_counts = _np.unique(y_train, return_counts=True)
+        cv = min(3, int(train_counts.min())) if len(train_classes) > 1 else 0
+        if X_test.shape[0] > 2 and cv >= 2:
+            try:
+                self.calibrated = CalibratedClassifierCV(self.clf, cv=cv, method="isotonic")
+                self.calibrated.fit(X_train, y_train)
+            except Exception:
+                self.calibrated = None
         self._trained = True
         self._feature_names = feature_names
         self._X_all = X

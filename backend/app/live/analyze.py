@@ -153,6 +153,23 @@ class AnalysisWorker:
                         self.gossip.counters.inc("flow_new_fingerprints")
                     except Exception:
                         pass
+                _denied = _deny_list_hit(Session, org_id, {
+                    "ja4": getattr(sa, "ja4", None),
+                    "ja4s": getattr(sa, "ja4s", None),
+                    "ja3": getattr(sa, "ja3_digest", None),
+                    "ja3s": getattr(sa, "ja3s_digest", None)})
+                if _denied:
+                    from app.parsing.rules import Finding as _RuleFinding
+                    sa.findings.append(_RuleFinding(
+                        rule_id="denied-fingerprint-match",
+                        rule_name="denied fingerprint match",
+                        severity="high",
+                        title=f"TLS stack matches org deny list ({_denied})",
+                        description="The session's JA3/JA4 fingerprint is on this "
+                        "organization's deny list. The list is operator-managed; "
+                        "CipherPost ships no fingerprint database.",
+                        reference="org allow/deny list",
+                    ))
                 if _regression:
                     from app.parsing.rules import Finding as _RuleFinding
                     sa.findings.append(_RuleFinding(

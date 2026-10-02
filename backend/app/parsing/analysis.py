@@ -146,6 +146,7 @@ def analyze_session(sess: Session, trust_store: str | None = None) -> SessionAna
             sa.visibility["ja4"] = sa.ja4
         if sa.server_hello is not None:
             sa.ja3s = _ja4.ja3s(sa.server_hello)
+            sa.ja3s_digest = _ja4.ja3s_digest(sa.server_hello)
             sa.ja4s = _ja4.ja4s(sa.server_hello)
             sa.visibility["ja4s"] = sa.ja4s
     except Exception:

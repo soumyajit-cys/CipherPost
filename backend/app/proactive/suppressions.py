@@ -24,13 +24,10 @@ def _finding_hosts(finding: dict) -> list[str]:
         if v:
             hosts.append(str(v))
     ft = str(finding.get("five_tuple", "") or "")
-    if "-" in ft and ":" in ft:
-        try:
-            left, right = ft.split("-", 1)
-            for part in (left, right):
-                hosts.append(part.rsplit(":", 1)[0])
-        except Exception:
-            pass
+    if ft and ":" in ft:
+        from app.parsing.reassembly import split_five_tuple as _split
+        client, cport, server, sport = _split(ft)
+        hosts.extend([h for h in (client, server) if h])
     return hosts
 
 
@@ -43,12 +40,16 @@ def _finding_ports(finding: dict) -> list[int]:
         except Exception:
             pass
     ft = str(finding.get("five_tuple", "") or "")
-    if "-" in ft and ":" in ft:
+    if ft and ":" in ft:
+        from app.parsing.reassembly import split_five_tuple as _split
+        _, _, sport = _split(ft)
         try:
-            for part in ft.split("-", 1):
-                ports.append(int(part.rsplit(":", 1)[1]))
+            cport = int(ft.split("->" if "->" in ft else "-", 1)[0].rpartition(":")[2])
+            ports.append(cport)
         except Exception:
             pass
+        if sport:
+            ports.append(sport)
     return ports
 
 

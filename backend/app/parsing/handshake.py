@@ -203,6 +203,7 @@ def parse_client_hello(data: bytes) -> ClientHelloInfo:
     pos += 1
     if pos + comp_len > len(buf):
         raise TlsParseError("client hello truncated in compression")
+    info.compression = list(buf[pos:pos+comp_len])
     pos += comp_len
     if pos + 2 > len(buf):
         return info
@@ -212,7 +213,7 @@ def parse_client_hello(data: bytes) -> ClientHelloInfo:
         raise TlsParseError("client hello truncated in extensions")
     exts_data = buf[pos:pos+exts_len]
     for etype, edata in _parse_extensions(exts_data):
-        if etype == 0:  # SNI
+        if etype == EXT_SNI:  # SNI
             if len(edata) >= 5:
                 name_list_len = int.from_bytes(edata[0:2], "big")
                 if 2 + name_list_len <= len(edata):
@@ -221,12 +222,12 @@ def parse_client_hello(data: bytes) -> ClientHelloInfo:
                     nlen = int.from_bytes(edata[3:5], "big")
                     if ntype == 0 and 5 + nlen <= len(edata):
                         info.sni = edata[5:5+nlen].decode(errors="replace")
-        elif etype == 10:  # supported_groups
+        elif etype == EXT_SUPPORTED_GROUPS:
             if len(edata) >= 2:
                 glen = int.from_bytes(edata[0:2], "big")
                 gdata = edata[2:2+glen]
                 info.supported_groups = [int.from_bytes(gdata[i:i+2], "big") for i in range(0, len(gdata) - 1, 2)]
-        elif etype == 16:  # ALPN
+        elif etype == EXT_ALPN:
             pos2 = 2
             if len(edata) >= 2:
                 plen = int.from_bytes(edata[0:2], "big")
@@ -235,12 +236,42 @@ def parse_client_hello(data: bytes) -> ClientHelloInfo:
                     name = edata[pos2+1:pos2+1+pl].decode(errors="replace")
                     info.alpn.append(name)
                     pos2 += 1 + pl
-        elif etype == 43:  # supported_versions
+        elif etype == EXT_SUPPORTED_VERSIONS:
             info.has_supported_versions = True
             if len(edata) >= 1:
                 vlen = edata[0]
                 vdata = edata[1:1+vlen]
                 info.offered_versions = [int.from_bytes(vdata[i:i+2], "big") for i in range(0, len(vdata) - 1, 2)]
+        elif etype == EXT_SIG_ALGS:
+            if len(edata) >= 2:
+                alen = int.from_bytes(edata[0:2], "big")
+                adata = edata[2:2+alen]
+                info.sig_algs = [int.from_bytes(adata[i:i+2], "big") for i in range(0, len(adata) - 1, 2)]
+        elif etype == EXT_KEY_SHARE:
+            # KeyShareClientHello: u16 list_len, then entries {group u16, key_exchange u16+opaque}.
+            if len(edata) >= 2:
+                klen = int.from_bytes(edata[0:2], "big")
+                kpos = 2
+                kend = min(2 + klen, len(edata))
+                while kpos + 4 <= kend:
+                    grp = int.from_bytes(edata[kpos:kpos+2], "big")
+                    kex_len = int.from_bytes(edata[kpos+2:kpos+4], "big")
+                    info.key_share_groups.append(grp)
+                    kpos += 4 + kex_len
+                    if kpos > kend:
+                        break  # truncated entry: keep groups parsed so far
+        elif etype == EXT_PSK_KEX_MODES:
+            if len(edata) >= 1:
+                mlen = edata[0]
+                info.psk_kex_modes = list(edata[1:1+mlen])
+        elif etype == EXT_EARLY_DATA:
+            info.early_data_offered = True
+        elif etype == EXT_ECH_OUTER:
+            info.ech_outer = True
+    # GREASE is signal, never evidence: count it, analysis views strip it.
+    info.grease_count = sum(1 for v in (info.cipher_suites + info.supported_groups +
+                                        info.offered_versions + info.key_share_groups)
+                            if is_grease(v))
     return info
 
 

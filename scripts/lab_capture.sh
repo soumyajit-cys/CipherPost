@@ -146,6 +146,24 @@ run() { # name port server_args... -- sclient_args... -- dialog
 ONLY="$*"
 want() { [ -z "$ONLY" ] && return 0; case " $ONLY " in *" $1 "*) return 0;; *) return 1;; esac; }
 
+run_implicit() { # name port kind tlsmin tlsmax ciphers(-- or -) server_cert server_key
+  NAME=$1; PORT=$2; KIND=$3; TMIN=$4; TMAX=$5; CIPH=$6; CERT=$7; KEY=$8
+  : > "$OUT/$NAME.tls.txt"
+  echo "[$NAME] starting cap" >> "$OUT/driver.log"
+  start_cap "$NAME" || return 1
+  date "+srv-start %T" >> "$OUT/driver.log"
+  if [ "$CIPH" = "-" ]; then CARG=""; else CARG="--ciphers $CIPH"; fi
+  # shellcheck disable=SC2086
+  start_server "$PORT" "$KIND" "$PORT" --cert "$CERT" --key "$KEY" --tlsmin "$TMIN" --tlsmax "$TMAX" $CARG || return 1
+  date "+cli-start %T" >> "$OUT/driver.log"
+  # shellcheck disable=SC2086
+  timeout 25 python3 scripts/lab_mail.py client-implicit "$KIND" "$PORT" --tlsmin "$TMIN" --tlsmax "$TMAX" $CARG >>"$OUT/$NAME.tls.txt" 2>&1
+  date "+cli-end %T" >> "$OUT/driver.log"
+  sleep 2
+  stop_all
+  finish "$NAME" "$PORT"
+}
+
 G=$LAB/good.crt; GK=$LAB/good.key
 
 # shellcheck disable=SC2086
@@ -190,9 +208,9 @@ if want smtp_stripped_proxy587; then
   stop_all; finish "$NAME" "$PORT"
 fi
 
-want smtp12_implicit465 && run smtp12_implicit465 465 smtp-implicit 465 --cert $G --key $GK --tlsmin 1.2 --tlsmax 1.2 -- -connect 127.0.0.1:465 -tls1_2 -servername mail.lab.test -- 'EHLO c\r\nQUIT\r\n'
-want smtp13_implicit465 && run smtp13_implicit465 465 smtp-implicit 465 --cert $G --key $GK -- -connect 127.0.0.1:465 -tls1_3 -servername mail.lab.test -- 'EHLO c\r\nQUIT\r\n'
-want smtp10_implicit465 && run smtp10_implicit465 465 smtp-implicit 465 --cert $G --key $GK --tlsmin 1.0 --tlsmax 1.0 --ciphers AES128-SHA@SECLEVEL=0 -- -connect 127.0.0.1:465 -tls1 -cipher AES128-SHA@SECLEVEL=0 -- 'EHLO c\r\nQUIT\r\n'
+want smtp12_implicit465 && run_implicit smtp12_implicit465 465 smtp-implicit 1.2 1.2 "-" $G $GK
+want smtp13_implicit465 && run_implicit smtp13_implicit465 465 smtp-implicit 1.3 1.3 "-" $G $GK
+want smtp10_implicit465 && run_implicit smtp10_implicit465 465 smtp-implicit 1.0 1.0 "AES128-SHA@SECLEVEL=0" $G $GK
 want imap13_starttls143 && run imap13_starttls143 143 imap 143 --cert $G --key $GK -- -starttls imap -connect 127.0.0.1:143 -tls1_3 -servername mail.lab.test -- 'a001 LOGOUT\r\n'
 if want imap_plain143; then
   NAME=imap_plain143; PORT=143; : > "$OUT/$NAME.tls.txt"
@@ -202,7 +220,7 @@ if want imap_plain143; then
   sleep 5
   stop_all; finish "$NAME" "$PORT"
 fi
-want imap13_implicit993 && run imap13_implicit993 993 imap-implicit 993 --cert $G --key $GK -- -connect 127.0.0.1:993 -tls1_3 -servername mail.lab.test -- 'a001 LOGOUT\r\n'
+want imap13_implicit993 && run_implicit imap13_implicit993 993 imap-implicit 1.3 1.3 "-" $G $GK
 want pop13_stls110 && run pop13_stls110 110 pop3 110 --cert $G --key $GK -- -starttls pop3 -connect 127.0.0.1:110 -tls1_3 -servername mail.lab.test -- 'QUIT\r\n'
 if want pop_plain110; then
   NAME=pop_plain110; PORT=110; : > "$OUT/$NAME.tls.txt"
@@ -212,6 +230,6 @@ if want pop_plain110; then
   sleep 5
   stop_all; finish "$NAME" "$PORT"
 fi
-want pop12_implicit995 && run pop12_implicit995 995 pop3-implicit 995 --cert $G --key $GK --tlsmin 1.2 --tlsmax 1.2 -- -connect 127.0.0.1:995 -tls1_2 -servername mail.lab.test -- 'QUIT\r\n'
+want pop12_implicit995 && run_implicit pop12_implicit995 995 pop3-implicit 1.2 1.2 "-" $G $GK
 want imap12_login143 && run imap12_login143 143 imap 143 --cert $G --key $GK --tlsmin 1.2 --tlsmax 1.2 -- -starttls imap -connect 127.0.0.1:143 -tls1_2 -servername mail.lab.test -- 'a001 LOGIN user secret\r\na002 LOGOUT\r\n'
 echo ALLDONE

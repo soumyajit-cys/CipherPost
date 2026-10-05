@@ -43,13 +43,22 @@ stop_all() {
   [ -n "$DCAP_PID" ] && pkill -P "$DCAP_PID" 2>/dev/null
   [ -n "$SRV_PID" ] && kill "$SRV_PID" 2>/dev/null
   [ -n "$DCAP_PID" ] && kill "$DCAP_PID" 2>/dev/null
+  ( wait_cap ) & WAITCAP_PID=$!
   # wait for capturer exit so its write buffer is flushed to disk
   for _ in $(seq 1 10); do
     [ -n "$DCAP_PID" ] && kill -0 "$DCAP_PID" 2>/dev/null || break
     sleep 1
   done
   sleep 2
+  echo "[$NAME] capturer exit: $DCAP_EXIT" >> "$OUT/driver.log"
   SRV_PID=""; DCAP_PID=""
+}
+
+# wait_cap: wait for capturer death with timestamp (diagnoses early death).
+wait_cap() {
+  wait $DCAP_PID 2>/dev/null
+  DCAP_EXIT=$?
+  date "+cap-dead %T (exit=$DCAP_EXIT)" >> "$OUT/driver.log"
 }
 finish() { # name port
   # Wait until no process holds the raw file (dead-but-unreaped writers or a

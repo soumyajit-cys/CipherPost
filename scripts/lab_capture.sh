@@ -12,8 +12,20 @@ DCAP_PID=""; SRV_PID=""
 start_cap() { # name
   dumpcap -i lo -F pcap -w "$OUT/$1.raw.pcap" >/dev/null 2>&1 &
   DCAP_PID=$!
-  sleep 3
+  sleep 2
   kill -0 $DCAP_PID 2>/dev/null || { echo "dumpcap failed to start"; return 1; }
+  # readiness probe: dumpcap startup on loaded hosts is slow; do not start
+  # the scenario until a probe SYN to a closed port is visible in the file.
+  timeout 2 bash -c "</dev/tcp/127.0.0.1/59999" 2>/dev/null
+  for _ in $(seq 1 15); do
+    if [ "$(tshark -r "$OUT/$1.raw.pcap" -Y "tcp.port==59999" 2>/dev/null | wc -l)" -ge 2 ]; then
+      return 0
+    fi
+    sleep 1
+    timeout 2 bash -c "</dev/tcp/127.0.0.1/59999" 2>/dev/null
+  done
+  echo "dumpcap readiness probe failed for $1"
+  return 1
 }
 start_server() { # args...
   timeout 25 python3 scripts/lab_mail.py server "$@" >/dev/null 2>&1 &

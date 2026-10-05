@@ -204,9 +204,9 @@ if want smtp_stripped_proxy587; then
     fi
   done
   if [ "$_held" = "1" ]; then echo "$NAME: skipped"; else
-  timeout 300 python3 scripts/lab_strip_proxy.py 587 1587 >/dev/null 2>&1 &
+  timeout 300 python3 scripts/lab_strip_proxy.py 587 1587 >"$OUT/$NAME.proxy.log" 2>&1 &
   PROXY_PID=$!
-  timeout 300 python3 scripts/lab_mail.py server smtp 1587 --cert $G --key $GK >/dev/null 2>&1 &
+  timeout 300 python3 scripts/lab_mail.py server smtp 1587 --cert $G --key $GK >"$OUT/$NAME.real.log" 2>&1 &
   REAL_PID=$!
   sleep 1
   start_cap "$NAME"

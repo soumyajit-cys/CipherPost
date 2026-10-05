@@ -85,7 +85,7 @@ run() { # name port server_args... -- sclient_args... -- dialog
   start_server "$PORT" "${SARGS[@]}"
   date "+cli-start %T" >> "$OUT/driver.log"
   # shellcheck disable=SC2086
-  printf "%b" "$DIALOG" | paced_stdin | timeout 30 openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1 & CLI_PID=$!
+  printf "%b" "$DIALOG" | paced_stdin | openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1 & CLI_PID=$!
   # wait for dialog idle (no tls.txt growth for 2s = both sides done talking),
   # then kill the client: its RST/FIN completes the stream so reassembly emits
   # the session instead of dropping it as incomplete. (s_client -quiet idles on

@@ -10,11 +10,11 @@ mkdir -p "$OUT"
 DCAP_PID=""; SRV_PID=""
 
 start_cap() { # name
-  tshark -i any -F pcap -w "$OUT/$1.raw.pcap" >/dev/null 2>&1 &
+  # Capture with dumpcap DIRECTLY (not via tshark -w): tshark forks a dumpcap
+  # child, and killing the tshark PID orphans it — buffered tail data is then
+  # never flushed and strays accumulate. dumpcap alone exits cleanly on TERM.
+  dumpcap -i any -F pcap -w "$OUT/$1.raw.pcap" >/dev/null 2>&1 &
   DCAP_PID=$!
-  # Warmup WITHOUT reading the growing file: concurrent tshark -r reads of
-  # a file under active capture empirically stall this host's capturer
-  # (background and scenario traffic both vanish mid-run; see real-eval.md).
   sleep 8
   kill -0 $DCAP_PID 2>/dev/null || { echo "capturer failed to start"; return 1; }
 }

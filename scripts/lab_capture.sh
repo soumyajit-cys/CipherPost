@@ -58,13 +58,20 @@ finish() { # name port
   echo "[$1] raw kept at $OUT/$1.raw.pcap size=$(stat -c%s "$OUT/$1.raw.pcap")" >> "$OUT/driver.log"
   echo "$1: $(capinfos "$OUT/$1.pcap" 2>/dev/null | grep -o 'Number of packets.*' | grep -o '[0-9]*' | head -n 1) pkts"
 }
-scli() { # uses SCARGS, DIALOG, NAME
-  date "+cli-start %T" >> "$OUT/driver.log"
-  printf "%b" "$DIALOG" | timeout 12 openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1
-  date "+cli-end %T" >> "$OUT/driver.log"
-  # settle: give the live capturer seconds to flush recent packets before kill
-  sleep 5
-  : > /dev/null
+# paced_stdin: emit each CRLF-terminated line with 1s spacing. A full dialog
+# fired in milliseconds intermittently vanishes from loopback capture on this
+# host (see docs/evidence/real-eval.md); pacing changes timing only, never bytes.
+paced_stdin() {
+  python3 -c "
+import sys, time
+data = sys.stdin.buffer.read().decode().replace(chr(13) + chr(10), chr(10)).split(chr(10))
+for line in data:
+    if not line:
+        continue
+    sys.stdout.buffer.write((line + chr(13) + chr(10)).encode())
+    sys.stdout.buffer.flush()
+    time.sleep(1)
+"
 }
 
 run() { # name port server_args... -- sclient_args... -- dialog
@@ -83,7 +90,7 @@ run() { # name port server_args... -- sclient_args... -- dialog
   start_server "$PORT" "${SARGS[@]}"
   date "+cli-start %T" >> "$OUT/driver.log"
   # shellcheck disable=SC2086
-  printf "%b" "$DIALOG" | timeout 12 openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1
+  printf "%b" "$DIALOG" | paced_stdin | timeout 30 openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1
   date "+cli-end %T" >> "$OUT/driver.log"
   echo "[$NAME] pre-stop dcap_alive=$(kill -0 $DCAP_PID 2>/dev/null && echo yes || echo NO) dcap_is=$(ps -p $DCAP_PID -o comm= 2>/dev/null) rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
   stop_all

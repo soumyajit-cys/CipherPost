@@ -17,17 +17,6 @@ spec:
         app: api
     spec:
       securityContext: {{- include "cipherpost.podSecurity" . | nindent 8 }}
-      initContainers:
-        - name: migrate
-          image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
-          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
-          command: ["python", "-m", "app.migrate"]
-          securityContext: {{- include "cipherpost.containerSecurity" . | nindent 12 }}
-          env:
-            {{- include "cipherpost.env" . | nindent 12 }}
-          envFrom:
-            - secretRef: { name: {{ .Values.existingSecretRefs.app | quote }} }
-          resources: {{- toYaml .Values.resources.alerter | nindent 12 }}
       containers:
         - name: api
           image: "{{ .Values.images.api.repository }}:{{ .Values.images.api.tag }}"
@@ -75,17 +64,6 @@ spec:
         app: worker
     spec:
       securityContext: {{- include "cipherpost.podSecurity" . | nindent 8 }}
-      initContainers:
-        - name: migrate
-          image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
-          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
-          command: ["python", "-m", "app.migrate"]
-          securityContext: {{- include "cipherpost.containerSecurity" . | nindent 12 }}
-          env:
-            {{- include "cipherpost.env" . | nindent 12 }}
-          envFrom:
-            - secretRef: { name: {{ .Values.existingSecretRefs.app | quote }} }
-          resources: {{- toYaml .Values.resources.alerter | nindent 12 }}
       containers:
         - name: worker
           image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"

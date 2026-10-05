@@ -27,10 +27,21 @@ start_cap() { # name
   echo "dumpcap readiness probe failed for $1"
   return 1
 }
-start_server() { # args...
-  timeout 25 python3 scripts/lab_mail.py server "$@" >/dev/null 2>&1 &
+start_server() { # port args...
+  PORT=$1; shift
+  timeout 25 python3 scripts/lab_mail.py server "$@" >"$OUT/srv_$PORT.log" 2>&1 &
   SRV_PID=$!
-  sleep 2
+  # wait until the port is actually listening (bind can lag or fail)
+  for _ in $(seq 1 10); do
+    if timeout 2 bash -c "</dev/tcp/127.0.0.1/$PORT" 2>/dev/null; then
+      sleep 1
+      return 0
+    fi
+    kill -0 $SRV_PID 2>/dev/null || { echo "server for port $PORT died early"; cat "$OUT/srv_$PORT.log"; return 1; }
+    sleep 1
+  done
+  echo "server for port $PORT never listened"
+  return 1
 }
 stop_all() {
   [ -n "$SRV_PID" ] && kill "$SRV_PID" 2>/dev/null
@@ -61,11 +72,15 @@ run() { # name port server_args... -- sclient_args... -- dialog
   while [ "$1" != "--" ]; do SCARGS="$SCARGS $1"; shift; done; shift
   DIALOG=$1
   : > "$OUT/$NAME.tls.txt"
+  echo "[$NAME] starting cap" >> "$OUT/driver.log"; date +%T >> "$OUT/driver.log"
   start_cap "$NAME" || return 1
-  start_server "${SARGS[@]}"
+  echo "[$NAME] cap live dcap=$DCAP_PID rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
+  start_server "$PORT" "${SARGS[@]}"
   # shellcheck disable=SC2086
   printf "%b" "$DIALOG" | timeout 12 openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1
+  echo "[$NAME] pre-stop dcap_alive=$(kill -0 $DCAP_PID 2>/dev/null && echo yes || echo NO) rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
   stop_all
+  echo "[$NAME] post-stop rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
   finish "$NAME" "$PORT"
 }
 
@@ -89,14 +104,14 @@ want smtp13_expired_blind587 && run smtp13_expired_blind587 587 smtp 587 --cert 
 if want smtp_nostarttls587; then
   NAME=smtp_nostarttls587; PORT=587; : > "$OUT/$NAME.tls.txt"
   start_cap "$NAME"
-  start_server smtp 587 --cert $G --key $GK --no-starttls
+  start_server 587 smtp 587 --cert $G --key $GK --no-starttls
   timeout 10 python3 -c "import socket;s=socket.create_connection(('127.0.0.1',587),timeout=8);f=s.makefile('rwb');f.readline();f.write(b'EHLO c\r\n');f.flush();[f.readline() for _ in range(3)];f.write(b'QUIT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
   stop_all; finish "$NAME" "$PORT"
 fi
 if want smtp_strip_ignored587; then
   NAME=smtp_strip_ignored587; PORT=587; : > "$OUT/$NAME.tls.txt"
   start_cap "$NAME"
-  start_server smtp 587 --cert $G --key $GK
+  start_server 587 smtp 587 --cert $G --key $GK
   timeout 10 python3 -c "import socket,base64;s=socket.create_connection(('127.0.0.1',587),timeout=8);f=s.makefile('rwb');f.readline();f.write(b'EHLO c\r\n');f.flush();[f.readline() for _ in range(3)];tok=base64.b64encode(b'\x00user\x00secret').decode();f.write(('AUTH PLAIN '+tok+'\r\n').encode());f.flush();f.readline();f.write(b'QUIT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
   stop_all; finish "$NAME" "$PORT"
 fi
@@ -121,7 +136,7 @@ want imap13_starttls143 && run imap13_starttls143 143 imap 143 --cert $G --key $
 if want imap_plain143; then
   NAME=imap_plain143; PORT=143; : > "$OUT/$NAME.tls.txt"
   start_cap "$NAME"
-  start_server imap 143 --cert $G --key $GK --no-starttls
+  start_server 143 imap 143 --cert $G --key $GK --no-starttls
   timeout 10 python3 -c "import socket;s=socket.create_connection(('127.0.0.1',143),timeout=8);f=s.makefile('rwb');f.readline();f.write(b'a001 CAPABILITY\r\n');f.flush();f.readline();f.readline();f.write(b'a002 LOGOUT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
   stop_all; finish "$NAME" "$PORT"
 fi
@@ -130,7 +145,7 @@ want pop13_stls110 && run pop13_stls110 110 pop3 110 --cert $G --key $GK -- -sta
 if want pop_plain110; then
   NAME=pop_plain110; PORT=110; : > "$OUT/$NAME.tls.txt"
   start_cap "$NAME"
-  start_server pop3 110 --cert $G --key $GK --no-starttls
+  start_server 110 pop3 110 --cert $G --key $GK --no-starttls
   timeout 10 python3 -c "import socket;s=socket.create_connection(('127.0.0.1',110),timeout=8);f=s.makefile('rwb');f.readline();f.write(b'CAPA\r\n');f.flush();[f.readline() for _ in range(4)];f.write(b'QUIT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
   stop_all; finish "$NAME" "$PORT"
 fi

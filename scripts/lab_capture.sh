@@ -78,14 +78,14 @@ run() { # name port server_args... -- sclient_args... -- dialog
   echo "[$NAME] starting cap" >> "$OUT/driver.log"; date +%T >> "$OUT/driver.log"
   date "+cap-start %T" >> "$OUT/driver.log"
   start_cap "$NAME" || return 1
-  echo "[$NAME] cap live dcap=$DCAP_PID rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
+  echo "[$NAME] cap live dcap=$DCAP_PID dcap_is=$(ps -p $DCAP_PID -o comm= 2>/dev/null) rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
   date "+srv-start %T" >> "$OUT/driver.log"
   start_server "$PORT" "${SARGS[@]}"
   date "+cli-start %T" >> "$OUT/driver.log"
   # shellcheck disable=SC2086
   printf "%b" "$DIALOG" | timeout 12 openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1
   date "+cli-end %T" >> "$OUT/driver.log"
-  echo "[$NAME] pre-stop dcap_alive=$(kill -0 $DCAP_PID 2>/dev/null && echo yes || echo NO) rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
+  echo "[$NAME] pre-stop dcap_alive=$(kill -0 $DCAP_PID 2>/dev/null && echo yes || echo NO) dcap_is=$(ps -p $DCAP_PID -o comm= 2>/dev/null) rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
   stop_all
   echo "[$NAME] post-stop rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
   finish "$NAME" "$PORT"

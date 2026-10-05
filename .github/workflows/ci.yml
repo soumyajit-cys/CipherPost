@@ -170,14 +170,24 @@ jobs:
           echo "/tmp" >> "$GITHUB_PATH"
       - name: Helm lint
         run: helm lint deploy/helm/cipherpost
-      - name: Helm template (defaults + full values)
+      - name: Helm template (eval-bundled + full values)
+        # Chart defaults ship no database by design (validations.yaml fails
+        # fast); template with bundled deps for evaluation, as the kind
+        # workflow does.
         run: |
-          helm template cp-ci deploy/helm/cipherpost --namespace cipherpost > /tmp/cp-ci.yaml
+          helm template cp-ci deploy/helm/cipherpost --namespace cipherpost \
+            --set postgres.bundled.enabled=true --set redis.bundled.enabled=true > /tmp/cp-ci.yaml
           helm template cp-full deploy/helm/cipherpost --namespace cipherpost \
             --set ingress.enabled=true --set monitoring.serviceMonitor.enabled=true \
             --set monitoring.prometheusRules.enabled=true \
             --set postgres.bundled.enabled=true --set redis.bundled.enabled=true \
             --set autoscaling.analyzer.enabled=false > /tmp/cp-full.yaml
+      - name: Helm template rejects database-less values
+        run: |
+          if helm template cp-nodb deploy/helm/cipherpost --namespace cipherpost > /tmp/cp-nodb.yaml 2>&1; then
+            echo "expected template to fail without database config"; exit 1
+          fi
+          grep -q "no database configured" /tmp/cp-nodb.yaml
       - name: Kubeconform strict
         # NOTE: no kind-cluster install test (see report). ServiceMonitor/
         # PrometheusRule are operator CRDs without public schemas: skipped.

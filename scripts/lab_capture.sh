@@ -10,10 +10,9 @@ mkdir -p "$OUT"
 DCAP_PID=""; SRV_PID=""
 
 start_cap() { # name
-  # Capture with dumpcap DIRECTLY (not via tshark -w): tshark forks a dumpcap
-  # child, and killing the tshark PID orphans it — buffered tail data is then
-  # never flushed and strays accumulate. dumpcap alone exits cleanly on TERM.
-  dumpcap -i any -F pcap -w "$OUT/$1.raw.pcap" >/dev/null 2>&1 &
+  # dumpcap on lo (proven in Item 2 PQ runs). Requires a quiet box: stray
+  # capturers/CPU hogs starve AF_PACKET delivery; keep runs serial and clean.
+  dumpcap -i lo -F pcap -w "$OUT/$1.raw.pcap" >/dev/null 2>&1 &
   DCAP_PID=$!
   sleep 8
   kill -0 $DCAP_PID 2>/dev/null || { echo "capturer failed to start"; return 1; }
@@ -49,12 +48,8 @@ stop_all() {
   SRV_PID=""; DCAP_PID=""
 }
 finish() { # name port
-  # -i any yields Linux SLL; convert to Ethernet (documented, payload untouched)
-  # so dpkt-based reassembly can read the file. Originals are not kept: the
-  # conversion only rewrites link headers (fake MACs + ethertype 0x0800).
-  tshark -r "$OUT/$1.raw.pcap" -Y "tcp.port==$2" -F pcap -w "$OUT/$1.sll.pcap" 2>/dev/null
-  python3 scripts/sll_to_ether.py "$OUT/$1.sll.pcap" "$OUT/$1.pcap"
-  rm -f "$OUT/$1.sll.pcap"
+  # lo capture is already Ethernet: plain filter, no conversion.
+  tshark -r "$OUT/$1.raw.pcap" -Y "tcp.port==$2" -F pcap -w "$OUT/$1.pcap" 2>/dev/null
   echo "[$1] raw kept at $OUT/$1.raw.pcap size=$(stat -c%s "$OUT/$1.raw.pcap")" >> "$OUT/driver.log"
   echo "$1: $(capinfos "$OUT/$1.pcap" 2>/dev/null | grep -o 'Number of packets.*' | grep -o '[0-9]*' | head -n 1) pkts"
 }

@@ -18,7 +18,7 @@ start_cap() { # name
   sleep 8
   kill -0 $DCAP_PID 2>/dev/null || { echo "capturer failed to start"; return 1; }
 }
-start_server() { # port args...
+start_server() { # pollport harness_args...
   PORT=$1; shift
   timeout 25 python3 scripts/lab_mail.py server "$@" >"$OUT/srv_$PORT.log" 2>&1 &
   SRV_PID=$!

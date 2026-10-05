@@ -357,8 +357,12 @@ def rule_3des(sa: SessionAnalysis):
 
 
 def rule_ssl_in_plaintext(sa: SessionAnalysis):
-    # plaintext SMTP/IMAP/POP3 with NO STARTTLS offered/used
-    if not sa.started_tls and not sa.tls_bytes:
+    # plaintext SMTP/IMAP/POP3 with NO STARTTLS offered/used.
+    # Requires observed plaintext bytes: a session with nothing on the wire
+    # (SYN/RST only) exposes nothing, so alleging cleartext exposure would be
+    # a false positive (lab find 2026-10-05: refused probes flagged HIGH).
+    if (not sa.started_tls and not sa.tls_bytes
+            and getattr(sa, "plaintext_bytes", 0) > 0):
         sa.add(
             "plaintext-mail-protocol",
             "Plaintext mail session (no TLS)",
@@ -653,7 +657,10 @@ def rule_unknown_cipher(sa: SessionAnalysis):
 
 
 def rule_no_tls_on_tls_port(sa: SessionAnalysis):
-    if sa.is_implicit_tls_port and not sa.started_tls and not sa.tls_bytes:
+    # Same zero-byte guard as rule_ssl_in_plaintext: nothing observed means
+    # no misconfiguration can be alleged (lab find 2026-10-05).
+    if (sa.is_implicit_tls_port and not sa.started_tls and not sa.tls_bytes
+            and getattr(sa, "plaintext_bytes", 0) > 0):
         sa.add(
             "no-tls-on-implicit-port",
             "No TLS on implicit-TLS port",

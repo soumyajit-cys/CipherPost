@@ -215,7 +215,7 @@ if want smtp_stripped_proxy587; then
 while True:
     ln=f.readline().decode(errors='replace')
     if ln.startswith('250 ') or not ln: break
-tok=base64.b64encode(b'\x00user\x00secret').decode();f.write(('AUTH PLAIN '+tok+'\r\n').encode());f.flush();f.readline();import time as _t;_t.sleep(1);f.write(b'QUIT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
+tok=base64.b64encode(b'\x00user\x00secret').decode();f.write(('AUTH PLAIN '+tok+'\r\n').encode());f.flush();f.readline();import time as _t;_t.sleep(1);f.write(b'QUIT\r\n');f.flush();f.readline();s.close()" >"$OUT/$NAME.out.txt" 2>"$OUT/$NAME.err.txt"
   kill $PROXY_PID $REAL_PID 2>/dev/null
   stop_all; finish "$NAME" "$PORT"
   fi

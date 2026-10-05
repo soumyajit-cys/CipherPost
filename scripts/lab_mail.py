@@ -154,9 +154,52 @@ def pop3_dialog(conn: socket.socket, offer_stls: bool, tls_ctx: ssl.SSLContext |
 DIALOGS = {"smtp": smtp_dialog, "imap": imap_dialog, "pop3": pop3_dialog}
 
 
+def client_implicit(kind: str, port: int, tlsmin: str, tlsmax: str,
+                      ciphers: str | None, sni: str) -> int:
+    """Real implicit-TLS client (stdlib ssl): paced dialog, RST-close.
+    Prints server responses to stdout (driver scrapes for progress)."""
+    import time as _t
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    ctx.minimum_version = TLSMAP[tlsmin]
+    ctx.maximum_version = TLSMAP[tlsmax]
+    if ciphers:
+        ctx.set_ciphers(ciphers)
+    raw = socket.create_connection(("127.0.0.1", port), timeout=10)
+    conn = ctx.wrap_socket(raw, server_hostname=sni)
+    f = conn.makefile("rwb")
+    if kind.startswith("smtp"):
+        _t.sleep(0.5)
+        f.write(b"EHLO labclient\r\n"); f.flush()
+        print(recv_line(f).strip(), flush=True)
+        _t.sleep(1)
+        f.write(b"QUIT\r\n"); f.flush()
+        print(recv_line(f).strip(), flush=True)
+    elif kind.startswith("imap"):
+        print(recv_line(f).strip(), flush=True)
+        _t.sleep(1)
+        f.write(b"a001 LOGOUT\r\n"); f.flush()
+        print(recv_line(f).strip(), flush=True)
+    elif kind.startswith("pop3"):
+        print(recv_line(f).strip(), flush=True)
+        _t.sleep(1)
+        f.write(b"QUIT\r\n"); f.flush()
+        print(recv_line(f).strip(), flush=True)
+    _t.sleep(1)
+    try:
+        import struct as _st
+        conn.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
+                        _st.pack("ii", 1, 0))
+    except Exception:
+        pass
+    conn.close()
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["server"])
+    ap.add_argument("mode", choices=["server", "client-implicit"])
     ap.add_argument("kind")
     ap.add_argument("port", type=int)
     ap.add_argument("--cert", default="")
@@ -165,8 +208,13 @@ def main() -> int:
     ap.add_argument("--tlsmax", default="1.3")
     ap.add_argument("--ciphers", default=None)
     ap.add_argument("--no-starttls", action="store_true")
+    ap.add_argument("--sni", default="mail.lab.test")
     args = ap.parse_args()
 
+    if args.mode == "client-implicit":
+        return client_implicit(args.kind, args.port, args.tlsmin,
+                               args.tlsmax, args.ciphers,
+                               getattr(args, "sni", None) or "mail.lab.test")
     implicit = args.kind.endswith("-implicit")
     base = args.kind.replace("-implicit", "")
     if base not in DIALOGS:

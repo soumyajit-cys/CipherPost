@@ -203,10 +203,18 @@ sensor agent with disk queue (privacy/outage/revocation tests); offline CLI
 workflow (dry-run safe); diagnostics bundles, feedback labels + precision
 dashboard, pilot/security/telemetry docs. 140+ backend tests green.
 
-**Still required:** three external pilots; kind install test; real-IdP SSO
-verification (generic OIDC only, no vendor claims); link-rate sizing from
+**Still required:** three external pilots; kind install test; link-rate sizing from
 real SPAN captures; license choice by the owner (see
 `docs/licensing-decision.md`).
+
+**Closed by lab 2026-10-05 (see `docs/v1-readiness.md`):** real-IdP SSO is now
+verified against Keycloak 26.8.0 (code+PKCE, group mapping, rotation,
+expiry, deprovision — `docs/evidence/sso-keycloak.md`; other providers NOT
+claimed); JA4 verified against the official spec example + reference
+behavior; PQ hybrid handshakes captured live with tshark agreement; a
+28-capture lab-labeled set in `tests/real/` (functional labels, not pilot
+labels); chaos incl. a real-Redis outage plus soak measurements. v1.0 still
+blocked on pilots, the 30-day run, kind/registry runs, and tagging.
 
 ## Further documentation
 

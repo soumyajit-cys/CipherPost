@@ -118,6 +118,15 @@ run() { # name port server_args... -- sclient_args... -- dialog
     echo "[$NAME] client already exited before kill" >> "$OUT/driver.log"
   fi
   wait $CLI_PID 2>/dev/null
+  for _ in $(seq 1 5); do
+    kill -0 $CLI_PID 2>/dev/null || break
+    sleep 1
+  done
+  if kill -0 $CLI_PID 2>/dev/null; then
+    echo "[$NAME] WARNING client $CLI_PID survived TERM, KILLing" >> "$OUT/driver.log"
+    kill -9 $CLI_PID 2>/dev/null
+    sleep 1
+  fi
   date "+cli-end %T" >> "$OUT/driver.log"
   echo "[$NAME] pre-stop dcap_alive=$(kill -0 $DCAP_PID 2>/dev/null && echo yes || echo NO) dcap_is=$(ps -p $DCAP_PID -o comm= 2>/dev/null) rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
   stop_all

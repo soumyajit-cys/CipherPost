@@ -1,0 +1,35 @@
+{{- /* Database migrations as a single pre-install/pre-upgrade hook Job.
+  Replaces the duplicated per-replica initContainers (Alembic race): exactly
+  one migration runs before workloads start, with retries from
+  .Values.migration.backoffLimit. Matches docs (NOTES.txt) which already
+  promised a migrate Job. */ -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-migrate
+  labels: {{- include "cipherpost.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "-5"
+spec:
+  backoffLimit: {{ .Values.migration.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "cipherpost.selectorLabels" . | nindent 8 }}
+        app: migrate
+    spec:
+      restartPolicy: OnFailure
+      securityContext: {{- include "cipherpost.podSecurity" . | nindent 8 }}
+      containers:
+        - name: migrate
+          image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
+          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          command: ["python", "-m", "app.migrate"]
+          securityContext: {{- include "cipherpost.containerSecurity" . | nindent 12 }}
+          env:
+            {{- include "cipherpost.env" . | nindent 12 }}
+          envFrom:
+            - secretRef: { name: {{ .Values.existingSecretRefs.app | quote }} }
+          resources: {{- toYaml .Values.resources.worker | nindent 12 }}

@@ -10,7 +10,7 @@ mkdir -p "$OUT"
 DCAP_PID=""; SRV_PID=""
 
 start_cap() { # name
-  tshark -i lo -F pcap -w "$OUT/$1.raw.pcap" >/dev/null 2>&1 &
+  tshark -i any -F pcap -w "$OUT/$1.raw.pcap" >/dev/null 2>&1 &
   DCAP_PID=$!
   sleep 2
   kill -0 $DCAP_PID 2>/dev/null || { echo "capturer failed to start"; return 1; }
@@ -55,7 +55,12 @@ stop_all() {
   SRV_PID=""; DCAP_PID=""
 }
 finish() { # name port
-  tshark -r "$OUT/$1.raw.pcap" -Y "tcp.port==$2" -F pcap -w "$OUT/$1.pcap" 2>/dev/null
+  # -i any yields Linux SLL; convert to Ethernet (documented, payload untouched)
+  # so dpkt-based reassembly can read the file. Originals are not kept: the
+  # conversion only rewrites link headers (fake MACs + ethertype 0x0800).
+  tshark -r "$OUT/$1.raw.pcap" -Y "tcp.port==$2" -F pcap -w "$OUT/$1.sll.pcap" 2>/dev/null
+  python3 scripts/sll_to_ether.py "$OUT/$1.sll.pcap" "$OUT/$1.pcap"
+  rm -f "$OUT/$1.sll.pcap"
   rm -f "$OUT/$1.raw.pcap"
   echo "$1: $(capinfos "$OUT/$1.pcap" 2>/dev/null | grep -o 'Number of packets.*' | grep -o '[0-9]*' | head -n 1) pkts"
 }

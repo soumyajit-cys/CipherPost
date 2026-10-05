@@ -78,8 +78,27 @@ hosted analysis) on top of this unreleased foundation.
     Tasks 1–8 can be ranked by evidence as the prompt requires. With zero
     issues and zero pilot notes, any priority order would be invented.
 
-## Recommendation
+## Update 2026-10-05 (blocker-closure lab — automation + local lab only)
 
-Close items 1–2 (pilots + 30-day run) and item 9 (tag a release) first.
-Re-run this gate after that. Until then, Phase 5 Tasks 1–8 are **deferred
-in full** — per the task brief, no code changes follow this file.
+Closed by lab work (evidence-linked, `docs/evidence/`):
+- Item 4 (real-IdP SSO) → CLOSED for Keycloak 26.8.0 (`sso-keycloak.md`).
+- Item 7 (JA4S verification) → CLOSED within what exists (`ja4-verification.md`).
+- Item 8 (PQ interop) → CLOSED (`pq-interop.md`, 5 captures).
+- Item 6 (chaos on real infra) → HALF-CLOSED (real-Redis outage + soak pass;
+  PG restart, container kills, CI nightly run still open).
+
+Still open (owner-only): items 1 (external pilots), 2 (30-day run),
+3 (kind run), 5 (registry/sign credentials), 9 (tagging), 10 (feedback
+corpus), and the remainder of 6. New sub-blockers discovered are logged in
+`docs/known-issues.md` (diff_tshark field gap, hostname-mismatch live path,
+FIN-less stream drops, JA4S numeric-vector absence).
+
+Re-ranked by risk now: 9/1/2 (process + pilots + live run — HIGH, gate v1.0),
+3/5 (MEDIUM, need owner runs/credentials), remainder of 6 + 10 (MEDIUM),
+2/7-residuals (LOW).
+
+## Recommendation (unchanged)
+
+Close items 1–2 (pilots + 30-day run) and item 9 (tag a release) first, then
+run the kind workflow (3) and the release pipeline with credentials (5).
+Re-run this gate after that. Phase 5 feature Tasks 1–8 remain deferred.

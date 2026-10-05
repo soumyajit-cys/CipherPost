@@ -52,6 +52,12 @@ stop_all() {
   SRV_PID=""; DCAP_PID=""
 }
 finish() { # name port
+  # Wait until no process holds the raw file (dead-but-unreaped writers or a
+  # missed kill would otherwise let us filter a still-growing file).
+  for _ in $(seq 1 10); do
+    fuser -s "$OUT/$1.raw.pcap" 2>/dev/null || break
+    sleep 1
+  done
   # lo capture is already Ethernet: plain filter, no conversion.
   tshark -r "$OUT/$1.raw.pcap" -Y "tcp.port==$2" -F pcap -w "$OUT/$1.pcap" 2>/dev/null
   echo "[$1] raw kept at $OUT/$1.raw.pcap size=$(stat -c%s "$OUT/$1.raw.pcap")" >> "$OUT/driver.log"

@@ -71,6 +71,10 @@ for line in data:
 
 run() { # name port server_args... -- sclient_args... -- dialog
   NAME=$1; PORT=$2; shift 2
+  if timeout 2 bash -c "</dev/tcp/127.0.0.1/$PORT" 2>/dev/null; then
+    echo "$NAME: ABORTED, port $PORT already held (stray server?)" | tee -a "$OUT/driver.log"
+    return 1
+  fi
   SARGS=()
   while [ "$1" != "--" ]; do SARGS+=("$1"); shift; done; shift
   SCARGS=""

@@ -1,8 +1,9 @@
-# v1.0 readiness (Phase 4 gate — honest assessment)
+# v1.0 readiness (Phase 4 gate + blocker-closure lab — honest assessment)
 
-Date: 2026-10-02. Status: **NOT READY for v1.0**. Ship as 0.4.0-RC after
-review; v1.0 requires the blockers below. Nothing in this file is projected
-or guessed — unverified items say so explicitly.
+Date: 2026-10-02 (gate); lab update 2026-10-05 ( Items closed by automation
+and local lab only; nothing requiring real people/systems is claimed).
+Status: **STILL NOT READY for v1.0** — 4 of 8 items now PASS with committed
+evidence (see table). Nothing here is projected or guessed.
 
 ## What Phase 4 delivered (all tested, on `main`)
 
@@ -54,20 +55,23 @@ or guessed — unverified items say so explicitly.
   0 errors, RSS flat 47.6 MB. Do not size production from this table —
   replay your own capture per `docs/sizing.md`.
 
-## v1.0 blockers (all NOT DONE — not observable, not claimed)
+## Blocker verdicts after the 2026-10-05 lab (evidence-linked)
 
-1. Three external pilots with analyst labels (precision, TTA, noise) — none
-   in repo; `tests/real/manifest.json` has zero captures.
-2. 30-day live-traffic run (drops, DLQ, drift, storage growth).
-3. kind install of the Helm chart (lint/template/kubeconform 13/13 only).
-4. Real-IdP SSO flow (code tested with fakes only).
-5. Registry push/sign + provenance on real infra.
-6. Nightly chaos suite on real infra (unit chaos only).
-7. Independent JA4S verification (single implementation; self-derived vectors).
-8. PQ interop against real hybrid servers (classification only, no live captures).
+| # | Item | Verdict | Evidence |
+|---|---|---|---|
+| 1 | Three external pilots with analyst labels | NOT-VERIFIED | No external orgs involved. Partial: 28 lab-labeled captures in `tests/real/` (functional labels, not pilot labels), `docs/evidence/real-eval.md` |
+| 2 | 30-day live-traffic run | NOT-VERIFIED | 3-minute soak only: 4.6M packets, 0 errors, RSS flat (`docs/evidence/chaos-run.md`). Owner must run the 30-day live capture. |
+| 3 | kind install of the Helm chart | NOT-VERIFIED | Workflow written-but-not-run (`.github/workflows/kind-install.yml`); 4 chart bugs fixed by review; `docs/evidence/kind-install.md`. Owner must run it. |
+| 4 | Real-IdP SSO flow | **PASS** (Keycloak 26.8.0 only) | `docs/evidence/sso-keycloak.md`; `test_phase6_keycloak.py` (4 slow tests). Limits stated there; no other providers. |
+| 5 | Registry push/sign + provenance | NOT-VERIFIED | Dry-run inputs added, parse-checked; no runner/credentials. `docs/evidence/release-dryrun.md`. Owner action required. |
+| 6 | Nightly chaos on real infra | **PARTIAL** | Real-Redis outage test + soak PASS (`docs/evidence/chaos-run.md`); true Postgres restart, container worker kills, and a CI nightly run remain NOT-VERIFIED. |
+| 7 | Independent JA4S verification | **PASS** (within what exists) | Spec worked example MATCH; JA4S layout verified vs reference behavior, 1 real mismatch fixed; `docs/evidence/ja4-verification.md`. No official numeric JA4S vector exists. |
+| 8 | PQ interop against real hybrid servers | **PASS** | 4 live handshakes (hybrid/classic/gap/HRR) + abort control, tshark agreement, 1 parser bug fixed; `docs/evidence/pq-interop.md`, 5 captures in `tests/real/`. |
 
-## Gate decision
+## Gate decision (unchanged in substance)
 
-Merge Phase 4 as **0.4.0-RC1** (or 0.4.0) after review. Promote to v1.0 only
-after blockers 1–2 plus chart install (3) are evidenced by pilot artifacts,
-not by code alone.
+Still **NOT READY for v1.0**: items 1, 2, 3, 5 and the remainder of 6 need
+real people, real time, real systems, or owner credentials — none of which
+automation can supply. What the lab closed (4, 7, 8, half of 6) is evidenced
+above; everything else lists exactly what the owner must do. Do not tag v1.0
+until 1–2 plus a green kind run (3) exist as artifacts, not plans.

@@ -1,0 +1,11 @@
+{{- /* Fail-fast configuration validation (renders nothing on success).
+  Without a database the API/worker crash-loop; without the app secret every
+  pod fails CreateContainerConfigError. Failing at template time with a clear
+  message beats both. Note: `helm template` with chart defaults now fails by
+  design (defaults ship no database); pass bundled or external values. */ -}}
+{{- if and (not .Values.postgres.bundled.enabled) (eq (.Values.postgres.external.host | toString) "") }}
+{{- fail "cipherpost: no database configured. Set postgres.bundled.enabled=true (evaluation only) or postgres.external.host" }}
+{{- end }}
+{{- if and (not .Values.redis.bundled.enabled) (eq (.Values.redis.external.host | toString) "") }}
+{{- fail "cipherpost: no redis configured. Set redis.bundled.enabled=true (evaluation only) or redis.external.host" }}
+{{- end }}

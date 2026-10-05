@@ -207,6 +207,15 @@ def main() -> int:
         except (ConnectionResetError, BrokenPipeError, ssl.SSLError, OSError) as e:
             print(f"lab server: connection ended: {e}", file=sys.stderr)
         finally:
+            # RST-close (SO_LINGER 0): guarantees connection teardown on the
+            # wire so captures contain complete streams. Lab-only behavior,
+            # documented in docs/evidence/real-eval.md.
+            try:
+                import struct as _st
+                conn.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
+                                _st.pack("ii", 1, 0))
+            except Exception:
+                pass
             try:
                 conn.close()
             except Exception:

@@ -62,6 +62,8 @@ scli() { # uses SCARGS, DIALOG, NAME
   date "+cli-start %T" >> "$OUT/driver.log"
   printf "%b" "$DIALOG" | timeout 12 openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1
   date "+cli-end %T" >> "$OUT/driver.log"
+  # settle: give the live capturer seconds to flush recent packets before kill
+  sleep 5
   : > /dev/null
 }
 
@@ -111,6 +113,7 @@ if want smtp_nostarttls587; then
   start_cap "$NAME"
   start_server 587 smtp 587 --cert $G --key $GK --no-starttls
   timeout 10 python3 -c "import socket;s=socket.create_connection(('127.0.0.1',587),timeout=8);f=s.makefile('rwb');f.readline();f.write(b'EHLO c\r\n');f.flush();[f.readline() for _ in range(3)];f.write(b'QUIT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
+  sleep 5
   stop_all; finish "$NAME" "$PORT"
 fi
 if want smtp_strip_ignored587; then
@@ -118,6 +121,7 @@ if want smtp_strip_ignored587; then
   start_cap "$NAME"
   start_server 587 smtp 587 --cert $G --key $GK
   timeout 10 python3 -c "import socket,base64;s=socket.create_connection(('127.0.0.1',587),timeout=8);f=s.makefile('rwb');f.readline();f.write(b'EHLO c\r\n');f.flush();[f.readline() for _ in range(3)];tok=base64.b64encode(b'\x00user\x00secret').decode();f.write(('AUTH PLAIN '+tok+'\r\n').encode());f.flush();f.readline();f.write(b'QUIT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
+  sleep 5
   stop_all; finish "$NAME" "$PORT"
 fi
 if want smtp_stripped_proxy587; then
@@ -143,6 +147,7 @@ if want imap_plain143; then
   start_cap "$NAME"
   start_server 143 imap 143 --cert $G --key $GK --no-starttls
   timeout 10 python3 -c "import socket;s=socket.create_connection(('127.0.0.1',143),timeout=8);f=s.makefile('rwb');f.readline();f.write(b'a001 CAPABILITY\r\n');f.flush();f.readline();f.readline();f.write(b'a002 LOGOUT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
+  sleep 5
   stop_all; finish "$NAME" "$PORT"
 fi
 want imap13_implicit993 && run imap13_implicit993 993 imap-implicit 993 --cert $G --key $GK -- -connect 127.0.0.1:993 -tls1_3 -servername mail.lab.test -- 'a001 LOGOUT\r\n'
@@ -152,6 +157,7 @@ if want pop_plain110; then
   start_cap "$NAME"
   start_server 110 pop3 110 --cert $G --key $GK --no-starttls
   timeout 10 python3 -c "import socket;s=socket.create_connection(('127.0.0.1',110),timeout=8);f=s.makefile('rwb');f.readline();f.write(b'CAPA\r\n');f.flush();[f.readline() for _ in range(4)];f.write(b'QUIT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
+  sleep 5
   stop_all; finish "$NAME" "$PORT"
 fi
 want pop12_implicit995 && run pop12_implicit995 995 pop3-implicit 995 --cert $G --key $GK --tlsmin 1.2 --tlsmax 1.2 -- -connect 127.0.0.1:995 -tls1_2 -servername mail.lab.test -- 'QUIT\r\n'

@@ -192,8 +192,9 @@ def main() -> int:
         except socket.timeout:
             continue
         try:
+            import time as _t
             with open("/tmp/opencode/maillab/srv_conns.log", "a") as _lf:
-                _lf.write(f"accept {addr}\n")
+                _lf.write(f"{_t.time():.2f} accept {addr}\n")
         except Exception:
             pass
         except OSError:

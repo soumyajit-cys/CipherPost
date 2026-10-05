@@ -361,8 +361,11 @@ def parse_server_hello(data: bytes) -> ServerHelloInfo:
         info.extension_ids.append(etype)
         if etype == 43 and len(edata) == 2:
             info.supported_versions_ext = int.from_bytes(edata[0:2], "big")
-        elif etype == EXT_KEY_SHARE and len(edata) == 2:
-            # KeyShareServerHello: selected group u16 (no key exchange bytes).
+        elif etype == EXT_KEY_SHARE and len(edata) >= 2:
+            # KeyShareServerHello: selected group u16 first, followed by
+            # key_exchange bytes in a real ServerHello (absent in HRR).
+            # Found by lab PQ interop 2026-10-05: real ServerHello key_share
+            # is 2+2+keylen (e.g. 1218B for X25519MLKEM768), never 2.
             info.selected_group = int.from_bytes(edata[0:2], "big")
         elif etype == EXT_ALPN and len(edata) >= 4:
             # ServerHello ALPN: u16 list len, u8 len, single protocol.

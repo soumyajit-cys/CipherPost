@@ -78,6 +78,24 @@ def test_client_hello_fields_and_grease_stripped():
     assert is_grease(0x0A0A) and is_grease(0xFAFA) and not is_grease(0x1301)
 
 
+def test_server_keyshare_with_key_exchange_bytes_selects_group():
+    """Item 2 lab find: a real TLS 1.3 ServerHello key_share carries
+    group + key_exchange (never bare 2B like HRR). selected_group must be
+    read from the first u16 regardless of trailing key bytes."""
+    from app.parsing.handshake import parse_server_hello
+    # hybrid-size key exchange (1216B) like lab X25519MLKEM768 capture
+    ks = _u16(4588) + _u16(1216) + b"\x66" * 1216
+    info = parse_server_hello(_server_hello_bytes(
+        b"\x22" * 32, exts=_ext(51, ks) + _ext(43, _u16(0x0304))))
+    assert info.selected_group == 4588
+    assert info.is_hrr is False
+    # classic X25519 size still works
+    ks2 = _u16(29) + _u16(32) + b"\x77" * 32
+    info2 = parse_server_hello(_server_hello_bytes(
+        b"\x22" * 32, exts=_ext(51, ks2)))
+    assert info2.selected_group == 29
+
+
 def test_server_selected_group_hrr_and_sentinel():
     from app.parsing.handshake import (
         parse_server_hello, HRR_RANDOM, DOWNGRAD_SENTINEL_TLS12)

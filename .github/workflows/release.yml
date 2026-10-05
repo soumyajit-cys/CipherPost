@@ -7,6 +7,15 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build, test, scan and SBOM only (no push/sign/attest)"
+        type: boolean
+        default: true
+      enable_push:
+        description: "Allow registry push + signing on this dispatch (owner only; needs secrets)"
+        type: boolean
+        default: false
   pull_request:
     paths:
       - "backend/app/VERSION"
@@ -88,7 +97,9 @@ jobs:
       # Multi-arch push + sign + provenance: real tag pushes with secrets only.
       - name: Push multi-arch images
         id: push
-        if: startsWith(github.ref, 'refs/tags/v') && secrets.REGISTRY_USER != ''
+        # Owner dispatch with dry_run=false + enable_push=true may also push;
+        # default dispatches (dry_run=true) never push.
+        if: startsWith(github.ref, 'refs/tags/v') && secrets.REGISTRY_USER != '' && inputs.dry_run != true || inputs.enable_push == true && secrets.REGISTRY_USER != ''
         uses: docker/build-push-action@v6
         with:
           context: .

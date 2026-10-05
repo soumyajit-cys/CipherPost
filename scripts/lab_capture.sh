@@ -85,7 +85,22 @@ run() { # name port server_args... -- sclient_args... -- dialog
   start_server "$PORT" "${SARGS[@]}"
   date "+cli-start %T" >> "$OUT/driver.log"
   # shellcheck disable=SC2086
-  printf "%b" "$DIALOG" | paced_stdin | timeout 30 openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1
+  printf "%b" "$DIALOG" | paced_stdin | timeout 30 openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1 & CLI_PID=$!
+  # wait for dialog idle (no tls.txt growth for 2s = both sides done talking),
+  # then kill the client: its RST/FIN completes the stream so reassembly emits
+  # the session instead of dropping it as incomplete. (s_client -quiet idles on
+  # stdin EOF; without this it lingers past capture end.)
+  _last=-1; _still=0
+  for _ in $(seq 1 25); do
+    _size=$(stat -c%s "$OUT/$NAME.tls.txt" 2>/dev/null || echo 0)
+    if [ "$_size" = "$_last" ]; then _still=$((_still+1)); else _still=0; fi
+    _last=$_size
+    kill -0 $CLI_PID 2>/dev/null || break
+    [ "$_still" -ge 2 ] && [ "$_size" -gt 0 ] && break
+    sleep 1
+  done
+  kill $CLI_PID 2>/dev/null
+  wait $CLI_PID 2>/dev/null
   date "+cli-end %T" >> "$OUT/driver.log"
   echo "[$NAME] pre-stop dcap_alive=$(kill -0 $DCAP_PID 2>/dev/null && echo yes || echo NO) dcap_is=$(ps -p $DCAP_PID -o comm= 2>/dev/null) rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
   stop_all

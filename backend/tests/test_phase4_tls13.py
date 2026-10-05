@@ -78,6 +78,23 @@ def test_client_hello_fields_and_grease_stripped():
     assert is_grease(0x0A0A) and is_grease(0xFAFA) and not is_grease(0x1301)
 
 
+def test_zero_byte_sessions_get_no_cleartext_findings():
+    """Item 3 lab find: refused SYN/RST-only sessions (0 bytes either way)
+    must not be flagged as cleartext credential exposure."""
+    from app.parsing.rules import SessionAnalysis, run_rules
+    for implicit, port in ((False, 587), (True, 465)):
+        sa = SessionAnalysis(session_id="t", protocol="SMTP",
+                             five_tuple=f"a:1-b:{port}", is_starttls=False)
+        sa.is_implicit_tls_port = implicit
+        sa.port = port
+        sa.tls_bytes = 0
+        sa.plaintext_bytes = 0
+        run_rules(sa)
+        ids = {f.rule_id for f in sa.findings}
+        assert "plaintext-mail-protocol" not in ids
+        assert "no-tls-on-implicit-port" not in ids
+
+
 def test_server_keyshare_with_key_exchange_bytes_selects_group():
     """Item 2 lab find: a real TLS 1.3 ServerHello key_share carries
     group + key_exchange (never bare 2B like HRR). selected_group must be

@@ -196,11 +196,14 @@ if want smtp_strip_ignored587; then
 fi
 if want smtp_stripped_proxy587; then
   NAME=smtp_stripped_proxy587; PORT=587; : > "$OUT/$NAME.tls.txt"
+  _held=0
   for _p in 587 1587; do
     if timeout 2 bash -c "</dev/tcp/127.0.0.1/$_p" 2>/dev/null; then
       echo "$NAME: ABORTED, port $_p held" | tee -a "$OUT/driver.log"
+      _held=1
     fi
   done
+  if [ "$_held" = "1" ]; then echo "$NAME: skipped"; else
   timeout 25 python3 scripts/lab_strip_proxy.py 587 1587 >/dev/null 2>&1 &
   PROXY_PID=$!
   timeout 25 python3 scripts/lab_mail.py server smtp 1587 --cert $G --key $GK >/dev/null 2>&1 &
@@ -215,6 +218,7 @@ while True:
 tok=base64.b64encode(b'\x00user\x00secret').decode();f.write(('AUTH PLAIN '+tok+'\r\n').encode());f.flush();f.readline();import time as _t;_t.sleep(1);f.write(b'QUIT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
   kill $PROXY_PID $REAL_PID 2>/dev/null
   stop_all; finish "$NAME" "$PORT"
+  fi
 fi
 
 want smtp12_implicit465 && run_implicit smtp12_implicit465 465 smtp-implicit 1.2 1.2 "-" $G $GK

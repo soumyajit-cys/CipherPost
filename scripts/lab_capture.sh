@@ -196,6 +196,11 @@ if want smtp_strip_ignored587; then
 fi
 if want smtp_stripped_proxy587; then
   NAME=smtp_stripped_proxy587; PORT=587; : > "$OUT/$NAME.tls.txt"
+  for _p in 587 1587; do
+    if timeout 2 bash -c "</dev/tcp/127.0.0.1/$_p" 2>/dev/null; then
+      echo "$NAME: ABORTED, port $_p held" | tee -a "$OUT/driver.log"
+    fi
+  done
   timeout 25 python3 scripts/lab_strip_proxy.py 587 1587 >/dev/null 2>&1 &
   PROXY_PID=$!
   timeout 25 python3 scripts/lab_mail.py server smtp 1587 --cert $G --key $GK >/dev/null 2>&1 &
@@ -203,7 +208,11 @@ if want smtp_stripped_proxy587; then
   sleep 1
   start_cap "$NAME"
   sleep 1
-  timeout 10 python3 -c "import socket,base64;s=socket.create_connection(('127.0.0.1',587),timeout=8);f=s.makefile('rwb');f.readline();f.write(b'EHLO c\r\n');f.flush();[f.readline() for _ in range(2)];tok=base64.b64encode(b'\x00user\x00secret').decode();f.write(('AUTH PLAIN '+tok+'\r\n').encode());f.flush();f.readline();import time as _t;_t.sleep(1);f.write(b'QUIT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
+  timeout 10 python3 -c "import socket,base64;s=socket.create_connection(('127.0.0.1',587),timeout=8);f=s.makefile('rwb');f.readline();f.write(b'EHLO c\r\n');f.flush();
+while True:
+    ln=f.readline().decode(errors='replace')
+    if ln.startswith('250 ') or not ln: break
+tok=base64.b64encode(b'\x00user\x00secret').decode();f.write(('AUTH PLAIN '+tok+'\r\n').encode());f.flush();f.readline();import time as _t;_t.sleep(1);f.write(b'QUIT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
   kill $PROXY_PID $REAL_PID 2>/dev/null
   stop_all; finish "$NAME" "$PORT"
 fi

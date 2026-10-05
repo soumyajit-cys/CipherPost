@@ -77,12 +77,12 @@ for line in data:
 
 run() { # name port server_args... -- sclient_args... -- dialog
   NAME=$1; PORT=$2; shift 2
+  : > "$OUT/$NAME.tls.txt"
   SARGS=()
   while [ "$1" != "--" ]; do SARGS+=("$1"); shift; done; shift
   SCARGS=""
   while [ "$1" != "--" ]; do SCARGS="$SCARGS $1"; shift; done; shift
   DIALOG=$1
-  : > "$OUT/$NAME.tls.txt"
   echo "[$NAME] starting cap" >> "$OUT/driver.log"; date +%T >> "$OUT/driver.log"
   date "+cap-start %T" >> "$OUT/driver.log"
   start_cap "$NAME" || return 1

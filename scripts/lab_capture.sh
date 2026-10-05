@@ -35,6 +35,9 @@ start_server() { # pollport harness_args...
   return 1
 }
 stop_all() {
+  # Kill child capturers first (tshark forks dumpcap; killing only the parent
+  # orphans the child, whose unflushed tail data is then lost with it).
+  [ -n "$DCAP_PID" ] && pkill -P "$DCAP_PID" 2>/dev/null
   [ -n "$SRV_PID" ] && kill "$SRV_PID" 2>/dev/null
   [ -n "$DCAP_PID" ] && kill "$DCAP_PID" 2>/dev/null
   # wait for capturer exit so its write buffer is flushed to disk
@@ -56,7 +59,9 @@ finish() { # name port
   echo "$1: $(capinfos "$OUT/$1.pcap" 2>/dev/null | grep -o 'Number of packets.*' | grep -o '[0-9]*' | head -n 1) pkts"
 }
 scli() { # uses SCARGS, DIALOG, NAME
+  date "+cli-start %T" >> "$OUT/driver.log"
   printf "%b" "$DIALOG" | timeout 12 openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1
+  date "+cli-end %T" >> "$OUT/driver.log"
   : > /dev/null
 }
 
@@ -69,11 +74,15 @@ run() { # name port server_args... -- sclient_args... -- dialog
   DIALOG=$1
   : > "$OUT/$NAME.tls.txt"
   echo "[$NAME] starting cap" >> "$OUT/driver.log"; date +%T >> "$OUT/driver.log"
+  date "+cap-start %T" >> "$OUT/driver.log"
   start_cap "$NAME" || return 1
   echo "[$NAME] cap live dcap=$DCAP_PID rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
+  date "+srv-start %T" >> "$OUT/driver.log"
   start_server "$PORT" "${SARGS[@]}"
+  date "+cli-start %T" >> "$OUT/driver.log"
   # shellcheck disable=SC2086
   printf "%b" "$DIALOG" | timeout 12 openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1
+  date "+cli-end %T" >> "$OUT/driver.log"
   echo "[$NAME] pre-stop dcap_alive=$(kill -0 $DCAP_PID 2>/dev/null && echo yes || echo NO) rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
   stop_all
   echo "[$NAME] post-stop rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"

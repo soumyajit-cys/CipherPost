@@ -19,6 +19,10 @@ start_cap() { # name
 }
 start_server() { # pollport harness_args...
   PORT=$1; shift
+  if timeout 2 bash -c "</dev/tcp/127.0.0.1/$PORT" 2>/dev/null; then
+    echo "ABORTED, port $PORT already held (stray server?)" | tee -a "$OUT/driver.log"
+    return 1
+  fi
   timeout 25 python3 scripts/lab_mail.py server "$@" >"$OUT/srv_$PORT.log" 2>&1 &
   SRV_PID=$!
   # wait until the port is actually listening (bind can lag or fail)
@@ -71,10 +75,6 @@ for line in data:
 
 run() { # name port server_args... -- sclient_args... -- dialog
   NAME=$1; PORT=$2; shift 2
-  if timeout 2 bash -c "</dev/tcp/127.0.0.1/$PORT" 2>/dev/null; then
-    echo "$NAME: ABORTED, port $PORT already held (stray server?)" | tee -a "$OUT/driver.log"
-    return 1
-  fi
   SARGS=()
   while [ "$1" != "--" ]; do SARGS+=("$1"); shift; done; shift
   SCARGS=""

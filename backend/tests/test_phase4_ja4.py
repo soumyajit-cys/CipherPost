@@ -166,6 +166,45 @@ def test_ja4s_and_ja3s_from_server_hello():
     assert len(J.ja3s_digest(sh)) == 32
 
 
+def test_ja4_matches_official_spec_worked_example():
+    """Item 1 verification: full worked example from FoxIO JA4.md.
+
+    Inputs are the example's printed field lists (offered order); expected
+    output is the spec's printed fingerprint. Spec: technical_details/JA4.md
+    (retrieved 2026-10-02, re-verified 2026-10-05). License note: FoxIO
+    License 1.1 — short factual input/output strings used for verification
+    only, no spec text or vectors copied into the repo.
+    """
+    from app.parsing import ja4 as J
+    from app.parsing.handshake import ClientHelloInfo
+    ciphers = [0x1301, 0x1302, 0x1303, 0xc02b, 0xc02f, 0xc02c, 0xc030,
+               0xcca9, 0xcca8, 0xc013, 0xc014, 0x009c, 0x009d, 0x002f, 0x0035]
+    exts = [0x001b, 0x0000, 0x0033, 0x0010, 0x4469, 0x0017, 0x002d, 0x000d,
+            0x0005, 0x0023, 0x0012, 0x002b, 0xff01, 0x000b, 0x000a, 0x0015]
+    sigalgs = [0x0403, 0x0804, 0x0401, 0x0503, 0x0805, 0x0501, 0x0806, 0x0601]
+    ch = ClientHelloInfo(
+        offered_versions=[0x0304, 0x0303], legacy_version=0x0303,
+        cipher_suites=ciphers, sni="example.com", alpn=["h2"],
+        supported_groups=[29], has_supported_versions=True,
+        sig_algs=sigalgs, extension_ids=exts, ec_point_formats=[0])
+    assert J.ja4(ch) == "t13d1516h2_8daaf6152771_e5627efa2ab1"
+
+
+def test_ja4s_includes_grease_per_reference():
+    """Item 1 fix: reference `to_ja4s` includes GREASE in ext count+hash
+    (present order). Verified by code reading 2026-10-05 (not copied)."""
+    import hashlib
+    from app.parsing import ja4 as J
+    from app.parsing.handshake import ServerHelloInfo
+    sh = ServerHelloInfo(negotiated_version=0x0304, cipher_suite=0x1301,
+                         extension_ids=[43, 51, 0x0A0A], alpn=["h2"])
+    got = J.ja4s(sh)
+    exp_hash = hashlib.sha256("002b,0033,0a0a".encode()).hexdigest()[:12]
+    assert got == f"t1303h2_1301_{exp_hash}"
+    # count includes the GREASE extension (03, not 02)
+    assert got.split("_")[0] == "t1303h2"
+
+
 def test_fuzz_fingerprint_never_raises():
     from hypothesis import given, settings as _hs, strategies as st
     from app.parsing import ja4 as J

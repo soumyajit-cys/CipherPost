@@ -6,6 +6,25 @@ Versioning is semantic; `backend/app/VERSION` is the single source of truth.
 
 ## [Unreleased]
 
+### Blocker closure lab (2026-10-05 — automation + local lab, no pilots)
+
+- JA4 verified vs official spec example (MATCH) and reference behavior; fixed
+  JA4S GREASE parity (`docs/evidence/ja4-verification.md`).
+- PQ interop: live X25519MLKEM768/classic/gap/HRR handshakes with tshark
+  agreement; fixed ServerHello key_share group parsing; 5 lab captures.
+- First labeled set: 23 mail + 5 PQ lab captures in `tests/real/`
+  (`eval_real.py`: 0 misses/FPs); fixed cleartext findings on zero-byte
+  sessions; `docs/evidence/real-eval.md` (lab-small, RC4/3DES untestable).
+- SSO verified against Keycloak 26.8.0 (login, mapping, rotation, expiry,
+  deprovision); slow integration tests; `docs/evidence/sso-keycloak.md`.
+- Chaos: real-Redis outage test + 3-min soak (25.7k pkt/s, 0 errors, RSS
+  flat); `docs/evidence/chaos-run.md`.
+- Helm: migrate hook Job (fixes initContainer race + NOTES mismatch),
+  fail-fast DB validation, kind-install workflow (written-but-not-run).
+- Release: explicit dry-run/push inputs (parse-checked; push/sign NOT run).
+- Still NOT READY for v1.0: external pilots, 30-day run, kind/registry runs,
+  tagging (`docs/v1-readiness.md`, `docs/known-issues.md`).
+
 ### Compliance and evidence (Phase 4 task 6)
 
 - Compliance tags load from versioned data (`mapping-v1.json`,

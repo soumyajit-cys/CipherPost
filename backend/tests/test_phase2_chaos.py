@@ -157,3 +157,68 @@ def test_bounded_memory_under_burst():
         pub.publish({"n": i})
     assert pub.depth() == 16
     assert pub.dropped == 84
+
+
+def _real_redis_or_skip():
+    """Real Redis via settings (local dev or CI services). Skip when down."""
+    import redis as _redis
+    from app.core.config import settings
+    try:
+        r = _redis.Redis.from_url(settings.REDIS_URL, decode_responses=False,
+                                  socket_timeout=3, socket_connect_timeout=3)
+        r.ping()
+        return r
+    except Exception as e:
+        pytest.skip(f"no real redis at {settings.REDIS_URL}: {e}")
+
+
+def test_redis_real_outage_client_pause_buffers_and_redelivers():
+    """Item 5: REAL outage (CLIENT PAUSE stalls the server ~5s; DEBUG sleep is
+    disabled on hardened redis).
+
+    Unlike the fakeredis restart test, this exercises real socket timeouts,
+    real buffering, and real redelivery against redis 7. Unique stream key so
+    parallel/dev runs never collide; key deleted afterwards.
+    """
+    import time as _time
+    import uuid as _uuid
+    from app.live import streams as bus
+    r = _real_redis_or_skip()
+    stream = f"chaos:real-outage:{_uuid.uuid4().hex[:8]}"
+    try:
+        import redis as _redis
+        from app.core.config import settings
+
+        def factory():
+            return _redis.Redis.from_url(settings.REDIS_URL, decode_responses=False,
+                                         socket_timeout=2, socket_connect_timeout=2)
+
+        pub = bus.ResilientPublisher(factory, stream, max_buffer=64)
+        for i in range(3):
+            assert pub.publish({"n": i}) is not None
+        assert r.xlen(stream) == 3
+
+        # Real outage: pause all clients ~12s (each publish burns its 2s
+        # socket timeout while paused; 5 x 2s < 12s keeps the outage up).
+        pauser = _redis.Redis.from_url(settings.REDIS_URL, decode_responses=False,
+                                       socket_timeout=2, socket_connect_timeout=2)
+        try:
+            pauser.execute_command("CLIENT", "PAUSE", 12000)
+        except Exception as e:
+            pytest.skip(f"CLIENT PAUSE unavailable: {e}")
+        pauser.close()
+        _time.sleep(0.5)  # let the pause bite
+        for i in range(3, 8):
+            assert pub.publish({"n": i}) is None  # buffered, never raises
+        assert pub.depth() == 5
+        assert pub.flush() == 5  # blocks past the pause, then delivers
+        assert pub.depth() == 0
+        assert r.xlen(stream) == 8
+        # No duplicates: entry count exact.
+        entries = r.xrange(stream)
+        assert len(entries) == 8
+    finally:
+        try:
+            r.delete(stream)
+        except Exception:
+            pass

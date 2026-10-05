@@ -10,10 +10,10 @@ mkdir -p "$OUT"
 DCAP_PID=""; SRV_PID=""
 
 start_cap() { # name
-  dumpcap -i lo -F pcap -w "$OUT/$1.raw.pcap" >/dev/null 2>&1 &
+  tshark -i lo -F pcap -w "$OUT/$1.raw.pcap" >/dev/null 2>&1 &
   DCAP_PID=$!
   sleep 2
-  kill -0 $DCAP_PID 2>/dev/null || { echo "dumpcap failed to start"; return 1; }
+  kill -0 $DCAP_PID 2>/dev/null || { echo "capturer failed to start"; return 1; }
   # readiness probe: dumpcap startup on loaded hosts is slow; do not start
   # the scenario until a probe SYN to a closed port is visible in the file.
   timeout 2 bash -c "</dev/tcp/127.0.0.1/59999" 2>/dev/null
@@ -24,7 +24,7 @@ start_cap() { # name
     sleep 1
     timeout 2 bash -c "</dev/tcp/127.0.0.1/59999" 2>/dev/null
   done
-  echo "dumpcap readiness probe failed for $1"
+  echo "capturer readiness probe failed for $1"
   return 1
 }
 start_server() { # port args...
@@ -46,7 +46,7 @@ start_server() { # port args...
 stop_all() {
   [ -n "$SRV_PID" ] && kill "$SRV_PID" 2>/dev/null
   [ -n "$DCAP_PID" ] && kill "$DCAP_PID" 2>/dev/null
-  # wait for dumpcap exit so its write buffer is flushed to disk
+  # wait for capturer exit so its write buffer is flushed to disk
   for _ in $(seq 1 10); do
     [ -n "$DCAP_PID" ] && kill -0 "$DCAP_PID" 2>/dev/null || break
     sleep 1

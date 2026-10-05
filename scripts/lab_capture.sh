@@ -61,7 +61,7 @@ finish() { # name port
   tshark -r "$OUT/$1.raw.pcap" -Y "tcp.port==$2" -F pcap -w "$OUT/$1.sll.pcap" 2>/dev/null
   python3 scripts/sll_to_ether.py "$OUT/$1.sll.pcap" "$OUT/$1.pcap"
   rm -f "$OUT/$1.sll.pcap"
-  rm -f "$OUT/$1.raw.pcap"
+  echo "[$1] raw kept at $OUT/$1.raw.pcap size=$(stat -c%s "$OUT/$1.raw.pcap")" >> "$OUT/driver.log"
   echo "$1: $(capinfos "$OUT/$1.pcap" 2>/dev/null | grep -o 'Number of packets.*' | grep -o '[0-9]*' | head -n 1) pkts"
 }
 scli() { # uses SCARGS, DIALOG, NAME

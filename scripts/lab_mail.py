@@ -188,9 +188,14 @@ def main() -> int:
     # consumes the first accept, so single-connection service is wrong.
     while True:
         try:
-            conn, _ = srv.accept()
+            conn, addr = srv.accept()
         except socket.timeout:
             continue
+        try:
+            with open("/tmp/opencode/maillab/srv_conns.log", "a") as _lf:
+                _lf.write(f"accept {addr}\n")
+        except Exception:
+            pass
         except OSError:
             break
         try:

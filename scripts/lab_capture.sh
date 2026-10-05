@@ -35,7 +35,12 @@ start_server() { # args...
 stop_all() {
   [ -n "$SRV_PID" ] && kill "$SRV_PID" 2>/dev/null
   [ -n "$DCAP_PID" ] && kill "$DCAP_PID" 2>/dev/null
-  sleep 1
+  # wait for dumpcap exit so its write buffer is flushed to disk
+  for _ in $(seq 1 10); do
+    [ -n "$DCAP_PID" ] && kill -0 "$DCAP_PID" 2>/dev/null || break
+    sleep 1
+  done
+  sleep 2
   SRV_PID=""; DCAP_PID=""
 }
 finish() { # name port

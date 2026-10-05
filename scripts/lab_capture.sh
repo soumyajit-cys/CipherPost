@@ -23,7 +23,7 @@ start_server() { # pollport harness_args...
     echo "ABORTED, port $PORT already held (stray server?)" | tee -a "$OUT/driver.log"
     return 1
   fi
-  timeout 25 python3 scripts/lab_mail.py server "$@" >"$OUT/srv_$PORT.log" 2>&1 &
+  timeout 300 python3 scripts/lab_mail.py server "$@" >"$OUT/srv_$PORT.log" 2>&1 &
   SRV_PID=$!
   # wait until the port is actually listening (bind can lag or fail)
   for _ in $(seq 1 10); do
@@ -204,9 +204,9 @@ if want smtp_stripped_proxy587; then
     fi
   done
   if [ "$_held" = "1" ]; then echo "$NAME: skipped"; else
-  timeout 25 python3 scripts/lab_strip_proxy.py 587 1587 >/dev/null 2>&1 &
+  timeout 300 python3 scripts/lab_strip_proxy.py 587 1587 >/dev/null 2>&1 &
   PROXY_PID=$!
-  timeout 25 python3 scripts/lab_mail.py server smtp 1587 --cert $G --key $GK >/dev/null 2>&1 &
+  timeout 300 python3 scripts/lab_mail.py server smtp 1587 --cert $G --key $GK >/dev/null 2>&1 &
   REAL_PID=$!
   sleep 1
   start_cap "$NAME"

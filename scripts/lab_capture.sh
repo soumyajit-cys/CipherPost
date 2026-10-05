@@ -55,7 +55,9 @@ finish() { # name port
   # lo capture is already Ethernet: plain filter, no conversion.
   tshark -r "$OUT/$1.raw.pcap" -Y "tcp.port==$2" -F pcap -w "$OUT/$1.pcap" 2>/dev/null
   echo "[$1] raw kept at $OUT/$1.raw.pcap size=$(stat -c%s "$OUT/$1.raw.pcap")" >> "$OUT/driver.log"
-  echo "$1: $(capinfos "$OUT/$1.pcap" 2>/dev/null | grep -o 'Number of packets.*' | grep -o '[0-9]*' | head -n 1) pkts"
+  _n=$(capinfos "$OUT/$1.pcap" 2>/dev/null | grep -o 'Number of packets.*' | grep -o '[0-9]*' | head -n 1)
+  _hello=$(tshark -r "$OUT/$1.pcap" -Y 'tls.handshake.type==1' 2>/dev/null | wc -l)
+  echo "$1: ${_n:-0} pkts, ${_hello:-0} hellos"
 }
 # paced_stdin: emit each CRLF-terminated line with 1s spacing. A full dialog
 # fired in milliseconds intermittently vanishes from loopback capture on this
@@ -86,7 +88,7 @@ run() { # name port server_args... -- sclient_args... -- dialog
   start_cap "$NAME" || return 1
   echo "[$NAME] cap live dcap=$DCAP_PID dcap_is=$(ps -p $DCAP_PID -o comm= 2>/dev/null) rawbytes=$(stat -c%s "$OUT/$NAME.raw.pcap")" >> "$OUT/driver.log"
   date "+srv-start %T" >> "$OUT/driver.log"
-  start_server "$PORT" "${SARGS[@]}"
+  start_server "$PORT" "${SARGS[@]}" || return 1
   date "+cli-start %T" >> "$OUT/driver.log"
   # shellcheck disable=SC2086
   printf "%b" "$DIALOG" | paced_stdin | openssl s_client $SCARGS -CAfile $LAB/ca.crt -quiet >>"$OUT/$NAME.tls.txt" 2>&1 & CLI_PID=$!

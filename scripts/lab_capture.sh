@@ -190,7 +190,7 @@ if want smtp_strip_ignored587; then
   NAME=smtp_strip_ignored587; PORT=587; : > "$OUT/$NAME.tls.txt"
   start_cap "$NAME"
   start_server 587 smtp 587 --cert $G --key $GK
-  timeout 10 python3 -c "import socket,base64;s=socket.create_connection(('127.0.0.1',587),timeout=8);f=s.makefile('rwb');f.readline();f.write(b'EHLO c\r\n');f.flush();[f.readline() for _ in range(3)];tok=base64.b64encode(b'\x00user\x00secret').decode();f.write(('AUTH PLAIN '+tok+'\r\n').encode());f.flush();f.readline();import time as _t;_t.sleep(1);f.write(b'QUIT\r\n');f.flush();f.readline();s.close()" >/dev/null 2>&1
+  timeout 10 python3 -c "import socket,base64;s=socket.create_connection(('127.0.0.1',587),timeout=8);f=s.makefile('rwb');f.readline();f.write(b'EHLO c\r\n');f.flush();[f.readline() for _ in range(3)];tok=base64.b64encode(b'\x00user\x00secret').decode();f.write(('AUTH PLAIN '+tok+'\r\n').encode());f.flush();f.readline();s.close()  # victim disconnects after creds (no QUIT): hang-proof, realistic" >/dev/null 2>&1
   sleep 5
   stop_all; finish "$NAME" "$PORT"
 fi

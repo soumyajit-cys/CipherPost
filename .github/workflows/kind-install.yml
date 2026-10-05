@@ -1,0 +1,147 @@
+# Kind install test: chart + bundled deps + smoke + upgrade/rollback.
+#
+# STATUS 2026-10-05: written-but-not-run (no kind/kubectl/helm on the lab
+# host; no workflow execution available). PASS requires a real green run or
+# a local run log; see docs/evidence/kind-install.md. Do not claim otherwise.
+name: kind-install
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 4 * * 0" # weekly, Sundays
+  pull_request:
+    paths:
+      - "deploy/helm/cipherpost/**"
+      - "docker/Dockerfile.*"
+      - ".github/workflows/kind-install.yml"
+
+jobs:
+  kind-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kind + helm + kubectl
+        run: |
+          curl -fsSL -o /tmp/kind https://kind.sigs.k8s.io/dl/v0.24.0/kind-linux-amd64
+          chmod +x /tmp/kind
+          sudo mv /tmp/kind /usr/local/bin/kind
+          curl -fsSL -o /tmp/helm.tar.gz https://get.helm.sh/helm-v4.0.0-linux-amd64.tar.gz
+          tar xzf /tmp/helm.tar.gz -C /tmp
+          sudo mv /tmp/linux-amd64/helm /usr/local/bin/helm
+          kind version && helm version
+
+      - name: Create kind cluster
+        run: |
+          cat > /tmp/kind-cfg.yaml <<'EOF'
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          nodes:
+            - role: control-plane
+            - role: worker
+              labels:
+                cipherpost/capture: "true"
+          EOF
+          kind create cluster --name cipherpost-it --config /tmp/kind-cfg.yaml
+          kubectl cluster-info
+
+      - name: Build images
+        run: |
+          docker build -f docker/Dockerfile.api -t cipherpost/api:it .
+          docker build -f docker/Dockerfile.worker -t cipherpost/worker:it .
+          docker build -f docker/Dockerfile.frontend -t cipherpost/frontend:it .
+
+      - name: Load images into kind
+        run: |
+          kind load docker-image cipherpost/api:it --name cipherpost-it
+          kind load docker-image cipherpost/worker:it --name cipherpost-it
+          kind load docker-image cipherpost/frontend:it --name cipherpost-it
+
+      - name: Create eval secrets (never in values)
+        run: |
+          kubectl create namespace cipherpost || true
+          openssl rand -hex 32 > /tmp/jwt.txt
+          kubectl create secret generic cipherpost-secrets -n cipherpost \
+            --from-literal=CIPHERPOST_DATABASE_URL_SYNC='postgresql+psycopg2://cipherpost:evaltest@cp-it-postgres:5432/cipherpost' \
+            --from-literal=CIPHERPOST_JWT_SECRET="$(cat /tmp/jwt.txt)" \
+            --from-literal=CIPHERPOST_ADMIN_PASSWORD='EvalTestAdmin123!' \
+            --from-literal=POSTGRES_PASSWORD='evaltest' \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Helm install (bundled Postgres/Redis, evaluation only)
+        run: |
+          helm upgrade --install cp-it ./deploy/helm/cipherpost \
+            --namespace cipherpost \
+            --set postgres.bundled.enabled=true \
+            --set redis.bundled.enabled=true \
+            --set images.api.tag=it --set images.worker.tag=it --set images.frontend.tag=it \
+            --set images.api.repository=cipherpost/api \
+            --set images.worker.repository=cipherpost/worker \
+            --set images.frontend.repository=cipherpost/frontend \
+            --wait --timeout 10m
+
+      - name: Wait for migrate Job and rollouts
+        run: |
+          kubectl wait --for=condition=complete --timeout=300s \
+            -n cipherpost job/cp-it-migrate
+          kubectl rollout status deployment/cp-it-api -n cipherpost --timeout=300s
+          kubectl rollout status deployment/cp-it-worker -n cipherpost --timeout=300s
+          kubectl get pods -n cipherpost -o wide
+
+      - name: Smoke test (probes, login, upload, finding)
+        run: |
+          kubectl port-forward -n cipherpost svc/cp-it-api 18080:8000 >/tmp/pf.log 2>&1 &
+          echo $! > /tmp/pf.pid
+          for _ in $(seq 1 30); do
+            curl -fs http://127.0.0.1:18080/api/v1/health/live >/dev/null 2>&1 && break
+            sleep 5
+          done
+          curl -fs http://127.0.0.1:18080/api/v1/health/ready | tee /tmp/ready.json
+          TOKEN=$(curl -fs -X POST http://127.0.0.1:18080/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"admin@cipherpost.local","password":"EvalTestAdmin123!"}' \
+            | python3 -c "import json,sys; print(json.load(sys.stdin)['token'])")
+          JOB=$(curl -fs -X POST http://127.0.0.1:18080/api/v1/upload \
+            -H "Authorization: Bearer $TOKEN" \
+            -F "file=@tests/fixtures/imap_starttls_strip.pcap" \
+            | python3 -c "import json,sys; print(json.load(sys.stdin)['job_id'])")
+          echo "job=$JOB"
+          for _ in $(seq 1 36); do
+            STATUS=$(curl -fs http://127.0.0.1:18080/api/v1/jobs/$JOB \
+              -H "Authorization: Bearer $TOKEN" \
+              | python3 -c "import json,sys; print(json.load(sys.stdin)['status'])")
+            echo "status=$STATUS"
+            [ "$STATUS" = "COMPLETED" ] && break
+            sleep 10
+          done
+          [ "$STATUS" = "COMPLETED" ]
+          N=$(curl -fs "http://127.0.0.1:18080/api/v1/jobs/$JOB/findings" \
+            -H "Authorization: Bearer $TOKEN" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))")
+          echo "findings=$N"
+          [ "$N" -gt 0 ]
+          kill "$(cat /tmp/pf.pid)" || true
+
+      - name: Helm upgrade and rollback
+        if: always()
+        run: |
+          helm upgrade cp-it ./deploy/helm/cipherpost --namespace cipherpost \
+            --reuse-values --set api.replicas=3 --wait --timeout 10m
+          kubectl rollout status deployment/cp-it-api -n cipherpost --timeout=300s
+          helm rollback cp-it -n cipherpost --wait --timeout 10m
+          kubectl rollout status deployment/cp-it-api -n cipherpost --timeout=300s
+
+      - name: Upload kind logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kind-install-logs
+          path: |
+            /tmp/ready.json
+            /tmp/pf.log
+      - name: Dump cluster state on failure
+        if: failure()
+        run: |
+          kubectl get all -n cipherpost
+          kubectl describe pods -n cipherpost | head -n 200
+          kubectl logs -n cipherpost -l app.kubernetes.io/name=cipherpost --tail=200 || true

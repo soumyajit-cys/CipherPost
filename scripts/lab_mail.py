@@ -181,25 +181,31 @@ def main() -> int:
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     srv.bind(("127.0.0.1", args.port))
-    srv.listen(1)
-    srv.settimeout(30)
-    try:
-        conn, _ = srv.accept()
-    except socket.timeout:
-        print("lab server: no client arrived", file=sys.stderr)
-        return 1
-    try:
-        if implicit:
-            conn = tls_ctx.wrap_socket(conn, server_side=True)
-        DIALOGS[base](conn, not args.no_starttls, tls_ctx)
-    except (ConnectionResetError, BrokenPipeError, ssl.SSLError) as e:
-        print(f"lab server: connection ended: {e}", file=sys.stderr)
-    finally:
+    srv.listen(5)
+    srv.settimeout(1.0)
+    served = 0
+    # Serve connections until killed by timeout(1); the listen-check probe
+    # consumes the first accept, so single-connection service is wrong.
+    while True:
         try:
-            conn.close()
-        except Exception:
-            pass
-        srv.close()
+            conn, _ = srv.accept()
+        except socket.timeout:
+            continue
+        except OSError:
+            break
+        try:
+            c = conn
+            if implicit:
+                c = tls_ctx.wrap_socket(c, server_side=True)
+            DIALOGS[base](c, not args.no_starttls, tls_ctx)
+            served += 1
+        except (ConnectionResetError, BrokenPipeError, ssl.SSLError, OSError) as e:
+            print(f"lab server: connection ended: {e}", file=sys.stderr)
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
     return 0
 
 

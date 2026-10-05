@@ -15,9 +15,13 @@ CIPHERPOST_OIDC_JWKS_CACHE_SECONDS=600
 
 Validation is fail-closed: RS256 pinned (unsigned and symmetric tokens
 rejected before any claim is read), issuer/audience/expiry/nonce required,
-unknown `kid` triggers one JWKS refresh then rejection. Tested only against a
-local fake OIDC provider in `backend/tests/test_phase3_sso_mfa.py` — no
-Okta/Azure/Google compatibility is claimed. To verify yours, point a staging
+unknown `kid` triggers one JWKS refresh then rejection. Tested against a
+local fake OIDC provider in `backend/tests/test_phase3_sso_mfa.py` AND
+against real Keycloak 26.8.0 in `backend/tests/test_phase6_keycloak.py`
+(slow, env-gated): full code+PKCE login, group-to-role mapping, key-rotation
+acceptance, short-lifetime expiry rejection, disabled-user rejection. See
+`docs/evidence/sso-keycloak.md`. No Okta/Azure/Google compatibility is
+claimed — nothing about other providers. To verify yours, point a staging
 deploy at it and watch `auth.sso.failed` in the audit log.
 
 ## Claim mapping and provisioning

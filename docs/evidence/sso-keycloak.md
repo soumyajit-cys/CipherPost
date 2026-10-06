@@ -47,3 +47,8 @@ env-gated on `CIPHERPOST_TEST_KEYCLOAK_URL` +
   Stating plainly so nobody over-reads this file.
 - Keycloak left RUNNING on :8888 with the test realm for re-runs; creds are
   lab-only (`KeycloakLabAdmin123!`, `AliceLab123!`, `BobLab123!`).
+  NOTE 2026-10-06: host restarted, /tmp wiped — Keycloak install and the
+  throwaway login harness are gone. The durable artifacts are the committed
+  slow test below plus this doc. To re-run: reinstall 26.8.0
+  (`kc.sh start-dev --http-port=8888`), recreate realm/client/users/groups
+  per the table above (or re-derive from the slow test), and run the test.

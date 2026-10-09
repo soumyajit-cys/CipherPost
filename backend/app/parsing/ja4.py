@@ -44,8 +44,20 @@ from app.parsing.handshake import (
 )
 
 SPEC = ("FoxIO JA4 technical_details/JA4.md (retrieved 2026-10-02, "
-        "re-verified 2026-10-05); reference python/ja4.py + common.py "
-        "(read 2026-10-05, not copied); JA3 classic form")
+        "re-verified 2026-10-05 and 2026-10-09); reference python/ja4.py + "
+        "common.py (read 2026-10-05 and 2026-10-09, not copied; "
+        "ja4.py@9cfecc5 2026-09-22, JA4.md@820ec30 2026-01-21); JA3 classic form")
+
+# JA4S GREASE handling. Spec text (JA4.md, client fingerprint) says "ignore
+# GREASE values anywhere it sees them" (§Details, cipher/extension counts);
+# the document carries no server/JA4S section at all, so the spec text is
+# ambiguous for JA4S. Reference code python/ja4.py::to_ja4s explicitly
+# INCLUDES them: `ext_len` counts all extensions and the comment reads
+# "include grease values" (present-order sha12 likewise unfiltered).
+# Per cleanup policy we do NOT guess: behavior lives behind this constant,
+# follows the reference implementation, and the claim is marked
+# "verified against reference code only, spec text ambiguous".
+JA4S_INCLUDE_GREASE = True
 
 _VERSION_MAP = {0x0304: "13", 0x0303: "12", 0x0302: "11", 0x0301: "10",
                 0x0300: "s3", 0x0002: "s2",
@@ -164,10 +176,15 @@ def ja4s(sh: ServerHelloInfo, quic: bool = False) -> str:
     unhashed; missing extensions hash to "000000000000". No longer marked
     experimental for layout; ALPN non-ASCII endpoints still follow the spec
     text (hex rules) where the reference code substitutes "9" (documented).
+    Claim level: verified against reference code only, spec text ambiguous
+    (see JA4S_INCLUDE_GREASE).
     """
     ptype = "q" if quic else "t"
     ver = _VERSION_MAP.get(sh.negotiated_version or sh.legacy_version or 0, "00")
-    exts = list(sh.extension_ids)  # present order, GREASE included (reference parity)
+    if JA4S_INCLUDE_GREASE:
+        exts = list(sh.extension_ids)  # present order, GREASE included (reference parity)
+    else:
+        exts = strip_grease(sh.extension_ids)
     ext_n = f"{min(len(exts), 99):02d}"
     alpn = _alpn2(sh.alpn or [])
     cipher = f"{(sh.cipher_suite or 0) & 0xFFFF:04x}"

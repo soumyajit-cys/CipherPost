@@ -92,25 +92,72 @@ def ours_tls(pcap: Path) -> list[dict]:
     return rows
 
 
+def _hex_int(value) -> int | None:
+    """Parse tshark hex ("0x1302") or decimal strings to int; None if unknown."""
+    if value is None:
+        return None
+    try:
+        s = str(value).strip().lower()
+        return int(s, 16) if s.startswith("0x") else int(s)
+    except (ValueError, TypeError):
+        return None
+
+
+def _cipher_name(iana: int | None) -> str | None:
+    if iana is None:
+        return None
+    try:
+        from app.parsing.handshake import lookup_cipher
+        meta = lookup_cipher(iana)
+        return meta.name if meta else None
+    except Exception:
+        return None
+
+
 def diff_one(pcap: Path) -> dict:
     ours = ours_tls(pcap)
     theirs = tshark_tls(pcap)
     disagreements: list[str] = []
     if theirs and isinstance(theirs, list) and theirs and "error" in (theirs[0] or {}):
         return {"pcap": str(pcap), "skip": theirs[0]["error"], "disagreements": []}
-    # Heuristic comparison: collect version/cipher strings from both sides.
-    our_versions = sorted({str(r.get("tls_version")) for r in ours})
-    their_versions = sorted({str(v) for r in theirs for v in (r.get("tls_version") or []) if v})
-    if our_versions and their_versions and not set(our_versions) & set(their_versions):
-        # versions are encoded differently (hex vs dotted); only flag if clearly disjoint
-        disagreements.append(f"version sets disjoint: ours={our_versions} tshark={their_versions[:5]}")
-    our_ciphers = sorted({str(r.get("cipher")) for r in ours if r.get("cipher")})
-    their_ciphers = sorted({str(v) for r in theirs for v in (r.get("cipher") or []) if v})
-    # Cipher names differ in format (IANA vs OpenSSL); report counts only.
-    if our_ciphers and not their_ciphers:
-        disagreements.append(f"tshark found no ciphers but we did: {our_ciphers[:3]}")
-    if their_ciphers and not our_ciphers:
-        disagreements.append(f"we found no ciphers but tshark did: {their_ciphers[:3]}")
+    # ServerHello packets: negotiated (version, cipher) pairs from tshark.
+    # supported_versions ext carries the real 1.3 version; the legacy
+    # handshake.version field stays 0x0303, so accept either.
+    their_pairs = set()
+    for r in theirs:
+        if str(r.get("hs_type")) != "2":
+            continue
+        ver = _hex_int(r.get("supported_version"))
+        if ver is None:
+            ver = _hex_int(r.get("tls_version"))
+        name = _cipher_name(_hex_int(r.get("cipher")))
+        if ver is not None or name is not None:
+            their_pairs.add((ver, name))
+    our_pairs = set()
+    for r in ours:
+        ver = r.get("tls_version")
+        ver = ver if isinstance(ver, int) else _hex_int(ver)
+        if ver is not None or r.get("cipher"):
+            our_pairs.add((ver, r.get("cipher")))
+    for ver, name in sorted(our_pairs, key=str):
+        if name is None:
+            continue
+        match = any(tv == ver and (tn == name or tn is None)
+                    for tv, tn in their_pairs)
+        if not match:
+            if not their_pairs:
+                disagreements.append(
+                    f"tshark decoded no ServerHello while we did: ours={sorted(our_pairs, key=str)[:3]}")
+            else:
+                disagreements.append(
+                    f"session (tls={ver}, cipher={name}) not in tshark ServerHellos: "
+                    f"tshark={sorted(their_pairs, key=str)[:6]}")
+    for ver, name in sorted(their_pairs, key=str):
+        if name is None:
+            continue
+        if not any(ov == ver and oc == name for ov, oc in our_pairs):
+            disagreements.append(
+                f"tshark ServerHello (tls={ver}, cipher={name}) missing from our sessions")
     our_cns = sorted({c for r in ours for c in r.get("cert_cns", []) if c})
     their_subjects = sorted({str(v) for r in theirs for v in (r.get("subjects") or []) if v})
     for cn in our_cns:

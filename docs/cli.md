@@ -1,4 +1,4 @@
-# `cipherpost` CLI (fully offline)
+# `cipherpost` CLI (offline for scan/rules/evidence; verify-domain and probe use the network)
 
 No server, database, or Redis required. The CLI uses the same `app.parsing`
 engine as the server and the sensor agent.

@@ -75,7 +75,7 @@ against Stage-1 ground truth through the replay harness.
   (JSON) including reassembled byte segments (starttls/plaintext/tls) so the
   analysis worker is stateless; blob segments are short-lived by design.
 - **Validation gate.** `eval_rules` against the labeled corpus must stay
-  green (currently 43/43 → 100% P/R) before Stage 4.
+  green (currently 43/43 → 100% P/R on the synthetic corpus) before Stage 4.
 
 ---
 

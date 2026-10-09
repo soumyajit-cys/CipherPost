@@ -41,7 +41,8 @@ For vulnerabilities: `SECURITY.md` private process only.
 
 ## Known limitations (read before judging output)
 
-- 19-rule 100% precision/recall is synthetic-corpus only; real-world
+- 27-rule 100% precision/recall is synthetic-corpus only (lab set: 28
+  captures, 94 sessions, `docs/evidence/real-eval.md`); real-world
   precision is unknown — your feedback labels are the evaluation.
 - MTA-STS/DANE needs `CIPHERPOST_DNS_RESOLVER` + trust anchor; otherwise
   `not-published`/`dnssec-failed`, never guessed.

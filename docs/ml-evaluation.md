@@ -46,3 +46,8 @@ in the registry. Promotion requires beating the current model by
 `ML_PROMOTE_MARGIN_F1` (default 0.02) with no per-rule false-positive-rate
 regression; otherwise the candidate is rejected with a recorded reason.
 `POST /api/v1/ml/rollback` restores the previous version (one click).
+
+Last verified: 2026-10-05 — grouped-split honesty result and ranking-only
+policy on the 16-session synthetic corpus plus 28 lab captures (94
+sessions); analyst-label path untested for lack of labels. Evidence
+`docs/evidence/real-eval.md`.

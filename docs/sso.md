@@ -68,3 +68,7 @@ Admins can reset MFA via `POST /api/v1/auth/mfa/disable` (audited).
 - `POST /api/v1/auth/revoke-all` bumps the user's session version, killing all
   sessions (use after role changes or suspected compromise).
 - Default session lifetime: `CIPHERPOST_JWT_EXPIRY_SECONDS` (24 h).
+
+Last verified: 2026-10-05 against Keycloak 26.8.0 (code+PKCE login,
+group-to-role mapping, key-rotation acceptance, expiry and disabled-user
+rejection) — evidence `docs/evidence/sso-keycloak.md`. No other providers.

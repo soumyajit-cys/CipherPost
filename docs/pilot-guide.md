@@ -46,6 +46,8 @@ For vulnerabilities: `SECURITY.md` private process only.
   precision is unknown — your feedback labels are the evaluation.
 - MTA-STS/DANE needs `CIPHERPOST_DNS_RESOLVER` + trust anchor; otherwise
   `not-published`/`dnssec-failed`, never guessed.
+  Last verified: unit/fake-DNS tests only; no live resolver run recorded —
+  see `docs/evidence/` for what has actually run.
 - ML scores are rules-derived prioritization, not ground truth.
 - Single sensor sees one segment; 30-day live run minimum before trusting trends.
 

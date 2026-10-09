@@ -3,14 +3,17 @@
 FAIL or limitation entries discovered while closing v1.0 blockers. Each item:
 observed behavior, impact, and status. Nothing here is guessed.
 
-## 1. diff_tshark.py misses ServerHello ciphers (tooling, open)
+## 1. diff_tshark.py comparison gaps (tooling, fixed 2026-10-09)
 
-`scripts/diff_tshark.py` reads tshark JSON field `tls.handshake.ciphersuite`,
-which is empty for TLS 1.3 ServerHello (and some TLS 1.2). It reports
-"tshark found no ciphers but we did" on every completed handshake. Direct
-tshark queries agree with our parser everywhere checked
-(`0x11ec`=4588, `0x001d`=29, `0x002f`, `0xc030`). Impact: noisy diff output
-only; no product behavior. Fix: query version-appropriate fields.
+Root causes found and fixed (not just "field artifact"): the script read
+`pkt["layers"]` instead of `pkt["_source"]["layers"]` (all comparisons ran
+on empty rows), used a nonexistent `extensions_supported_version` field
+(correct: `extensions.supported_version`), and compared whole-file string
+sets across encodings. After the fix, `scripts/diff_tshark.py tests/real/`
+reports 28/28 agree (`docs/evidence/diff-tshark.md`). Remaining gap:
+tshark leaves some Certificate messages as raw bytes (no `x509sat`
+subjects); that case is now "cannot compare", with CN correctness covered
+by openssl cross-checks at cert creation.
 
 ## 2. hostname-mismatch has no live coverage (open, needs owner)
 

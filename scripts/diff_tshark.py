@@ -24,11 +24,29 @@ def have_tshark() -> bool:
     return shutil.which("tshark") is not None
 
 
+def _layers(pkt: dict) -> dict:
+    # tshark -T json nests fields under _source.layers (values are lists).
+    # The old code read pkt["layers"] and silently got nothing.
+    src = pkt.get("_source") or {}
+    return src.get("layers") or {}
+
+
+def _one(layers: dict, field: str):
+    vals = layers.get(field) or []
+    return vals[0] if vals else None
+
+
 def tshark_tls(pcap: Path) -> list[dict]:
-    # Extract handshake fields per TLS record via tshark JSON.
+    # Extract handshake fields per packet via tshark JSON. Separate
+    # ClientHello (type 1, offers) from ServerHello (type 2, selected):
+    # tls.handshake.ciphersuite is the ServerHello's selected cipher,
+    # tls.handshake.ciphersuites the ClientHello offer list.
     cmd = ["tshark", "-r", str(pcap), "-T", "json",
+           "-e", "tls.handshake.type",
            "-e", "tls.handshake.version",
            "-e", "tls.handshake.ciphersuite",
+           "-e", "tls.handshake.ciphersuites",
+           "-e", "tls.handshake.extensions_supported_version",
            "-e", "x509sat.printableString",
            "-e", "tls.handshake.extensions_server_name"]
     try:
@@ -43,12 +61,15 @@ def tshark_tls(pcap: Path) -> list[dict]:
         return [{"error": f"tshark JSON parse failed: {e}"}]
     rows = []
     for pkt in data:
-        layers = pkt.get("layers", {})
+        layers = _layers(pkt)
         rows.append({
-            "tls_version": layers.get("tls.handshake.version"),
-            "cipher": layers.get("tls.handshake.ciphersuite"),
-            "subjects": layers.get("x509sat.printableString"),
-            "sni": layers.get("tls.handshake.extensions_server_name"),
+            "hs_type": _one(layers, "tls.handshake.type"),
+            "tls_version": _one(layers, "tls.handshake.version"),
+            "cipher": _one(layers, "tls.handshake.ciphersuite"),
+            "ciphers": layers.get("tls.handshake.ciphersuites") or [],
+            "supported_version": _one(layers, "tls.handshake.extensions_supported_version"),
+            "subjects": layers.get("x509sat.printableString") or [],
+            "sni": _one(layers, "tls.handshake.extensions_server_name"),
         })
     return rows
 

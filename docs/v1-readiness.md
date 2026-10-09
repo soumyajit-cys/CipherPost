@@ -1,9 +1,10 @@
 # v1.0 readiness (Phase 4 gate + blocker-closure lab — honest assessment)
 
 Date: 2026-10-02 (gate); lab update 2026-10-05 ( Items closed by automation
-and local lab only; nothing requiring real people/systems is claimed).
-Status: **STILL NOT READY for v1.0** — 4 of 8 items now PASS with committed
-evidence (see table). Nothing here is projected or guessed.
+and local lab only; nothing requiring real people/systems is claimed);
+reviewed 2026-10-09 with no status changes.
+Status: **STILL NOT READY for v1.0** — 3 of 8 items PASS with committed
+evidence plus 1 PARTIAL (see table). Nothing here is projected or guessed.
 
 ## What Phase 4 delivered (all tested, on `main`)
 
@@ -75,8 +76,10 @@ previous table already marked the unrun items NOT-VERIFIED correctly.
 
 ## Gate decision (unchanged in substance)
 
-Still **NOT READY for v1.0**: items 1, 2, 3, 5 and the remainder of 6 need
+Still **NOT READY for v1.0**: external pilots, the 30-day run, the kind run,
+registry push/sign/provenance, and the remainder of chaos need
 real people, real time, real systems, or owner credentials — none of which
-automation can supply. What the lab closed (4, 7, 8, half of 6) is evidenced
-above; everything else lists exactly what the owner must do. Do not tag v1.0
-until 1–2 plus a green kind run (3) exist as artifacts, not plans.
+automation can supply. What the lab closed (Real-IdP SSO for Keycloak,
+JA4/JA4S, PQ interop, half of chaos) is evidenced above; everything else
+lists exactly what the owner must do. Do not tag v1.0
+until pilots plus a green kind run exist as artifacts, not plans.

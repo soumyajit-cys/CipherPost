@@ -44,7 +44,15 @@
           "notes": "TLS 1.3: certs not passively observable"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp13_starttls587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp12_starttls587_lab_01.pcap",
@@ -89,7 +97,15 @@
           "notes": "no sentinel"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp12_starttls587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp10_starttls587_lab_01.pcap",
@@ -140,7 +156,15 @@
           "notes": "lab CA"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp10_starttls587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp11_starttls587_lab_01.pcap",
@@ -191,7 +215,15 @@
           "notes": "lab CA"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp11_starttls587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp_weakcbc587_lab_01.pcap",
@@ -236,7 +268,15 @@
           "notes": "lab CA"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp_weakcbc587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp_expired587_lab_01.pcap",
@@ -257,7 +297,15 @@
           "notes": "expired chain untrusted"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp_expired587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp_self587_lab_01.pcap",
@@ -284,7 +332,15 @@
           "notes": "valid dates"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp_self587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp_wronghost587_lab_01.pcap",
@@ -311,7 +367,15 @@
           "notes": "valid dates"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp_wronghost587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp_weaksig587_lab_01.pcap",
@@ -338,7 +402,15 @@
           "notes": "AES128-SHA forced for seclevel-0 sha1 compat"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp_weaksig587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp13_expired_blind587_lab_01.pcap",
@@ -365,7 +437,15 @@
           "notes": "1.3 negotiated"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp13_expired_blind587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp_nostarttls587_lab_01.pcap",
@@ -386,7 +466,15 @@
           "notes": "no offer ever made"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp_nostarttls587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp_strip_ignored587_lab_01.pcap",
@@ -407,7 +495,15 @@
           "notes": "offer on wire, no TLS followed"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp_strip_ignored587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp_stripped_proxy587_lab_01.pcap",
@@ -428,7 +524,15 @@
           "notes": "stripped offer invisible on wire; tool must not allege (documented limitation)"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp_stripped_proxy587",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp12_implicit465_lab_01.pcap",
@@ -455,7 +559,15 @@
           "notes": "1.2 negotiated"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp12_implicit465",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp13_implicit465_lab_01.pcap",
@@ -488,7 +600,15 @@
           "notes": "no sentinel"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp13_implicit465",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_smtp10_implicit465_lab_01.pcap",
@@ -521,7 +641,15 @@
           "notes": "lab CA (observable: TLS 1.0 certs in clear)"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "smtp10_implicit465",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_imap13_starttls143_lab_01.pcap",
@@ -548,7 +676,15 @@
           "notes": "TLS 1.3 blind"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "imap13_starttls143",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_imap_plain143_lab_01.pcap",
@@ -563,7 +699,15 @@
           "notes": "no STARTTLS capability by config"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "imap_plain143",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_imap13_implicit993_lab_01.pcap",
@@ -590,7 +734,15 @@
           "notes": "TLS 1.3 blind"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "imap13_implicit993",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_pop13_stls110_lab_01.pcap",
@@ -617,7 +769,15 @@
           "notes": "TLS 1.3 blind"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "pop13_stls110",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_pop_plain110_lab_01.pcap",
@@ -632,7 +792,15 @@
           "notes": "no STLS capability by config"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "pop_plain110",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_pop12_implicit995_lab_01.pcap",
@@ -653,7 +821,15 @@
           "notes": "TLS present"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "pop12_implicit995",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "mail_imap12_login143_lab_01.pcap",
@@ -674,7 +850,15 @@
           "notes": "LOGIN inside TLS"
         }
       ],
-      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05"
+      "notes": "labels from deliberately configured server/client settings, not tool output; reviewer: lab run 2026-10-05",
+      "source_config": {
+        "harness": "scripts/lab_mail.py",
+        "driver": "scripts/lab_capture.sh",
+        "certs": "scripts/lab_certs.sh",
+        "scenario": "imap12_login143",
+        "evidence": "docs/evidence/real-eval.md"
+      },
+      "provenance": "complete"
     },
     {
       "pcap": "pq_hybrid_lab_01.pcap",
@@ -713,7 +897,15 @@
           "notes": "TLS 1.3: cert contents not passively observable; tool must not report"
         }
       ],
-      "notes": "PQ posture facts verified: offered [X25519MLKEM768 (hybrid PQ)], selected same, negotiated_pq true. Lab CA valid 2026-10-05..07, CN mail.pqlab.test."
+      "notes": "PQ posture facts verified: offered [X25519MLKEM768 (hybrid PQ)], selected same, negotiated_pq true. Lab CA valid 2026-10-05..07, CN mail.pqlab.test.",
+      "source_config": {
+        "harness": "openssl 3.6.1 s_server/s_client (manual commands)",
+        "driver": null,
+        "certs": null,
+        "scenario": "pq_hybrid_lab_01",
+        "evidence": "docs/evidence/pq-interop.md#toolchain"
+      },
+      "provenance": "partial (commands documented in evidence doc; no runnable script committed)"
     },
     {
       "pcap": "pq_classic_lab_01.pcap",
@@ -746,7 +938,15 @@
           "notes": "TLS 1.3: cert contents not passively observable; tool must not report"
         }
       ],
-      "notes": "Control case: classical-only handshake must show offered [x25519], selected x25519, negotiated_pq false."
+      "notes": "Control case: classical-only handshake must show offered [x25519], selected x25519, negotiated_pq false.",
+      "source_config": {
+        "harness": "openssl 3.6.1 s_server/s_client (manual commands)",
+        "driver": null,
+        "certs": null,
+        "scenario": "pq_classic_lab_01",
+        "evidence": "docs/evidence/pq-interop.md#toolchain"
+      },
+      "provenance": "partial (commands documented in evidence doc; no runnable script committed)"
     },
     {
       "pcap": "pq_gap_lab_01.pcap",
@@ -773,7 +973,15 @@
           "notes": "TLS 1.3 negotiated"
         }
       ],
-      "notes": "PQ gap case: offered_pq true, negotiated_pq false. Posture reporting only; no finding expected."
+      "notes": "PQ gap case: offered_pq true, negotiated_pq false. Posture reporting only; no finding expected.",
+      "source_config": {
+        "harness": "openssl 3.6.1 s_server/s_client (manual commands)",
+        "driver": null,
+        "certs": null,
+        "scenario": "pq_gap_lab_01",
+        "evidence": "docs/evidence/pq-interop.md#toolchain"
+      },
+      "provenance": "partial (commands documented in evidence doc; no runnable script committed)"
     },
     {
       "pcap": "pq_hrr_lab_01.pcap",
@@ -800,7 +1008,15 @@
           "notes": "TLS 1.3 negotiated"
         }
       ],
-      "notes": "HRR is normal TLS 1.3 operation; only an unoffered selection would be flagged."
+      "notes": "HRR is normal TLS 1.3 operation; only an unoffered selection would be flagged.",
+      "source_config": {
+        "harness": "openssl 3.6.1 s_server/s_client (manual commands)",
+        "driver": null,
+        "certs": null,
+        "scenario": "pq_hrr_lab_01",
+        "evidence": "docs/evidence/pq-interop.md#toolchain"
+      },
+      "provenance": "partial (commands documented in evidence doc; no runnable script committed)"
     },
     {
       "pcap": "pq_no_overlap_lab_01.pcap",
@@ -821,7 +1037,15 @@
           "notes": "no negotiated version exists"
         }
       ],
-      "notes": "Negative control: server abort must not produce findings or invented sessions."
+      "notes": "Negative control: server abort must not produce findings or invented sessions.",
+      "source_config": {
+        "harness": "openssl 3.6.1 s_server/s_client (manual commands)",
+        "driver": null,
+        "certs": null,
+        "scenario": "pq_no_overlap_lab_01",
+        "evidence": "docs/evidence/pq-interop.md#toolchain"
+      },
+      "provenance": "partial (commands documented in evidence doc; no runnable script committed)"
     }
   ]
 }

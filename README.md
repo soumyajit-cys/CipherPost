@@ -9,6 +9,13 @@ deterministic, auditable rules engine (NIST SP 800-52r2 / OWASP), augments
 the findings with an ML-based risk score and SHAP explanations, and emits
 prioritized findings in JSON/HTML/PDF plus an interactive React dashboard.
 
+It detects missing or downgraded encryption only where the capture point can
+see it: a passive tool placed downstream of an on-path STARTTLS strip cannot
+see the original offer, so it reports absence of TLS plus any
+plaintext-continuation evidence — never a reconstruction of unseen bytes.
+CipherPost is pre-1.0: zero external pilots, no 30-day live run, no kind
+install run, no registry signing run (see Maturity below).
+
 ## Architecture
 
 ```
@@ -45,7 +52,7 @@ prioritized findings in JSON/HTML/PDF plus an interactive React dashboard.
 
 - **Stage 1** — Corpus + lab traffic generator (`scripts/traffic_generator.py`) across TLS matrix (strong/1.2/expired/self-signed/untrusted/STARTTLS-strip)
 - **Stage 2** — Live capture daemon: scapy sniff (or pcap replay) → streaming reassembly keyed by 5-tuple → Redis `cipherpost:sessions`
-- **Stage 3** — Analysis worker consumes sessions → shared `analyze_session()` (handshake, certs, 19 rules); validated 100% P/R vs corpus
+- **Stage 3** — Analysis worker consumes sessions → shared `analyze_session()` (handshake, certs, 27 rules); 100% P/R on the synthetic corpus only (see `scripts/eval_real.py` for the 28-capture lab set: 94 sessions, 0 misses/FPs as of 2026-10-05)
 - **Stage 4** — Rolling ML baseline (`FLEET_BASELINE_WINDOW_DAYS=7`, refit every N sessions) + SHAP, published to `cipherpost:findings`
 - **Stage 5** — Alert dispatcher (pluggable webhook/slack/syslog/email, threshold/dedup/rate-limit) + SSE live feeds (`/live/*`) + historical queries + live dashboard
 - **Stage 6** — Deterministic replay harness, fuzz/load tests, Dockerized full stack, Prometheus `/metrics` + structured logs
@@ -186,9 +193,11 @@ PYTHONPATH=backend/. python scripts/export_mock_data.py
   Observed leaf certs are inventoried (`GET /api/v1/certs`) with proactive
   expiry forecasting (`GET /api/v1/certs/expiring`).
 
-## Maturity: what's hardened vs evolving (Phase 3 adoption)
+## Maturity: pre-1.0, what's hardened vs evolving
 
-Honestly labeled (see THREAT_MODEL.md, DEPLOYMENT.md, docs/, CHANGELOG.md).
+Maturity level: **pre-1.0 — zero external pilots, 30-day live run not done,
+kind install not run, registry signing not run.** Honestly labeled (see
+THREAT_MODEL.md, DEPLOYMENT.md, docs/, CHANGELOG.md).
 Phase 3 makes CipherPost adoptable by outside orgs (SSO/MFA, real tenancy,
 sensor agents, CLI, Helm, stable API, release pipeline, pilot docs) — but no
 external organization has piloted it yet. **A minimum of three external

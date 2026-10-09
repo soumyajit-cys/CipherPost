@@ -37,6 +37,19 @@ rules that needed missing data list their ids in `not_observable`.
 - HelloRetryRequest is normal TLS 1.3 operation; only a selected group the
   client never offered is flagged.
 
+## STARTTLS stripping: what a downstream sensor can and cannot say
+
+- A passive capture point sees only the bytes that reach it. If an on-path
+  attacker strips the STARTTLS offer upstream, the offer never appears in the
+  capture: the tool reports absence of TLS (`plaintext-mail-protocol`) plus
+  any plaintext-continuation evidence — it cannot reconstruct the unseen
+  offer and never alleges a specific stripping event it did not observe.
+- `starttls-strip-attempt` fires only when the offer IS on the wire
+  (server advertised, or client requested) and no TLS handshake follows.
+  A stripped offer is therefore reported as plaintext, not as stripping;
+  the proxy case in `tests/real/` (`smtp_stripped_proxy587`) pins this
+  behavior: plaintext true, strip-attempt false.
+
 ## GREASE
 
 GREASE values (RFC 8701) appear throughout hellos and are stripped before
@@ -53,3 +66,16 @@ unless stated otherwise.
 
 Scores rank sessions for review; SHAP bars show what drove a score, never
 evidence of a vulnerability. See `docs/ml-evaluation.md`.
+
+## Fingerprint spec basis (JA4/JA4S)
+
+Client JA4 reproduces the official worked example
+(`t13d1516h2_8daaf6152771_e5627efa2ab1`); JA4S layout follows the reference
+implementation's `to_ja4s` behavior (GREASE included in count+hash).
+Hybrid post-quantum group detection verified against OpenSSL 3.6.1
+loopback captures with tshark 4.6.4 decode (X25519MLKEM768 negotiated,
+selected, and gap cases).
+
+Last verified: 2026-10-05, FoxIO JA4 spec + reference code (read-only),
+OpenSSL 3.6.1, tshark 4.6.4 — evidence `docs/evidence/ja4-verification.md`,
+`docs/evidence/pq-interop.md`.

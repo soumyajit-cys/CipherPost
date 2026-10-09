@@ -32,7 +32,8 @@ def test_layers_unwrap_and_hex():
     assert D._hex_int("771") == 771
     assert D._hex_int(None) is None
     assert D._hex_int("bogus") is None
-    assert D._cipher_name(0x1301) == "TLS_AES_256_GCM_SHA384"
+    assert D._cipher_name(0x1301) == "TLS_AES_128_GCM_SHA256"
+    assert D._cipher_name(0x1302) == "TLS_AES_256_GCM_SHA384"
     assert D._cipher_name(0xFFFF) is None
     # old (broken) path yields nothing
     assert D._layers({"layers": {}}) == {}
@@ -72,7 +73,10 @@ def _write_synthetic_pcap(path):
     from dpkt.ethernet import Ethernet
     from dpkt.ip import IP
     from dpkt.tcp import TCP
-    c_ip, s_ip, c_port, s_port = "10.9.0.1", "10.9.0.2", 40000, 587
+    import socket as _sock
+    c_ip = _sock.inet_aton("10.9.0.1")
+    s_ip = _sock.inet_aton("10.9.0.2")
+    c_port, s_port = 40000, 587
     seq_c, seq_s = 1000, 5000
     pkts = []
 

@@ -46,7 +46,7 @@ def tshark_tls(pcap: Path) -> list[dict]:
            "-e", "tls.handshake.version",
            "-e", "tls.handshake.ciphersuite",
            "-e", "tls.handshake.ciphersuites",
-           "-e", "tls.handshake.extensions_supported_version",
+           "-e", "tls.handshake.extensions.supported_version",
            "-e", "x509sat.printableString",
            "-e", "tls.handshake.extensions_server_name"]
     try:
@@ -67,7 +67,7 @@ def tshark_tls(pcap: Path) -> list[dict]:
             "tls_version": _one(layers, "tls.handshake.version"),
             "cipher": _one(layers, "tls.handshake.ciphersuite"),
             "ciphers": layers.get("tls.handshake.ciphersuites") or [],
-            "supported_version": _one(layers, "tls.handshake.extensions_supported_version"),
+            "supported_version": _one(layers, "tls.handshake.extensions.supported_version"),
             "subjects": layers.get("x509sat.printableString") or [],
             "sni": _one(layers, "tls.handshake.extensions_server_name"),
         })

@@ -138,6 +138,11 @@ def build_report_data(analyses: list[SessionAnalysis],
         for rid in (getattr(a, "not_observable", None) or []):
             not_observable[rid] = not_observable.get(rid, 0) + 1
     limitations = []
+    limitations.append(
+        "Passive visibility limit: a capture point downstream of an on-path "
+        "STARTTLS strip cannot see the original offer. Absence of TLS is "
+        "reported with any plaintext-continuation evidence; stripping is "
+        "alleged only when the offer itself is on the wire.")
     if tls13_sessions:
         limitations.append(
             f"{tls13_sessions} TLS 1.3 session(s): certificate contents are "

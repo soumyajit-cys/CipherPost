@@ -55,18 +55,23 @@ evidence (see table). Nothing here is projected or guessed.
   0 errors, RSS flat 47.6 MB. Do not size production from this table —
   replay your own capture per `docs/sizing.md`.
 
-## Blocker verdicts after the 2026-10-05 lab (evidence-linked)
+## Blocker verdicts re-derived from evidence (2026-10-09 review)
 
-| # | Item | Verdict | Evidence |
-|---|---|---|---|
-| 1 | Three external pilots with analyst labels | NOT-VERIFIED | No external orgs involved. Partial: 28 lab-labeled captures in `tests/real/` (functional labels, not pilot labels), `docs/evidence/real-eval.md` |
-| 2 | 30-day live-traffic run | NOT-VERIFIED | 3-minute soak only: 4.6M packets, 0 errors, RSS flat (`docs/evidence/chaos-run.md`). Owner must run the 30-day live capture. |
-| 3 | kind install of the Helm chart | NOT-VERIFIED | Workflow written-but-not-run (`.github/workflows/kind-install.yml`); 4 chart bugs fixed by review; `docs/evidence/kind-install.md`. Owner must run it. |
-| 4 | Real-IdP SSO flow | **PASS** (Keycloak 26.8.0 only) | `docs/evidence/sso-keycloak.md`; `test_phase6_keycloak.py` (4 slow tests). Limits stated there; no other providers. |
-| 5 | Registry push/sign + provenance | NOT-VERIFIED | Dry-run inputs added, parse-checked; no runner/credentials. `docs/evidence/release-dryrun.md`. Owner action required. |
-| 6 | Nightly chaos on real infra | **PARTIAL** | Real-Redis outage test + soak PASS (`docs/evidence/chaos-run.md`); true Postgres restart, container worker kills, and a CI nightly run remain NOT-VERIFIED. |
-| 7 | Independent JA4S verification | **PASS** (within what exists) | Spec worked example MATCH; JA4S layout verified vs reference behavior, 1 real mismatch fixed; `docs/evidence/ja4-verification.md`. No official numeric JA4S vector exists. |
-| 8 | PQ interop against real hybrid servers | **PASS** | 4 live handshakes (hybrid/classic/gap/HRR) + abort control, tshark agreement, 1 parser bug fixed; `docs/evidence/pq-interop.md`, 5 captures in `tests/real/`. |
+Each status was re-checked against its evidence file on 2026-10-09. No item
+without committed evidence is marked PASS. Downgrades applied in this review:
+none — every PASS/PARTIAL below links a committed evidence file; the
+previous table already marked the unrun items NOT-VERIFIED correctly.
+
+| Item | Verdict | Evidence |
+|---|---|---|
+| External pilots with analyst labels | NOT-VERIFIED | No external orgs involved. Partial only: 28 lab-labeled captures in `tests/real/` (functional labels, not pilot labels), `docs/evidence/real-eval.md` |
+| 30-day live-traffic run | NOT-VERIFIED | 3-minute soak only: 4.6M packets, 0 errors, RSS flat (`docs/evidence/chaos-run.md`). Owner must run the 30-day live capture. |
+| Kind install of the Helm chart | NOT-VERIFIED | Workflow written-but-not-run (`.github/workflows/kind-install.yml`); 4 chart bugs fixed by review; `docs/evidence/kind-install.md`. Owner must run it. |
+| Real-IdP SSO flow | PASS (Keycloak 26.8.0 only) | `docs/evidence/sso-keycloak.md`; `test_phase6_keycloak.py` (4 slow tests). MFA is app-side TOTP (unchanged); `/auth/logout` and `revoke-all` not re-run live — stated in the evidence file. No other providers. |
+| Registry push, image signing, provenance | NOT-VERIFIED | Explicitly NOT passed for signing/push/provenance: release inputs only parse-checked, no runner/credentials (`docs/evidence/release-dryrun.md`). Owner action required. |
+| Nightly chaos on real infrastructure | PARTIAL | PASS: real-Redis outage test + soak (`docs/evidence/chaos-run.md`). NOT-VERIFIED remainder: true Postgres restart, container worker kills, CI nightly run. |
+| Independent JA4/JA4S verification | PASS (within what exists) | Spec worked example MATCH; JA4S layout verified vs reference behavior, 1 real mismatch fixed; `docs/evidence/ja4-verification.md`. No official numeric JA4S vector exists. |
+| Post-quantum interop | PASS | 4 live handshakes (hybrid/classic/gap/HRR) + abort control, tshark agreement, 1 parser bug fixed; `docs/evidence/pq-interop.md`, 5 captures in `tests/real/`. |
 
 ## Gate decision (unchanged in substance)
 

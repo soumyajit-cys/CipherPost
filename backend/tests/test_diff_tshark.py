@@ -87,6 +87,10 @@ def _write_synthetic_pcap(path):
         return Ethernet(dst=b"\x00" * 6, src=b"\x00" * 6, type=0x0800, data=ip)
 
     banner = b"220 mail.test ESMTP synthetic\r\n"
+    ehlo = b"EHLO c\r\n"
+    ehlo_resp = b"250-mail.test\r\n250 STARTTLS\r\n"
+    starttls = b"STARTTLS\r\n"
+    ready = b"220 2.0.0 Ready\r\n"
     pkts.append(tcp(c_ip, c_port, s_ip, s_port, seq_c, 0, dpkt.tcp.TH_SYN))
     seq_c += 1
     pkts.append(tcp(s_ip, s_port, c_ip, c_port, seq_s, seq_c, dpkt.tcp.TH_SYN | dpkt.tcp.TH_ACK))
@@ -94,6 +98,18 @@ def _write_synthetic_pcap(path):
     pkts.append(tcp(c_ip, c_port, s_ip, s_port, seq_c, seq_s, dpkt.tcp.TH_ACK))
     pkts.append(tcp(s_ip, s_port, c_ip, c_port, seq_s, seq_c, dpkt.tcp.TH_ACK, banner))
     seq_s += len(banner)
+    pkts.append(tcp(c_ip, c_port, s_ip, s_port, seq_c, seq_s,
+                    dpkt.tcp.TH_ACK | dpkt.tcp.TH_PUSH, ehlo))
+    seq_c += len(ehlo)
+    pkts.append(tcp(s_ip, s_port, c_ip, c_port, seq_s, seq_c,
+                    dpkt.tcp.TH_ACK | dpkt.tcp.TH_PUSH, ehlo_resp))
+    seq_s += len(ehlo_resp)
+    pkts.append(tcp(c_ip, c_port, s_ip, s_port, seq_c, seq_s,
+                    dpkt.tcp.TH_ACK | dpkt.tcp.TH_PUSH, starttls))
+    seq_c += len(starttls)
+    pkts.append(tcp(s_ip, s_port, c_ip, c_port, seq_s, seq_c,
+                    dpkt.tcp.TH_ACK | dpkt.tcp.TH_PUSH, ready))
+    seq_s += len(ready)
     ch = _client_hello_record()
     pkts.append(tcp(c_ip, c_port, s_ip, s_port, seq_c, seq_s, dpkt.tcp.TH_ACK | dpkt.tcp.TH_PUSH, ch))
     seq_c += len(ch)
@@ -120,7 +136,7 @@ def test_diff_agrees_on_synthetic_tls13(tmp_path):
     assert res["ours"], "expected one analyzed session"
     sa = res["ours"][0]
     assert sa["tls_version"] == 0x0304
-    assert sa["cipher"] == "TLS_AES_256_GCM_SHA384"
+    assert sa["cipher"] == "TLS_AES_128_GCM_SHA256"
 
 
 @pytest.mark.skipif(shutil.which("tshark") is None, reason="needs tshark")

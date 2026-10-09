@@ -132,7 +132,6 @@ def test_diff_agrees_on_synthetic_tls13(tmp_path):
     res = D.diff_one(pcap)
     assert not res.get("skip"), res.get("skip")
     assert res["disagreements"] == [], res["disagreements"]
-    ours = {tuple(sorted(d.items())) for d in res["ours"]}
     assert res["ours"], "expected one analyzed session"
     sa = res["ours"][0]
     assert sa["tls_version"] == 0x0304

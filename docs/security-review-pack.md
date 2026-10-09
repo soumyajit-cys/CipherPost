@@ -66,5 +66,5 @@ runs. Diagnostics bundles redact secrets and mask addresses by default.
 No 30-day live run; no kind-cluster install test; real-IdP SSO tested
 Keycloak-26.8.0-only (`docs/evidence/sso-keycloak.md`); synthetic + 28-capture
 lab precision only. Compliance tags load from versioned `mapping-v1.json`
-(IANA/RFC-cited mappings retrieved 2026-10-02; re-check current framework
-editions during audits). See README Maturity.
+(each tag carries framework title, control, and source URL; re-check current
+framework editions during audits). See README Maturity.

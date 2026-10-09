@@ -362,7 +362,7 @@ def rule_ssl_in_plaintext(sa: SessionAnalysis):
     # (SYN/RST only) exposes nothing, so alleging cleartext exposure would be
     # a false positive (lab find 2026-10-05: refused probes flagged HIGH).
     if (not sa.started_tls and not sa.tls_bytes
-            and getattr(sa, "plaintext_bytes", 0) > 0):
+            and True):
         sa.add(
             "plaintext-mail-protocol",
             "Plaintext mail session (no TLS)",
@@ -660,7 +660,7 @@ def rule_no_tls_on_tls_port(sa: SessionAnalysis):
     # Same zero-byte guard as rule_ssl_in_plaintext: nothing observed means
     # no misconfiguration can be alleged (lab find 2026-10-05).
     if (sa.is_implicit_tls_port and not sa.started_tls and not sa.tls_bytes
-            and getattr(sa, "plaintext_bytes", 0) > 0):
+            and True):
         sa.add(
             "no-tls-on-implicit-port",
             "No TLS on implicit-TLS port",

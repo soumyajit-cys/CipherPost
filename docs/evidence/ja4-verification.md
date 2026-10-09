@@ -52,3 +52,23 @@ Analyst: lab run on this machine. Sources (read-only, nothing copied):
   documented choice.
 - Reference code itself was only read, never executed (needs its tshark
   pipeline); behavior comparison is by code reading.
+
+## Re-verification 2026-10-09 (cleanup Task 4)
+
+Sources re-fetched (read-only, FoxIO License 1.1 still in force — nothing
+copied): `technical_details/JA4.md` (220 lines, last change 820ec30 on
+2026-01-21), `python/ja4.py` (610 lines, last change 9cfecc5 on 2026-09-22),
+`python/common.py` (`sha_encode`, `first_last_alpn` unchanged in behavior).
+
+- Spec text: JA4.md is client-fingerprint-only; no JA4S/server section
+  exists, so the spec text is ambiguous for JA4S GREASE handling. (The
+  "ignore GREASE" lines — §§ Details, cipher/extension counts — all sit in
+  the client-fingerprint context.)
+- Reference code `to_ja4s`: unchanged — `ext_len` counts all extensions
+  with the verbatim comment "include grease values"; present-order sha12
+  over the unfiltered list; single embedded cipher; `000000000000` when
+  empty. Our `ja4s()` matches on every point.
+- Decision (no guessing): behavior stays behind the named constant
+  `JA4S_INCLUDE_GREASE = True` in `backend/app/parsing/ja4.py`, following
+  the reference implementation. Claim level, stated in code and here:
+  **verified against reference code only, spec text ambiguous**.

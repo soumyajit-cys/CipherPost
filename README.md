@@ -210,9 +210,10 @@ sensor agent with disk queue (privacy/outage/revocation tests); offline CLI
 (golden/exit-code tests); Helm chart (`helm lint`, `template`, kubeconform
 13/13 — no kind run); committed OpenAPI + breaking-change CI gate; release
 workflow (dry-run safe); diagnostics bundles, feedback labels + precision
-dashboard, pilot/security/telemetry docs. 140+ backend tests green.
+dashboard, pilot/security/telemetry docs. 208 backend tests green (2026-10-09).
 
-**Still required:** three external pilots; kind install test; link-rate sizing from
+**Still required:** three external pilots; kind install test (workflow written,
+not run); registry push/sign run; release tag; link-rate sizing from
 real SPAN captures; license choice by the owner (see
 `docs/licensing-decision.md`).
 

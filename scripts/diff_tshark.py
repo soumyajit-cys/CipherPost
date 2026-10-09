@@ -161,6 +161,12 @@ def diff_one(pcap: Path) -> dict:
     our_cns = sorted({c for r in ours for c in r.get("cert_cns", []) if c})
     their_subjects = sorted({str(v) for r in theirs for v in (r.get("subjects") or []) if v})
     for cn in our_cns:
+        if not their_subjects:
+            # tshark surfaced no subjects at all (e.g. it leaves some
+            # Certificate messages as raw bytes): absence of evidence, not
+            # evidence of mismatch. Correctness of our CNs is covered by
+            # openssl cross-checks in evidence docs, not by this script.
+            break
         if cn and not any(cn in s for s in their_subjects):
             disagreements.append(f"cert CN {cn!r} not seen in tshark subjects")
             break

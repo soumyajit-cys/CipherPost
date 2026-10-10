@@ -115,8 +115,9 @@ Treat every packet, handshake field, and certificate as attacker-controlled.
 4. **ML label circularity** — initial labels derive from the rules engine
    (documented in README + disagreement reports); treat scores as
    prioritization, never as ground truth. Synthetic 100% P/R does not imply
-   real-world performance — see `tests/real/` (empty, human-labelled harness
-   + tshark diff, not a gate).
+   real-world performance — see `tests/real/` (28 lab-generated captures, 94
+   sessions, functional labels not pilot labels; harness + tshark diff, not a
+   gate; `docs/evidence/real-eval.md`).
 5. **Deployment hardening verified by code review, not by running containers**
    (Docker/K8s non-root, unexposed DB/Redis, migrate gating were verified via
    `docker compose config` only — run a staging deploy before production).
@@ -127,3 +128,9 @@ Treat every packet, handshake field, and certificate as attacker-controlled.
    Ryzen 7 5700G, 14 GB); link-rate sizing, full root-chain DNSSEC, and
    session-attributed MTA-STS/DANE findings are follow-ups. Alert group hold
    (10 s) delays first notification by design; tune per site.
+
+Last verified: 2026-10-10 — detection scope narrowed to where the capture
+point can see it; SSO scope Keycloak 26.8.0 only
+(`docs/evidence/sso-keycloak.md`); MTA-STS/DANE per unit/fake-DNS tests only
+(no live resolver run); maturity pre-1.0, zero external pilots, 30-day live
+run not done, kind install not run, registry signing not run.

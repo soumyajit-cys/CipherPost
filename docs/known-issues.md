@@ -21,7 +21,11 @@ by openssl cross-checks at cert creation.
 a lab-CA wrong-host cert yields `untrusted-certificate-chain` only (correct).
 The `hostname-mismatch` path needs a publicly-trusted wrong-name cert, which
 only the owner can arrange. Labeled `present:false` with rationale in the
-wronghost manifest entry.
+wronghost manifest entry. Cleanup 2026-10-10: exact trigger documented in
+`docs/what-we-cannot-see.md` ("Hostname mismatch"), matching-logic unit test
+added (`test_edge_sessions.py::test_hostname_matching_logic_unit`); end-to-end
+live path stays NOT-VERIFIED for lack of a trusted-chain wrong-name cert —
+no pipeline redesign in this task by design.
 
 ## 3. Reassembly drops FIN-less streams silently (accepted limitation)
 
@@ -37,3 +41,22 @@ The JA4S spec is diagram-only; our layout matches the reference
 implementation's `to_ja4s` behavior (GREASE included in count+hash). No
 official numeric JA4S vector exists to test against. See
 `docs/evidence/ja4-verification.md`.
+
+## 5. RC4/3DES/export rules have no real-handshake coverage (open, no infra)
+
+Ciphers absent from OpenSSL 3.6, so no lab capture can negotiate them.
+Cleanup 2026-10-10: synthetic unit fixtures added
+(`test_edge_sessions.py::test_rc4_3des_synthetic_rule_logic`, clearly named
+synthetic) exercising the rule logic; docs state these paths are NOT verified
+on real handshakes (`docs/what-we-cannot-see.md` "Legacy ciphers"). Left open
+because generating real RC4/3DES handshakes needs an old-OpenSSL/MTA build —
+new infrastructure out of scope for this cleanup task.
+
+## 6. Helm chart installs without a cluster (partially closed 2026-10-10)
+
+`helm lint` + `template` + `kubeconform` now pass locally (18/18 valid;
+fixed missing `---` separator in `templates/bundled.yaml` — see
+`docs/evidence/helm-validation.md`). Installation remains NOT-VERIFIED until
+the kind workflow runs. Unfixable-without-a-cluster items stay listed in
+`docs/evidence/kind-install.md` (registry images/pull secrets, HPA behavior,
+probe tuning, bundled auth/persistence, storageClassName, parity).

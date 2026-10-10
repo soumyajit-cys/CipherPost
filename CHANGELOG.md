@@ -114,8 +114,8 @@ liveness/readiness probes; Prometheus rules + runbook; measured sizing guide.
 
 **Validation:** failure-injection suite (nightly CI) + soak script. 128 fast
 tests pass; 6 slow chaos tests pass. See README Maturity for honest limits —
-a real 30-day live-traffic run is still required before any
-production-ready claim could be made.
+a real 30-day live-traffic run is still required before any claim of readiness
+for production use could be made.
 
 ## [0.1.0] - 2026-09-29 (Phase 1: secure, clean, trustworthy foundations)
 

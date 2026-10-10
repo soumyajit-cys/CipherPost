@@ -185,7 +185,7 @@ class Agent:
     def _run_live(self) -> None:
         from app.live.capture import CaptureWorker  # local import: needs scapy
         w = CaptureWorker(iface=self.cfg.get("iface", "eth0"))
-        # Reuse the battle-tested sniffer; redirect its sessions to metadata.
+        # Reuse the shared sniffer; redirect its sessions to metadata.
         orig = w._emit_sessions
 
         def _to_meta(sessions):

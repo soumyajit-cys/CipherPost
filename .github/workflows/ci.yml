@@ -35,6 +35,8 @@ jobs:
         run: pip-audit -r backend/requirements.txt
       - name: Audit allowlist gate
         run: python scripts/check_allowlist.py
+      - name: Claims overstatement gate (banned phrases)
+        run: python scripts/check_claims.py
 
   migrate-check:
     runs-on: ubuntu-latest

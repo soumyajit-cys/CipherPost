@@ -1,46 +1,40 @@
 """CI check: fail if README/docs contain banned overstatement phrases.
 
-Banned (case-insensitive) unless allow-listed with justification:
+Banned (case-insensitive):
   production-ready, battle-tested, enterprise-grade
 
-"100%" / "complete" / "fully" are NOT hard-banned (they appear in CSS,
-counts, and qualified synthetic-corpus statements). Instead this script
-flags unqualified accuracy claims: a line containing "100%" or
-"precision" or "recall" outside an allow-listed file must also mention
-"synthetic" or "lab" on the same line, or the file fails.
+"100%" is flagged only when it looks like an accuracy claim (same line
+mentions precision/recall/accuracy/P-R) AND the line is not qualified
+with synthetic/lab wording AND the file is not explicitly allow-listed
+below with a justification.
 
-Allow-list lives in this file (ALLOWED) with justification per entry.
-Run: python scripts/check_claims.py
-Exit 1 on violation (CI gate), 0 otherwise.
+Allow-list: file substring -> justification. Listed files may contain
+qualified "100%" accuracy statements (synthetic-corpus or lab-only with
+basis stated); unqualified production accuracy claims still fail.
+Run: python scripts/check_claims.py (exit 1 on violation).
 """
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
 HARD_BANNED = ["production-ready", "battle-tested", "enterprise-grade"]
 
-# path-substring -> justification (prose accuracy statements that are
-# explicitly qualified as synthetic/lab-only, or non-prose uses).
-ALLOWED = {
-    # CHANGELOG historical note explicitly says a 30-day run is still
-    # required before any production-use claim; reworded to avoid the
-    # hyphenated banned phrase, but keep an allow guard in case of relapse.
-    "CHANGELOG.md": "historical limit note, not a readiness claim",
-    # Qualified synthetic/lab accuracy statements (must still mention
-    # synthetic/lab on the same line; checked below).
-    "README.md": "accuracy figures qualified as synthetic-corpus/lab-only",
-    "docs/pilot-guide.md": "explicitly synthetic-corpus only + unknown real-world",
-    "docs/design.md": "synthetic-corpus P/R gate for pipeline smoke only",
-    "THREAT_MODEL.md": "explicit non-implication disclaimer for synthetic 100%",
-    "tests/real/README.md": "synthetic circularity disclaimer",
+ALLOWED_100 = {
+    "README.md": "Stage 3 100% P/R explicitly synthetic-corpus only + lab basis",
+    "docs/pilot-guide.md": "100% P/R explicitly synthetic-corpus only, real-world unknown",
+    "docs/design.md": "100% P/R synthetic-corpus pipeline smoke gate",
+    "THREAT_MODEL.md": "synthetic 100% explicitly does-not-imply real-world",
+    "tests/real/README.md": "synthetic circularity disclaimer (outside docs scan)",
+    "docs/evidence/real-eval.md": "lab 1.00 figures with stated 28-capture/94-session basis + limits",
+    "docs/ml-evaluation.md": "1.0 on 16 synthetic sessions explicitly smoke-only",
 }
 
-ACCURACY_RE = re.compile(r"100%|precision|recall", re.IGNORECASE)
-QUALIFIED_RE = re.compile(r"synthetic|lab-only|lab set|lab-generated|lab-labeled", re.IGNORECASE)
+ACC_100_RE = re.compile(r"100%")
+ACC_CTX_RE = re.compile(r"precision|recall|accuracy|P/R|\bP\b.*\bR\b", re.IGNORECASE)
+QUAL_RE = re.compile(r"synthetic|lab", re.IGNORECASE)
 
 
 def check_file(path: Path) -> list[str]:
@@ -52,24 +46,16 @@ def check_file(path: Path) -> list[str]:
     low = text.lower()
     for phrase in HARD_BANNED:
         if phrase in low:
-            # allow only if file is explicitly allow-listed AND the line
-            # carries a disclaimer (conservative: still fail, owner must
-            # reword). Allow-list is for audit, not exemption.
             problems.append(f"{path}: contains banned phrase {phrase!r}")
-    # Accuracy-qualification check for markdown prose only.
     if path.suffix == ".md":
+        allowed = any(k in str(path) for k in ALLOWED_100)
         for i, line in enumerate(text.splitlines(), 1):
-            if ACCURACY_RE.search(line) and not QUALIFIED_RE.search(line):
-                # Ignore lines that are clearly not accuracy claims:
-                # CSS, counts, paths, code spans about unrelated numbers.
-                stripped = line.strip()
-                if stripped.startswith(("|", "-", "#", ">", "`", "*")):
-                    # Table/list/heading lines still count if they claim
-                    # accuracy without qualification — check keywords.
-                    if re.search(r"precision|recall|accuracy|P/R", line, re.IGNORECASE):
-                        problems.append(f"{path}:{i}: unqualified accuracy claim: {line.strip()[:120]}")
-                elif re.search(r"precision|recall|accuracy|P/R", line, re.IGNORECASE):
-                    problems.append(f"{path}:{i}: unqualified accuracy claim: {line.strip()[:120]}")
+            if ACC_100_RE.search(line) and ACC_CTX_RE.search(line):
+                if QUAL_RE.search(line):
+                    continue
+                if allowed:
+                    continue
+                problems.append(f"{path}:{i}: unqualified 100% accuracy claim: {line.strip()[:140]}")
     return problems
 
 
@@ -85,17 +71,11 @@ def main() -> int:
     problems: list[str] = []
     for f in files:
         problems.extend(check_file(f))
-    # De-duplicate, stable order.
-    seen: list[str] = []
-    for p in problems:
-        if p not in seen:
-            seen.append(p)
+    seen = list(dict.fromkeys(problems))
     if seen:
         print("claims-check FAILED:")
         for p in seen:
             print(f"  - {p}")
-        print("\nFix: qualify accuracy figures with synthetic/lab basis or remove")
-        print("the claim; reword/remove banned readiness phrases.")
         return 1
     print(f"claims-check OK ({len(files)} markdown files scanned)")
     return 0

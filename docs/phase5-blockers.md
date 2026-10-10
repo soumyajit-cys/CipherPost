@@ -59,20 +59,27 @@ hosted analysis) on top of this unreleased foundation.
    release workflow. Task 1 pack signing policy and Task 8 supply-chain
    checks build on signing practices never exercised end-to-end.
 
-6. **Nightly chaos suite on real infra — NOT DONE (risk: MEDIUM).**
-   Close: run `.github/workflows/nightly-chaos.yml` slow failure-injection
-   against real Redis/Postgres (currently unit-level only). Task 3 scaling
-   and Task 5 operational maturity depend on failure behavior never observed.
+6. **Nightly chaos suite on real infra — PARTIAL (risk: MEDIUM).**
+   Lab-closed half: real-Redis outage + 3-min soak pass
+   (`docs/evidence/chaos-run.md`). Still NOT-VERIFIED: true Postgres restart,
+   container worker kills, CI nightly run. Consistent with v1-readiness
+   "Nightly chaos: PARTIAL".
 
-7. **Independent JA4S verification — NOT DONE (risk: LOW).**
-   Close: cross-check JA4S vectors against an independent implementation
-   (current vectors are self-derived; spec text is diagram-only, labeled
-   EXPERIMENTAL). Affects Task 1 field-reference accuracy for fingerprints.
+7. **Independent JA4S verification — PASS within what exists (risk: LOW
+   residual).**
+   Lab-closed 2026-10-05/09: spec worked example MATCH; JA4S layout verified
+   vs reference behavior (`docs/evidence/ja4-verification.md`; GREASE handling
+   behind `JA4S_INCLUDE_GREASE`, claim "verified against reference code only,
+   spec text ambiguous"). No official numeric JA4S vector exists. Consistent
+   with v1-readiness "Independent JA4/JA4S verification: PASS".
 
-8. **PQ interop against real hybrid servers — NOT DONE (risk: LOW).**
-   Close: captures against servers negotiating hybrid PQ groups
-   (X25519MLKEM768 etc.). Classification code exists but has zero live
-   observations; posture reporting (Task 6-adjacent analytics) is ungrounded.
+8. **PQ interop against real hybrid servers — PASS lab-only (risk: LOW
+   residual).**
+   Lab-closed 2026-10-05: 4 live handshakes (hybrid/classic/gap/HRR) + abort
+   control with tshark agreement, 1 parser bug fixed
+   (`docs/evidence/pq-interop.md`, 5 captures in `tests/real/`). No
+   third-party servers contacted; scope is OpenSSL 3.6.1 loopback only.
+   Consistent with v1-readiness "Post-quantum interop: PASS".
 
 9. **v1.0 (or 0.4.0-RC) tag by owner — NOT DONE (risk: HIGH, process).**
    Close: owner reviews `docs/v1-readiness.md`, tags the release. Phase 5

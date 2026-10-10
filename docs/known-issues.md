@@ -1,4 +1,4 @@
-# Known issues (blocker-closure lab, 2026-10-05)
+# Known issues (blocker-closure lab, 2026-10-05; cleanup review 2026-10-10)
 
 FAIL or limitation entries discovered while closing v1.0 blockers. Each item:
 observed behavior, impact, and status. Nothing here is guessed.

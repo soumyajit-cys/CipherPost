@@ -83,3 +83,10 @@ automation can supply. What the lab closed (Real-IdP SSO for Keycloak,
 JA4/JA4S, PQ interop, half of chaos) is evidenced above; everything else
 lists exactly what the owner must do. Do not tag v1.0
 until pilots plus a green kind run exist as artifacts, not plans.
+
+Last verified: 2026-10-09 — statuses re-derived from evidence files
+(`docs/evidence/real-eval.md`, `chaos-run.md`, `sso-keycloak.md`,
+`ja4-verification.md`, `pq-interop.md`, `release-dryrun.md`,
+`kind-install.md`, `diff-tshark.md`); toolchain OpenSSL 3.6.1, tshark 4.6.4,
+Keycloak 26.8.0, Python 3.13. Interop claims in this file (JA4/JA4S, PQ
+groups, SSO) are scoped to those versions and that lab only.

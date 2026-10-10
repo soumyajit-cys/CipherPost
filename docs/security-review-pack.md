@@ -68,3 +68,9 @@ Keycloak-26.8.0-only (`docs/evidence/sso-keycloak.md`); synthetic + 28-capture
 lab precision only. Compliance tags load from versioned `mapping-v1.json`
 (each tag carries framework title, control, and source URL; re-check current
 framework editions during audits). See README Maturity.
+
+Last verified: 2026-10-05 — architecture/data-flow statements against the
+committed code and configs listed above; SSO scope Keycloak 26.8.0 only
+(`docs/evidence/sso-keycloak.md`); compliance tags are versioned-data
+mappings (`mapping-v1.json`), not an auditor certification; MTA-STS/DANE
+behavior per unit/fake-DNS tests only (no live resolver run).

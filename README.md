@@ -226,6 +226,17 @@ behavior; PQ hybrid handshakes captured live with tshark agreement; a
 labels); chaos incl. a real-Redis outage plus soak measurements. v1.0 still
 blocked on pilots, the 30-day run, kind/registry runs, and tagging.
 
+Last verified: 2026-10-05/09 — JA4 spec example + reference behavior
+(`docs/evidence/ja4-verification.md`, FoxIO spec read-only); PQ hybrid-group
+detection against OpenSSL 3.6.1 loopback captures with tshark 4.6.4 decode
+(`docs/evidence/pq-interop.md`); SSO Keycloak 26.8.0 only
+(`docs/evidence/sso-keycloak.md`); MTA-STS/DANE unit/fake-DNS tests only (no
+live resolver run); compliance tags are versioned-data mappings
+(`mapping-v1.json`), not an auditor certification. Accuracy figures in this
+file are lab-only: 28 lab-generated captures, 94 sessions
+(`docs/evidence/real-eval.md`) plus the synthetic corpus; no claim about
+arbitrary production traffic.
+
 ## Further documentation
 
 - `docs/auth.md` — auth, roles, API keys, tenancy, audit

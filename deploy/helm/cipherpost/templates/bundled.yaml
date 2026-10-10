@@ -54,6 +54,7 @@ spec:
   ports: [{ port: 5432 }]
 {{- end }}
 {{- if .Values.redis.bundled.enabled }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

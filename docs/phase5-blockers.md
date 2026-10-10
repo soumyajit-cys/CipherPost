@@ -1,6 +1,11 @@
 # Phase 5 gate check: BLOCKED — v1.0 foundation not met
 
-Date: 2026-10-05. Verdict: **STOP. Do not start Phase 5 Tasks 1–8.**
+Date: 2026-10-05; consistency review 2026-10-10. Verdict: **STOP. Do not
+start Phase 5 Tasks 1–8.** Source of truth for per-item verdicts is
+`docs/v1-readiness.md` (name-based PASS/PARTIAL/FAIL/NOT-VERIFIED with
+evidence links); this file is the risk-ranked gate narrative and is kept
+consistent with it. Items 1–10 below retain their original numbers for
+audit traceability; v1-readiness uses names (no numbers).
 
 Evidence (all observed in-repo on 2026-10-05):
 
@@ -41,11 +46,13 @@ hosted analysis) on top of this unreleased foundation.
    Phase 5 operational work (Task 5 doctor, upgrade automation) assumes a
    deploy path that has never been executed.
 
-4. **Real-IdP SSO flow — NOT DONE (risk: MEDIUM).**
-   Close: verify against a real OIDC provider (generic; no vendor claims),
-   covering rotation, JIT, and lockout paths currently tested with fakes
-   only. Task 5 support-policy security-fix SLAs and Task 6 governance
-   touch auth surfaces that are unverified against reality.
+4. **Real-IdP SSO flow — PASS for Keycloak 26.8.0 only, NOT-VERIFIED for
+   other providers (risk: MEDIUM for non-Keycloak).**
+   Lab-closed 2026-10-05: verified against real Keycloak 26.8.0 (code+PKCE,
+   mapping, rotation, expiry, deprovision — `docs/evidence/sso-keycloak.md`);
+   MFA is app-side TOTP (unchanged); `/auth/logout` and `revoke-all` not
+   re-run live. No other providers claimed. Consistent with v1-readiness
+   "Real-IdP SSO flow: PASS (Keycloak 26.8.0 only)".
 
 5. **Registry push / image sign + provenance — NOT DONE (risk: MEDIUM).**
    Close: push, cosign-sign, and verify provenance on real infra per the

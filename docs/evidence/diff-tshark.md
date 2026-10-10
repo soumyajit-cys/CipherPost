@@ -35,6 +35,11 @@ tshark-row counts printed by the script). No remaining real disagreements;
 no parser bug indicated. The previously reported disagreements were all
 script-side.
 
+Re-run 2026-10-10 (cleanup review): `tshark -v` → TShark 4.6.4, same command
+— 28/28 agree, zero DISAGREEMENTS lines (per-capture `agree
+(sessions=N tshark_rows=M)` for all 23 mail + 5 PQ captures). No new parser
+bug indicated.
+
 ## Follow-up change to known-issues.md
 
 Item 1 is now: script fixed; remaining `x509sat` gap documented as

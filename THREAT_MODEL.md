@@ -3,10 +3,15 @@
 ## 1. What this tool protects against
 
 CipherPost is a **passive network observer** for email transport security. It
-detects, in live traffic or archived captures:
+detects missing or downgraded encryption where the capture point can see it,
+in live traffic or archived captures:
 
-- **Downgrade attacks** — STARTTLS stripping (`starttls-strip-attempt`),
-  missing TLS on implicit-TLS ports, unauthenticated plaintext sessions.
+- **Downgrade attacks** — STARTTLS stripping (`starttls-strip-attempt` when
+  the offer is on the wire), missing TLS on implicit-TLS ports,
+  unauthenticated plaintext sessions. A passive tool placed downstream of an
+  on-path STARTTLS strip cannot see the original offer; it reports absence of
+  TLS plus any plaintext-continuation evidence only (see
+  `docs/what-we-cannot-see.md` and report "limitations" text).
 - **Weak transport cryptography** — SSLv3/TLS 1.0/1.1, export/RC4/3DES/
   non-AEAD ciphers, non-PFS key exchange, short keys, weak signatures.
 - **Certificate failures** — expired, not-yet-valid, self-signed, untrusted

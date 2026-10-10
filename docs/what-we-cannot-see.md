@@ -67,6 +67,32 @@ unless stated otherwise.
 Scores rank sessions for review; SHAP bars show what drove a score, never
 evidence of a vulnerability. See `docs/ml-evaluation.md`.
 
+## Hostname mismatch (chain-first design)
+
+`validate_chain()` (`backend/app/parsing/certificates.py`) verifies the chain
+against the trust store FIRST and returns chain errors (`untrusted`,
+`expired`, `invalid-sig`, ...) before reaching the hostname check. The
+`hostname-mismatch` result fires ONLY when the chain otherwise verifies `ok`
+but the observed SNI/hostname is absent from the leaf SANs. Consequence: a
+lab-CA wrong-host cert yields `untrusted-certificate-chain` only (correct —
+the chain is untrusted regardless of name); the live `hostname-mismatch` path
+needs a publicly-trusted wrong-name cert, which only the owner can arrange.
+Labeled `present:false` with rationale in the wronghost manifest entry
+(`tests/real/manifest.json`); matching logic unit-tested in
+`backend/tests/test_edge_sessions.py::test_hostname_matching_logic_unit`.
+Limitation: without a trusted-chain wrong-name capture, the end-to-end path
+is NOT-VERIFIED on real handshakes.
+
+## Legacy ciphers (RC4/3DES/export)
+
+`rc4-cipher`, `3des-cipher`, `export-grade-cipher` rule logic is exercised by
+synthetic unit fixtures only (`test_edge_sessions.py::
+test_rc4_3des_synthetic_rule_logic`, constructed `cipher_meta`, clearly named
+synthetic). These paths are NOT verified on real handshakes: RC4/3DES are
+absent from OpenSSL 3.6 (`openssl ciphers -v 'RC4-SHA'` / `'DES-CBC3-SHA'`
+return "no cipher match"), so no lab capture could negotiate them. See
+`docs/evidence/real-eval.md` limits and `docs/known-issues.md`.
+
 ## Fingerprint spec basis (JA4/JA4S)
 
 Client JA4 reproduces the official worked example

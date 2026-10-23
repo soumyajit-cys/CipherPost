@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postfix:
+    image: mailserver:latest
+    container_name: cipherpost-postfix
+    ports:
+      - "25:25"
+      - "587:587"
+      - "465:465"
+    environment:
+      - MAIL_HOSTNAME=lab.local
+      - SAILS_DOMAIN=lab.local
+      - NET_TYPE=mail
+      - SASL_EMAIL
+      - SASL_USER=admin
+      - SASL_PASS=password
+    volumes:
+      - ./postfix/mail:/var/mail
+      - ./postfix/config:/etc/postfix
+      - ./postfix/state:/var/lib/postfix
+    profiles:
+      - modern
+      - legacy-tolerant
+      - deliberately-broken
+
+  dovecot:
+    image: mailserver:latest
+    container_name: cipherpost-dovecot
+    ports:
+      - "993:993"
+      - "995:995"
+    environment:
+      - MAIL_HOSTNAME=lab.local
+      - SAILS_DOMAIN=lab.local
+      - NET_TYPE=mail
+      - SASL_EMAIL
+      - SASL_USER=admin
+      - SASL_PASS=password
+    volumes:
+      - ./dovecot/mail:/var/mail
+      - ./dovecot/config:/etc/dovecot
+      - ./dovecot/state:/var/lib/dovecot
+    profiles:
+      - modern
+      - legacy-tolerant
+      - deliberately-broken
+
+networks:
+  mail:
+    driver: bridge

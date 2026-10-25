@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # --- Mail Infrastructure ---
   postfix:
     image: mailserver:latest
     container_name: cipherpost-postfix
@@ -45,6 +46,41 @@ services:
       - modern
       - legacy-tolerant
       - deliberately-broken
+
+  # --- CipherPost Stack ---
+  db:
+    image: postgres:16-alpine
+    container_name: cipherpost-db
+    environment:
+      - POSTGRES_USER=cipherpost
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=cipherpost
+    networks:
+      - mail
+
+  redis:
+    image: redis:7-alpine
+    container_name: cipherpost-redis
+    networks:
+      - mail
+
+  api:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.api
+    container_name: cipherpost-api
+    environment:
+      - CIPHERPOST_ENV=dev
+      - CIPHERPOST_DATABASE_URL=postgresql+asyncpg://cipherpost:password@db:5432/cipherpost
+      - CIPHERPOST_DATABASE_URL_SYNC=postgresql+psycopg2://cipherpost:password@db:5432/cipherpost
+      - CIPHERPOST_REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8000:8000"
+    networks:
+      - mail
 
 networks:
   mail:

@@ -84,6 +84,10 @@ class Settings(BaseSettings):
     RAW_CAPTURE_DIR: Path = Path("/data/capture")
     RAW_RETENTION_SECONDS: int = 6 * 3600      # rolling raw-capture window
     RAW_SEGMENT_SECONDS: int = 300             # time-chunked segment file length
+    # Disk guard: stop writing raw capture frames when free space on
+    # RAW_CAPTURE_DIR falls below this; resume automatically when it
+    # recovers. Dropped frames are counted (metrics + log alert), never silent.
+    RAW_DISK_MIN_FREE_BYTES: int = 2 * 1024 ** 3  # 2 GB
     LIVE_REPLAY_SPEED: float = 0.0             # 0 = as fast as possible (replay mode)
     SESSION_STREAM: str = "cipherpost:sessions"
     FINDINGS_STREAM: str = "cipherpost:findings"
@@ -143,6 +147,9 @@ class Settings(BaseSettings):
     # --- proactive detection (track 2) ----------------------------------------
     CERT_EXPIRY_WARN_DAYS: int = 30  # forecast horizon for expiry alerts
     CERT_EXPIRY_CHECK_INTERVAL_SECONDS: int = 900  # alerter sweep cadence
+    # CipherPost's own TLS (API/proxy cert) — set so `cipherpost doctor` can
+    # warn before it expires during an unattended run.
+    OWN_TLS_CERT_PATH: Optional[str] = None
     DNS_RESOLVER: Optional[str] = None  # e.g. "8.8.8.8"; unset = MTA-STS/DANE stay stubbed
 
     # --- MTA-STS / DANE (phase 2 task 5: real checks via dnspython) ---------

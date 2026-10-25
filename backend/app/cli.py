@@ -338,6 +338,18 @@ def cmd_rules(args) -> int:
     return EXIT_USAGE
 
 
+def cmd_doctor(args) -> int:
+    """Installed-state checks for unattended operation (app.core.doctor)."""
+    from app.core import doctor
+    results = doctor.run_doctor(raw_dir=args.raw_dir, backup_dir=args.backup_dir,
+                                own_tls_cert=args.tls_cert)
+    text, rc = doctor.render(results)
+    print("cipherpost doctor (local-only checks)\n")
+    print(text)
+    print("\nRunbook: docs/runbook.md — ops checklist: docs/live-run/ops-checklist.md")
+    return rc
+
+
 def build_parser() -> "argparse.ArgumentParser":
     import argparse
     ap = argparse.ArgumentParser(prog="cipherpost", description="Offline TLS forensics for email traffic")
@@ -363,6 +375,10 @@ def build_parser() -> "argparse.ArgumentParser":
     rl = sub.add_parser("rules", help="List/explain detection rules")
     rl.add_argument("rules_cmd", nargs="?", default="list")
     rl.add_argument("rule_id", nargs="?")
+    dc = sub.add_parser("doctor", help="Installed-state checks (disk, clock, certs, backups)")
+    dc.add_argument("--raw-dir", default=None, help="raw capture dir to check (default config)")
+    dc.add_argument("--backup-dir", default=None, help="backup dump dir to check freshness")
+    dc.add_argument("--tls-cert", default=None, help="CipherPost's own TLS cert path")
     sub.add_parser("version", help="Print version")
     return ap
 
@@ -383,6 +399,8 @@ def main(argv=None) -> int:
         return cmd_evidence(args)
     if args.cmd == "rules":
         return cmd_rules(args)
+    if args.cmd == "doctor":
+        return cmd_doctor(args)
     if args.cmd == "version":
         print(version())
         return EXIT_CLEAN

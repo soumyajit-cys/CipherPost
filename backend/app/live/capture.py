@@ -126,6 +126,9 @@ class CaptureWorker:
         if pkt.raw:
             try:
                 ref = self.store.write(pkt.ts, pkt.raw)
+                if ref is None:
+                    # disk guard active: frame intentionally dropped (counted)
+                    self.gossip.counters.inc("raw_dropped_disk_guard")
                 pkt.raw_ref = ref
             except Exception as e:
                 log.debug("store write failed: %s", e)

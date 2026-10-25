@@ -1,0 +1,19 @@
+# Mail lab image: Postfix (SMTP 25/587/465) + Dovecot (IMAP 143/993, POP3 110/995).
+# Lab-only: self-signed cert injection, fixed accounts, weak-TLS profiles for
+# detection verification. NEVER run this image on a public interface.
+FROM debian:bookworm-slim
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        postfix dovecot-core dovecot-imapd dovecot-pop3d dovecot-lmtpd \
+        openssl ca-certificates sasl2-bin && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Expose SMTP (25), submission (587), SMTPS (465), IMAP (143), IMAPS (993),
+# POP3 (110), POP3S (995).
+EXPOSE 25 587 465 143 993 110 995
+
+ENTRYPOINT ["/entrypoint.sh"]

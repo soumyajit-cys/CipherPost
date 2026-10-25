@@ -1,61 +1,82 @@
 services:
-  # --- Mail Infrastructure ---
+  # --- Mail lab (Postfix + Dovecot) -----------------------------------------
+  # Builds from Dockerfile.mailserver; certs mounted from ../certs (generated
+  # by scripts/lab_certs.sh). All host ports bind to 127.0.0.1 only.
   postfix:
-    image: mailserver:latest
-    container_name: cipherpost-postfix
-    ports:
-      - "25:25"
-      - "587:587"
-      - "465:465"
+    build:
+      context: .
+      dockerfile: Dockerfile.mailserver
+    container_name: cipherpost-mail
     environment:
-      - MAIL_HOSTNAME=lab.local
-      - SAILS_DOMAIN=lab.local
-      - NET_TYPE=mail
-      - SASL_EMAIL
-      - SASL_USER=admin
-      - SASL_PASS=password
+      - TLS_PROFILE=${TLS_PROFILE:-modern}
+      - MAIL_DOMAIN=${MAIL_DOMAIN:-lab.test}
+      - CERT_DIR=/etc/lab-certs
+      - CERT=${CERT:-/etc/lab-certs/good.crt}
+      - KEY=${KEY:-/etc/lab-certs/good.key}
+      - LAB_USER=${LAB_USER:-alice}
+      - LAB_PASS=${LAB_PASS:-alice-lab-pass}
     volumes:
-      - ./postfix/mail:/var/mail
-      - ./postfix/config:/etc/postfix
-      - ./postfix/state:/var/lib/postfix
+      - ../certs:/etc/lab-certs:ro
+    ports:
+      - "127.0.0.1:25:25"      # SMTP (STARTTLS offered)
+      - "127.0.0.1:587:587"    # submission (STARTTLS offered)
+      - "127.0.0.1:465:465"    # SMTPS (implicit TLS)
+      - "127.0.0.1:143:143"    # IMAP (STARTTLS offered)
+      - "127.0.0.1:993:993"    # IMAPS (implicit TLS)
+      - "127.0.0.1:110:110"    # POP3 (STLS offered)
+      - "127.0.0.1:995:995"    # POP3S (implicit TLS)
     networks:
       - mail
-    profiles:
-      - modern
-      - legacy-tolerant
-      - deliberately-broken
 
-  dovecot:
-    image: mailserver:latest
-    container_name: cipherpost-dovecot
-    ports:
-      - "993:993"
-      - "995:995"
+  # --- CipherPost capture -----------------------------------------------------
+  # Sniffs the lab traffic on the shared bridge network. Needs NET_RAW/NET_ADMIN.
+  capture:
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile.api
+    container_name: cipherpost-capture
     environment:
-      - MAIL_HOSTNAME=lab.local
-      - SAILS_DOMAIN=lab.local
-      - NET_TYPE=mail
-      - SASL_EMAIL
-      - SASL_USER=admin
-      - SASL_PASS=password
-    volumes:
-      - ./dovecot/mail:/var/mail
-      - ./dovecot/config:/etc/dovecot
-      - ./dovecot/state:/var/lib/dovecot
+      - CIPHERPOST_ENV=dev
+      - CIPHERPOST_LIVE_IFACE=${CAPTURE_IFACE:-eth0}
+      - CIPHERPOST_LIVE_BPF_PORTS=25,587,465,110,995,143,993
+      - CIPHERPOST_REDIS_URL=redis://redis:6379/0
+      - CIPHERPOST_DATABASE_URL=postgresql+asyncpg://cipherpost:labpass@db:5432/cipherpost
+    depends_on:
+      - redis
+      - db
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
     networks:
       - mail
-    profiles:
-      - modern
-      - legacy-tolerant
-      - deliberately-broken
 
-  # --- CipherPost Stack ---
+  # --- CipherPost API ----------------------------------------------------------
+  api:
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile.api
+    container_name: cipherpost-api
+    environment:
+      - CIPHERPOST_ENV=dev
+      - CIPHERPOST_DATABASE_URL=postgresql+asyncpg://cipherpost:labpass@db:5432/cipherpost
+      - CIPHERPOST_DATABASE_URL_SYNC=postgresql+psycopg2://cipherpost:labpass@db:5432/cipherpost
+      - CIPHERPOST_REDIS_URL=redis://redis:6379/0
+      - CIPHERPOST_JWT_SECRET=${CIPHERPOST_JWT_SECRET:-lab-only-secret-change-me-0123456789abcdef}
+      - CIPHERPOST_ADMIN_PASSWORD=${CIPHERPOST_ADMIN_PASSWORD:-lab-admin-password-123}
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks:
+      - mail
+
   db:
     image: postgres:16-alpine
     container_name: cipherpost-db
     environment:
       - POSTGRES_USER=cipherpost
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_PASSWORD=labpass
       - POSTGRES_DB=cipherpost
     networks:
       - mail
@@ -63,24 +84,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: cipherpost-redis
-    networks:
-      - mail
-
-  api:
-    build:
-      context: ../../
-      dockerfile: docker/Dockerfile.api
-    container_name: cipherpost-api
-    environment:
-      - CIPHERPOST_ENV=dev
-      - CIPHERPOST_DATABASE_URL=postgresql+asyncpg://cipherpost:password@db:5432/cipherpost
-      - CIPHERPOST_DATABASE_URL_SYNC=postgresql+psycopg2://cipherpost:password@db:5432/cipherpost
-      - CIPHERPOST_REDIS_URL=redis://redis:6379/0
-    depends_on:
-      - db
-      - redis
-    ports:
-      - "8000:8000"
     networks:
       - mail
 

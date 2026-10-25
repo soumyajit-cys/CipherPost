@@ -6,6 +6,8 @@ CipherPost API answers on http://127.0.0.1:8000/api/v1/health.
 
 Usage:
     python3 smoke_test.py [--host 127.0.0.1]
+
+Exit codes: 0 all pass, 1 one or more failures.
 """
 import argparse
 import socket
@@ -21,6 +23,8 @@ SERVICES = [
     ("POP3 110 (STLS)", 110),
     ("POP3S 995 (implicit TLS)", 995),
 ]
+API_PORT = 8000
+API_PATH = "/api/v1/health"
 
 
 def check_tcp(host: str, port: int, timeout: float = 3.0) -> bool:
@@ -39,21 +43,19 @@ def check_api(url: str) -> bool:
         return False
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--host", default="127.0.0.1")
-    args = ap.parse_args()
-
+def main_with_overrides(host: str, ports: list[tuple[str, int]],
+                        api_url: str) -> int:
+    """Run all checks against explicit targets. Separated from main() so the
+    pass/fail logic is unit-testable without a running lab."""
     failures = 0
-    for name, port in SERVICES:
-        ok = check_tcp(args.host, port)
-        print(f"[{'PASS' if ok else 'FAIL'}] {name} ({args.host}:{port})")
+    for name, port in ports:
+        ok = check_tcp(host, port)
+        print(f"[{'PASS' if ok else 'FAIL'}] {name} ({host}:{port})")
         if not ok:
             failures += 1
 
-    api_ok = check_api(f"http://{args.host}:8000/api/v1/health")
-    print(f"[{'PASS' if api_ok else 'FAIL'}] CipherPost API "
-          f"(http://{args.host}:8000/api/v1/health)")
+    api_ok = check_api(api_url)
+    print(f"[{'PASS' if api_ok else 'FAIL'}] CipherPost API ({api_url})")
     if not api_ok:
         failures += 1
 
@@ -62,6 +64,16 @@ def main() -> int:
         return 1
     print("\nAll smoke tests passed.")
     return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--host", default="127.0.0.1")
+    args = ap.parse_args()
+    return main_with_overrides(
+        host=args.host,
+        ports=list(SERVICES),
+        api_url=f"http://{args.host}:{API_PORT}{API_PATH}")
 
 
 if __name__ == "__main__":

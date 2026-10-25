@@ -1,0 +1,14 @@
+# Deliberately-broken profile: expired cert (via env SSL_CERT_PATH),
+# weak cipher suite, and plaintext AUTH permitted on 587/25 so CipherPost's
+# expired-certificate / weak-cipher / plaintext findings can be verified.
+smtpd_tls_protocols = !SSLv2, !SSLv3
+smtp_tls_protocols = !SSLv2, !SSLv3
+smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3
+# Weak ciphers: explicitly include export-grade and 3DES where the library
+# still offers them (modern OpenSSL may refuse; that failure is expected and
+# documented — see docs/live-run/setup.md).
+smtpd_tls_ciphers = export
+smtpd_tls_mandatory_ciphers = export
+smtp_tls_ciphers = export
+# Allow AUTH before TLS (plaintext credentials on the wire):
+smtpd_tls_auth_only = no

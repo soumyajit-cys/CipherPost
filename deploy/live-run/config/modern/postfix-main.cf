@@ -1,0 +1,3 @@
+# Modern profile: TLS 1.2+ only, secure ciphers.
+# DMS defaults already give TLS_LEVEL=modern; no overrides needed. This file
+# exists so the --env-file / config-dir structure is uniform across profiles.

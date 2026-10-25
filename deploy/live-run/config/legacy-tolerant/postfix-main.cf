@@ -1,0 +1,7 @@
+# Legacy-tolerant profile: allow TLS 1.0/1.1 so CipherPost's protocol-version
+# findings can be verified against known configuration.
+# DMS v12+ removed TLS 1.0/1.1 from TLS_LEVEL=intermediate; the documented
+# workaround is a Postfix override (docs/evidence/live-run-lab.md).
+smtpd_tls_protocols = !SSLv2, !SSLv3
+smtp_tls_protocols = !SSLv2, !SSLv3
+smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3

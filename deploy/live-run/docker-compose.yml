@@ -1,35 +1,56 @@
+# CipherPost live-run lab: docker-mailserver + CipherPost stack.
+#
+# Profile is selected with docker compose --env-file profiles/<name>.env.
+# All three profiles use the official docker-mailserver image (documented at
+# https://docker-mailserver.github.io/docker-mailserver/, retrieved 2026-10-25):
+#   SSL_TYPE=manual      + SSL_CERT_PATH/SSL_KEY_PATH  (bring-your-own cert)
+#   TLS_LEVEL=modern|intermediate                      (empty = modern)
+#   ENABLE_IMAP / ENABLE_POP3                          (both on)
+# Profile-specific Postfix overrides live in config/<profile>/postfix-main.cf
+# and are mounted at /tmp/docker-mailserver/ (documented config volume path).
+#
+# All host ports bind to 127.0.0.1 only: lab traffic never leaves the host.
 services:
-  # --- Mail lab (Postfix + Dovecot) -----------------------------------------
-  # Builds from Dockerfile.mailserver; certs mounted from ../certs (generated
-  # by scripts/lab_certs.sh). All host ports bind to 127.0.0.1 only.
-  postfix:
-    build:
-      context: .
-      dockerfile: Dockerfile.mailserver
+  mail:
+    image: ${DMS_IMAGE:-ghcr.io/docker-mailserver/docker-mailserver:latest}
     container_name: cipherpost-mail
+    hostname: mail.${MAIL_DOMAIN:-lab.test}
     environment:
-      - TLS_PROFILE=${TLS_PROFILE:-modern}
-      - MAIL_DOMAIN=${MAIL_DOMAIN:-lab.test}
-      - CERT_DIR=/etc/lab-certs
-      - CERT=${CERT:-/etc/lab-certs/good.crt}
-      - KEY=${KEY:-/etc/lab-certs/good.key}
-      - LAB_USER=${LAB_USER:-alice}
-      - LAB_PASS=${LAB_PASS:-alice-lab-pass}
+      # TLS source: manual => SSL_CERT_PATH + SSL_KEY_PATH (both documented).
+      # deliberately-broken points these at the lab CA's expired.crt/key.
+      - SSL_TYPE=manual
+      - SSL_CERT_PATH=${SSL_CERT_PATH:-/tmp/docker-mailserver/good.crt}
+      - SSL_KEY_PATH=${SSL_KEY_PATH:-/tmp/docker-mailserver/good.key}
+      # TLS_LEVEL: modern (default) | intermediate. TLS 1.0/1.1 re-enable is
+      # done via the profile's postfix-main.cf override (DMS v12+ dropped
+      # 1.0/1.1 from intermediate; see docs/evidence/live-run-lab.md).
+      - TLS_LEVEL=${TLS_LEVEL:-modern}
+      - OVERRIDE_HOSTNAME=mail.${MAIL_DOMAIN:-lab.test}
+      - ENABLE_IMAP=1
+      - ENABLE_POP3=1
+      - ENABLE_CLAMAV=0
+      - ENABLE_SPAMASSASSIN=0
+      - ENABLE_FAIL2BAN=0
+      - PERMIT_DOCKER=none
+      - ONE_DIR=1
     volumes:
-      - ../certs:/etc/lab-certs:ro
+      - ./config/${TLS_PROFILE_DIR:-modern}/:/tmp/docker-mailserver/
+      - maildata:/var/mail
+      - mailstate:/var/mail-state
+      - ./certs:/certs:ro
+      - /etc/localtime:/etc/localtime:ro
     ports:
-      - "127.0.0.1:25:25"      # SMTP (STARTTLS offered)
-      - "127.0.0.1:587:587"    # submission (STARTTLS offered)
-      - "127.0.0.1:465:465"    # SMTPS (implicit TLS)
-      - "127.0.0.1:143:143"    # IMAP (STARTTLS offered)
-      - "127.0.0.1:993:993"    # IMAPS (implicit TLS)
-      - "127.0.0.1:110:110"    # POP3 (STLS offered)
-      - "127.0.0.1:995:995"    # POP3S (implicit TLS)
+      - "127.0.0.1:25:25"       # SMTP (STARTTLS offered)
+      - "127.0.0.1:587:587"     # submission (STARTTLS offered)
+      - "127.0.0.1:465:465"     # SMTPS (implicit TLS)
+      - "127.0.0.1:993:993"     # IMAPS (implicit TLS)
+      - "127.0.0.1:995:995"     # POP3S (implicit TLS)
     networks:
       - mail
 
-  # --- CipherPost capture -----------------------------------------------------
-  # Sniffs the lab traffic on the shared bridge network. Needs NET_RAW/NET_ADMIN.
+  # CipherPost capture on the shared bridge network. Needs NET_RAW/NET_ADMIN
+  # (never privileged: true). Sees container-to-container traffic on this
+  # network; see docs/live-run/capture-placement.md for what NAT hides.
   capture:
     build:
       context: ../..
@@ -38,7 +59,7 @@ services:
     environment:
       - CIPHERPOST_ENV=dev
       - CIPHERPOST_LIVE_IFACE=${CAPTURE_IFACE:-eth0}
-      - CIPHERPOST_LIVE_BPF_PORTS=25,587,465,110,995,143,993
+      - CIPHERPOST_LIVE_BPF_PORTS=25,587,465,993,995,143,110
       - CIPHERPOST_REDIS_URL=redis://redis:6379/0
       - CIPHERPOST_DATABASE_URL=postgresql+asyncpg://cipherpost:labpass@db:5432/cipherpost
     depends_on:
@@ -50,7 +71,6 @@ services:
     networks:
       - mail
 
-  # --- CipherPost API ----------------------------------------------------------
   api:
     build:
       context: ../..
@@ -61,8 +81,8 @@ services:
       - CIPHERPOST_DATABASE_URL=postgresql+asyncpg://cipherpost:labpass@db:5432/cipherpost
       - CIPHERPOST_DATABASE_URL_SYNC=postgresql+psycopg2://cipherpost:labpass@db:5432/cipherpost
       - CIPHERPOST_REDIS_URL=redis://redis:6379/0
-      - CIPHERPOST_JWT_SECRET=${CIPHERPOST_JWT_SECRET:-lab-only-secret-change-me-0123456789abcdef}
-      - CIPHERPOST_ADMIN_PASSWORD=${CIPHERPOST_ADMIN_PASSWORD:-lab-admin-password-123}
+      - CIPHERPOST_JWT_SECRET=${CIPHERPOST_JWT_SECRET:?set CIPHERPOST_JWT_SECRET in your env or profiles file (openssl rand -hex 32)}
+      - CIPHERPOST_ADMIN_PASSWORD=${CIPHERPOST_ADMIN_PASSWORD:?set CIPHERPOST_ADMIN_PASSWORD (min 12 chars)}
     depends_on:
       - db
       - redis
@@ -86,6 +106,10 @@ services:
     container_name: cipherpost-redis
     networks:
       - mail
+
+volumes:
+  maildata:
+  mailstate:
 
 networks:
   mail:

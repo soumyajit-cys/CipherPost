@@ -45,6 +45,8 @@ services:
       - "127.0.0.1:465:465"     # SMTPS (implicit TLS)
       - "127.0.0.1:993:993"     # IMAPS (implicit TLS)
       - "127.0.0.1:995:995"     # POP3S (implicit TLS)
+      - "127.0.0.1:143:143"     # IMAP (STARTTLS offered; ENABLE_IMAP=1)
+      - "127.0.0.1:110:110"     # POP3 (STLS offered; ENABLE_POP3=1)
     networks:
       - mail
 

@@ -102,7 +102,8 @@ def test_check_api_fails_on_503_and_on_unreachable():
 
 def test_main_all_pass(capsys):
     srv, url = _serve(_OK)
-    listener = socket.socket(); listener.bind(("127.0.0.1", 0)); listener.listen(1)
+    listener = socket.socket(); listener.bind(("127.0.0.1", 0))
+    listener.listen(16)  # backlog must exceed number of sequential checks
     port = listener.getsockname()[1]
     try:
         rc = smoke.main_with_overrides(
@@ -177,10 +178,21 @@ def test_compose_binds_only_loopback_and_uses_dms_image():
 
 
 def test_lab_certs_output_names_match_profile_paths():
-    """scripts/lab_certs.sh must produce the cert files the profiles reference."""
+    """scripts/lab_certs.sh must produce the cert files the profiles reference.
+
+    mkcert() generates "<name>.key" alongside "<name>.crt" for every name it
+    is called with, so good/expired keys exist even though they are not named
+    literally; the final `ls` line names the .crt files.
+    """
     script = (ROOT / "scripts" / "lab_certs.sh").read_text()
-    for name in ("ca.crt", "good.crt", "good.key", "expired.crt", "expired.key"):
-        assert name in script, f"lab_certs.sh does not generate {name}"
-    # the compose mounts deploy/live-run/certs at /certs
+    assert 'mkcert() {' in script and '-keyout "$1.key"' in script, \
+        "mkcert must generate a .key beside every .crt"
+    for name in ("good", "expired"):
+        assert f"mkcert {name} " in script, f"lab_certs.sh must generate {name} cert+key"
+    assert "ca.crt" in script
+    ls_line = [l for l in script.splitlines() if l.startswith("ls ")]
+    assert ls_line and "good.crt" in ls_line[0] and "expired.crt" in ls_line[0], \
+        "lab_certs.sh final ls should list good.crt and expired.crt"
+    # the compose mounts deploy/live-run/certs at /certs (matches profile paths)
     compose = (LAB / "docker-compose.yml").read_text()
     assert "./certs:/certs:ro" in compose

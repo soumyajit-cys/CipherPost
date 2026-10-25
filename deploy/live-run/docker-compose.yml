@@ -18,6 +18,8 @@ services:
       - ./postfix/mail:/var/mail
       - ./postfix/config:/etc/postfix
       - ./postfix/state:/var/lib/postfix
+    networks:
+      - mail
     profiles:
       - modern
       - legacy-tolerant

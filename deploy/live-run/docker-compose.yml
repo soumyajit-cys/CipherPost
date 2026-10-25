@@ -42,6 +42,8 @@ services:
       - ./dovecot/mail:/var/mail
       - ./dovecot/config:/etc/dovecot
       - ./dovecot/state:/var/lib/dovecot
+    networks:
+      - mail
     profiles:
       - modern
       - legacy-tolerant

@@ -6,6 +6,50 @@ Versioning is semantic; `backend/app/VERSION` is the single source of truth.
 
 ## [Unreleased]
 
+### Live-run and pilot kit (2026-10-25/26 — tooling only, no run or pilot results)
+
+- Reproducible mail lab (`deploy/live-run/`): docker-mailserver (Postfix +
+  Dovecot) + CipherPost stack, TLS profiles `modern` / `legacy-tolerant` /
+  `deliberately-broken` via documented DMS env + `postfix-main.cf`
+  overrides; all ports on 127.0.0.1; one-command `start_lab.sh` with
+  random-password lab accounts; `smoke_test.py` (+ unit tests). Container
+  bring-up NOT-VERIFIED (no docker daemon access here) —
+  `docs/evidence/live-run-lab.md`.
+- Capture-placement guide rewritten for accuracy (TLS 1.3 certificates are
+  NOT passively observable; Docker NAT caveats; both-directions checklist
+  with tshark commands) — `docs/live-run/capture-placement.md`.
+- Offline `scripts/live_report.py` (Markdown+JSON period report: sessions,
+  encryption share, TLS/cipher distributions, new flows/fingerprints,
+  findings, feedback, suppressions, pipeline health, zero-session gaps,
+  previous-period flags) + exact metric definitions
+  (`docs/live-run/report-reference.md`); 8 fixture tests.
+- Triage process (`docs/live-run/triage.md`), daily log template, redacted
+  issue bundles (`scripts/export_issue_bundle.py`, diagnostics-bundle
+  redaction reuse, PCAP slice behind explicit flag), four GitHub issue
+  templates, exit-criteria template (`docs/live-run/exit-criteria.md` —
+  contains no results).
+- Pilot kit (`docs/pilot/`): onboarding checklist, data-handling summary
+  (code-linked), NON-LEGAL agreement outline, weekly check-in + end-of-pilot
+  survey templates, aggregation-safe metrics rules, and
+  `scripts/pilot_preflight.py` (local-only PASS/WARN/FAIL; simulated-failure
+  tests).
+- Ops safety for unattended runs: `cipherpost doctor` (DB/Redis/clock/disk/
+  memory/own-TLS-expiry/backups/data-dirs), disk guard in `RollingRawStore`
+  (stops raw-capture writes below 2 GB free, resumes, counted drops),
+  compose log-rotation defaults (50 MB x 5), ops checklist with backup cron
+  + CI-tested restore command (`docs/live-run/ops-checklist.md`);
+  failure-injection tests. Real disk-fill and expired-cert-in-live-stack
+  NOT-VERIFIED — `docs/evidence/ops-safety.md`.
+- Label hygiene: feedback accepts `triage_category` (bug|noise|
+  expected-behavior|documented-limitation); `scripts/export_labels.py`
+  exports analyst labels with provenance in the ML dataset format
+  (source=analyst separate from source=rules) and gates `tests/real/`
+  manifest entries (live-run/pilot data requires authorization + permission
+  + pseudonymization attestation); check wired into CI.
+- New settings: `RAW_DISK_MIN_FREE_BYTES`, `OWN_TLS_CERT_PATH`.
+- Still NOT READY for v1.0 — unchanged: no pilots, no 30-day run, no kind/
+  registry runs, no tag (`docs/v1-readiness.md`).
+
 ### Blocker closure lab (2026-10-05 — automation + local lab, no pilots)
 
 - JA4 verified vs official spec example (MATCH) and reference behavior; fixed

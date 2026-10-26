@@ -10,8 +10,17 @@
 # and are mounted at /tmp/docker-mailserver/ (documented config volume path).
 #
 # All host ports bind to 127.0.0.1 only: lab traffic never leaves the host.
+
+# Log-rotation defaults for unattended runs (docs/live-run/ops-checklist.md):
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "5"
+
 services:
   mail:
+    logging: *default-logging
     image: ${DMS_IMAGE:-ghcr.io/docker-mailserver/docker-mailserver:latest}
     container_name: cipherpost-mail
     hostname: mail.${MAIL_DOMAIN:-lab.test}
@@ -54,6 +63,7 @@ services:
   # (never privileged: true). Sees container-to-container traffic on this
   # network; see docs/live-run/capture-placement.md for what NAT hides.
   capture:
+    logging: *default-logging
     build:
       context: ../..
       dockerfile: docker/Dockerfile.api
@@ -74,6 +84,7 @@ services:
       - mail
 
   api:
+    logging: *default-logging
     build:
       context: ../..
       dockerfile: docker/Dockerfile.api
@@ -94,6 +105,7 @@ services:
       - mail
 
   db:
+    logging: *default-logging
     image: postgres:16-alpine
     container_name: cipherpost-db
     environment:
@@ -104,6 +116,7 @@ services:
       - mail
 
   redis:
+    logging: *default-logging
     image: redis:7-alpine
     container_name: cipherpost-redis
     networks:

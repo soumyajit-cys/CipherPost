@@ -86,6 +86,24 @@ capture:
 
 Required Linux capabilities: `CAP_NET_RAW` + `CAP_NET_ADMIN` (or `privileged: true` as a shortcut). No full root required. Configure the interface via `CIPHERPOST_LIVE_IFACE` and the BPF port list via `CIPHERPOST_LIVE_BPF_PORTS` (default `25,587,465,110,995,143,993`). For environments where live network access is unavailable (hackathon judging), use the **replay demo** above or upload a PCAP via the dashboard — the analysis engine is identical.
 
+### Live-run lab (one command, loopback only)
+
+To verify detections against known configuration before/during the 30-day
+run, `deploy/live-run/` stands up a real mail environment
+(docker-mailserver: Postfix + Dovecot) plus the CipherPost stack, in three
+TLS profiles (`modern` / `legacy-tolerant` / `deliberately-broken`):
+
+```bash
+cd deploy/live-run && bash start_lab.sh modern   # or legacy-tolerant | deliberately-broken
+```
+
+All ports bind to 127.0.0.1; the smoke test checks every mail port and the
+API. See `docs/live-run/setup.md` (setup + honest limits),
+`docs/live-run/capture-placement.md` (what a capture can/cannot see), and
+`docs/live-run/ops-checklist.md` (daily/weekly ops incl. `cipherpost
+doctor` and `scripts/live_report.py`). This is a lab, not a result: no
+live-run or pilot results exist.
+
 ### Rolling retention & resource limits
 
 - Raw frames are written to time-chunked segment files in `CIPHERPOST_RAW_CAPTURE_DIR` (`/data/capture`). Files older than `CIPHERPOST_RAW_RETENTION_SECONDS` (default 6h, configurable 1–24h) are auto-purged. Sessions store `raw_refs` for forensic replay while within the window; older refs resolve to “purged”.
@@ -244,6 +262,10 @@ arbitrary production traffic.
 - `docs/cli.md` — offline `cipherpost` CLI, exit codes, JSON/SARIF schema
 - `docs/api-policy.md` — /api/v1 stability, deprecations, pagination
 - `docs/pilot-guide.md` — 1-hour install, 2-week measurements, limits
+- `docs/pilot/` — pilot onboarding kit (checklist, data-handling summary,
+  agreement outline for counsel, check-in/survey templates, metrics rules)
+- `docs/live-run/` — 30-day run kit: lab setup, capture placement, report
+  reference, daily log + triage, ops checklist, exit-criteria template
 - `docs/security-review-pack.md` — architecture/data-flows for assessors
 - `docs/telemetry-proposal.md` — opt-in telemetry design (not implemented)
 - `docs/licensing-decision.md` — license options for the owner (no choice made)
@@ -269,7 +291,7 @@ backend/app/
   cli.py      offline `cipherpost` CLI (no server/DB/Redis)
 frontend/     React + Recharts dashboard (+ landing, login, agents strip)
 docker/       Dockerfiles, docker-compose (+prod), nginx
-deploy/       Helm chart, systemd units
+deploy/       Helm chart, systemd units, live-run lab kit (deploy/live-run/)
 k8s/          namespace, config, services, capture DaemonSet, HPA, ingress
 sdk/          typed Python + TypeScript API clients (contract-tested)
 ops/          Grafana dashboard, Prometheus notes + alert rules

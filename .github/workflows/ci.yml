@@ -37,6 +37,8 @@ jobs:
         run: python scripts/check_allowlist.py
       - name: Claims overstatement gate (banned phrases)
         run: python scripts/check_claims.py
+      - name: tests/real manifest hygiene (source/license/authorization)
+        run: PYTHONPATH=backend python scripts/export_labels.py --check-manifest tests/real/manifest.json
 
   migrate-check:
     runs-on: ubuntu-latest

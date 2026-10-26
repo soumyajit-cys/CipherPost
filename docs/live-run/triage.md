@@ -34,7 +34,11 @@ noise.
    live at the time (`postconf smtpd_tls_*`, `doveconf ssl_*`) — not the
    config you believe is live.
 4. Only then label `false_positive` via the feedback endpoint with a comment
-   saying what steps 1–3 showed. The label exports with provenance
+   saying what steps 1–3 showed. Pass `triage_category` in the same call
+   (`bug | noise | expected-behavior | documented-limitation` — the API
+   validates it and stores it as a machine-readable comment prefix that
+   `scripts/export_labels.py` exports with the rest of the provenance).
+   The label exports with provenance
    (`scripts/export_labels.py`) and feeds precision dashboards — an
    unconfirmed label poisons that dataset.
 

@@ -65,8 +65,9 @@ previous table already marked the unrun items NOT-VERIFIED correctly.
 
 | Item | Verdict | Evidence |
 |---|---|---|
-| External pilots with analyst labels | NOT-VERIFIED | No external orgs involved. Partial only: 28 lab-labeled captures in `tests/real/` (functional labels, not pilot labels), `docs/evidence/real-eval.md` |
-| 30-day live-traffic run | NOT-VERIFIED | 3-minute soak only: 4.6M packets, 0 errors, RSS flat (`docs/evidence/chaos-run.md`). Owner must run the 30-day live capture. |
+| External pilots with analyst labels | NOT-VERIFIED | No external orgs involved. Partial only: 28 lab-labeled captures in `tests/real/` (functional labels, not pilot labels), `docs/evidence/real-eval.md`. Pilot onboarding kit now exists (`docs/pilot/` — checklist, data-handling summary, NON-LEGAL agreement outline, check-in/survey templates, metrics rules, preflight script) but has never been used by a pilot org. |
+| 30-day live-traffic run | NOT-VERIFIED | 3-minute soak only: 4.6M packets, 0 errors, RSS flat (`docs/evidence/chaos-run.md`). Owner must run the 30-day live capture. Run kit + exit-criteria template now exist (`deploy/live-run/`, `docs/live-run/exit-criteria.md` — a template containing no results). |
+| Live-run + pilot tooling in place | PARTIAL | Built and unit-verified 2026-10-25/26: reproducible lab kit (`docs/evidence/live-run-lab.md` — container bring-up NOT-VERIFIED, docker.sock permission denied), offline `live_report.py` + metric reference (`docs/live-run/report-reference.md`), triage/daily-log/exit-criteria docs, issue-bundle export with redaction tests, label export + `tests/real/` hygiene gate (`docs/evidence/label-hygiene.md`), `cipherpost doctor` + disk guard + ops checklist (`docs/evidence/ops-safety.md` — real disk fill NOT-VERIFIED), pilot preflight (`docs/evidence/pilot-preflight.md` — k8s path NOT-VERIFIED). Nothing here is a live-run or pilot result. |
 | Kind install of the Helm chart | NOT-VERIFIED | Workflow written-but-not-run (`.github/workflows/kind-install.yml`); 4 chart bugs fixed by review; `docs/evidence/kind-install.md`. Owner must run it. |
 | Real-IdP SSO flow | PASS (Keycloak 26.8.0 only) | `docs/evidence/sso-keycloak.md`; `test_phase6_keycloak.py` (4 slow tests). MFA is app-side TOTP (unchanged); `/auth/logout` and `revoke-all` not re-run live — stated in the evidence file. No other providers. |
 | Registry push, image signing, provenance | NOT-VERIFIED | Explicitly NOT passed for signing/push/provenance: release inputs only parse-checked, no runner/credentials (`docs/evidence/release-dryrun.md`). Owner action required. |
@@ -84,9 +85,21 @@ JA4/JA4S, PQ interop, half of chaos) is evidenced above; everything else
 lists exactly what the owner must do. Do not tag v1.0
 until pilots plus a green kind run exist as artifacts, not plans.
 
+Tooling note (2026-10-26): the live-run kit, reports, triage/label tooling,
+and ops guards needed to RUN the 30-day experiment and onboard pilots now
+exist and are unit-verified (table row "Live-run + pilot tooling"). This
+changes nothing about the gate: tooling is not a result, and the run/pilot
+items above remain NOT-VERIFIED until executed. The 30-day run's pass/fail
+terms are defined in `docs/live-run/exit-criteria.md` (template — no
+results).
+
 Last verified: 2026-10-09 — statuses re-derived from evidence files
 (`docs/evidence/real-eval.md`, `chaos-run.md`, `sso-keycloak.md`,
 `ja4-verification.md`, `pq-interop.md`, `release-dryrun.md`,
 `kind-install.md`, `diff-tshark.md`); toolchain OpenSSL 3.6.1, tshark 4.6.4,
 Keycloak 26.8.0, Python 3.13. Interop claims in this file (JA4/JA4S, PQ
 groups, SSO) are scoped to those versions and that lab only.
+2026-10-26 addition: live-run/pilot tooling row added (PARTIAL, evidence
+`docs/evidence/{live-run-lab,ops-safety,label-hygiene,pilot-preflight}.md`,
+baseline `docs/evidence/baseline-live-run-kit.md`); no status of any
+existing item changed.

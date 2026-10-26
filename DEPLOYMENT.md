@@ -207,3 +207,10 @@ verify with `test_no_payload_bytes_leave_sensor`.
 4. Set `CERT_EXPIRY_WARN_DAYS`, verify `/api/v1/certs/expiring`.
 5. Import Grafana dashboard (`ops/grafana/dashboard.json`) against
    Prometheus scraping `/metrics`.
+6. Run `cipherpost doctor` (disk, clock/NTP, own-TLS expiry, backups, DB,
+   Redis/DLQ) and schedule it (see `docs/live-run/ops-checklist.md`).
+   Set `CIPHERPOST_OWN_TLS_CERT_PATH` so doctor can warn before the API's
+   own certificate expires during an unattended run.
+7. For a mail-traffic source before the real deployment: the live-run lab
+   (`deploy/live-run/`, `docs/live-run/setup.md`) stands up Postfix +
+   Dovecot + CipherPost on 127.0.0.1 with selectable TLS profiles.

@@ -1,4 +1,5 @@
-# Known issues (blocker-closure lab, 2026-10-05; cleanup review 2026-10-10)
+# Known issues (blocker-closure lab, 2026-10-05; cleanup review 2026-10-10;
+# live-run kit additions 2026-10-26)
 
 FAIL or limitation entries discovered while closing v1.0 blockers. Each item:
 observed behavior, impact, and status. Nothing here is guessed.
@@ -60,3 +61,28 @@ fixed missing `---` separator in `templates/bundled.yaml` — see
 the kind workflow runs. Unfixable-without-a-cluster items stay listed in
 `docs/evidence/kind-install.md` (registry images/pull secrets, HPA behavior,
 probe tuning, bundled auth/persistence, storageClassName, parity).
+
+## 7. Live-run lab verified statically only (open, needs owner, 2026-10-26)
+
+The docker-mailserver lab (`deploy/live-run/`) is compose-validated for all
+three profiles and unit-tested for logic, but container bring-up is
+NOT-VERIFIED — the docker daemon refused this session's access
+(`docs/evidence/live-run-lab.md`). Consequences deferred to first real run:
+(a) DMS v12+ removed TLS 1.0/1.1 from `TLS_LEVEL=intermediate`; the
+legacy-tolerant profile re-enables them for SMTP only via
+`postfix-main.cf` override — whether IMAP/POP3 also need a Dovecot override
+is unconfirmed; (b) the `deliberately-broken` profile requests export
+ciphers that modern OpenSSL in the image may refuse at startup (expected
+collision; document in the daily log if it happens); (c) the DMS image is
+unpinned (`DMS_IMAGE`, default `latest`) — pinning is required before real
+use and can only happen after a verified pull+run.
+
+## 8. Ops guards verified by injection only (accepted, 2026-10-26)
+
+The disk guard, doctor checks, and backup-freshness logic are
+failure-injection tested (stubbed statvfs, generated certs, injected
+timestamps — `backend/tests/test_doctor.py`); a real disk filling up during
+a live capture and a real expiring API cert in a running stack were NOT
+exercised (`docs/evidence/ops-safety.md`). Owner should run the weekly
+restore drill and watch the first `DISK GUARD` occurrence during the live
+run.

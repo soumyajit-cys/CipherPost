@@ -24,17 +24,41 @@ _FRAME_HDR = struct.Struct("<QdI")  # ts_ms, ts_f, length
 _MAGIC = 0x43505720  # "CPW "
 _EXT = ".seg"
 _CHUNK_MIN_FRAMES = 16
+_DISK_CHECK_EVERY_WRITES = 128   # check free disk at most this often
+_DISK_LOG_EVERY_SECONDS = 60.0   # rate-limit the disk-guard alert line
+
+
+def _disk_free_bytes(path) -> int | None:
+    """Free bytes on the filesystem holding `path`. Module-level so tests can
+    simulate low disk without touching real storage."""
+    try:
+        st = os.statvfs(path)
+        return st.f_bavail * st.f_frsize
+    except OSError:
+        return None
 
 
 class RollingRawStore:
     """Append frames to time-chunked segment files; purge old ones."""
 
     def __init__(self, directory: Path | str, retention_seconds: int,
-                 segment_seconds: int = 300):
+                 segment_seconds: int = 300,
+                 disk_min_free_bytes: int | None = None):
         self.dir = Path(directory)
         self.dir.mkdir(parents=True, exist_ok=True)
         self.retention = int(retention_seconds)
         self.segment_seconds = int(segment_seconds)
+        # Disk guard (unattended-run safety): stop capture storage before the
+        # disk fills. Free-space checks are cached; drops are counted and
+        # alerted (rate-limited), and writing resumes automatically.
+        if disk_min_free_bytes is None:
+            from app.core.config import settings as _s
+            disk_min_free_bytes = _s.RAW_DISK_MIN_FREE_BYTES
+        self.disk_min_free_bytes = int(disk_min_free_bytes)
+        self._disk_guard_active = False
+        self._disk_guard_dropped = 0
+        self._writes_since_check = _DISK_CHECK_EVERY_WRITES  # check on first write
+        self._last_guard_log = 0.0
         self._current: Path | None = None
         self._fh = None
         self._lock = threading.RLock()
@@ -84,9 +108,45 @@ class RollingRawStore:
             self._current = path
             return path
 
+    def _disk_guard_should_drop(self) -> bool:
+        """True while free space on the capture filesystem is below the floor.
+        Cached between checks; flips off automatically on recovery."""
+        self._writes_since_check += 1
+        if self._disk_guard_active or \
+                self._writes_since_check >= _DISK_CHECK_EVERY_WRITES:
+            self._writes_since_check = 0
+            free = _disk_free_bytes(self.dir)
+            if free is None:
+                # cannot measure: do not drop, but say so once per window
+                if not self._disk_guard_active:
+                    log.warning("disk guard: cannot measure free space on %s", self.dir)
+            else:
+                active = free < self.disk_min_free_bytes
+                if active and not self._disk_guard_active:
+                    log.error(
+                        "DISK GUARD: stopping raw-capture writes on %s "
+                        "(%.2f GB free < %.2f GB floor). Frames are DROPPED until "
+                        "space recovers; alerts stay live. Check docs/live-run/"
+                        "ops-checklist.md.",
+                        self.dir, free / 1024 ** 3, self.disk_min_free_bytes / 1024 ** 3)
+                elif not active and self._disk_guard_active:
+                    log.warning("disk guard: space recovered on %s — capture writes resumed",
+                                self.dir)
+                self._disk_guard_active = active
+        return self._disk_guard_active
+
     def write(self, ts: float, frame: bytes):
-        """Append a frame; returns (segment_name, offset, length)."""
+        """Append a frame; returns (segment_name, offset, length), or None when
+        the disk guard is dropping frames (counted, never silent)."""
         with self._lock:
+            if self._disk_guard_should_drop():
+                self._disk_guard_dropped += 1
+                now = time.time()
+                if now - self._last_guard_log >= _DISK_LOG_EVERY_SECONDS:
+                    self._last_guard_log = now
+                    log.error("disk guard: %d frames dropped so far on %s",
+                              self._disk_guard_dropped, self.dir)
+                return None
             path = self._open_segment(ts)
             offset = self._fh.tell()
             self._fh.write(_FRAME_HDR.pack(0, int(ts * 1e6), len(frame)))

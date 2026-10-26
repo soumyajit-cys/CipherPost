@@ -72,3 +72,38 @@ first for every incident (queues, DLQ depths, drops).
   compare `psi` leaders against recent change windows.
 - Fix: for real traffic shifts, retrain baselines (`POST /api/v1/ml/retrain`);
   for parser regressions, fix the parser and re-run the corpus eval.
+
+## Disk-guard (raw capture writes stopped)
+
+- Means: free space on the raw-capture filesystem fell below
+  `CIPHERPOST_RAW_DISK_MIN_FREE_BYTES` (default 2 GB); `RollingRawStore`
+  stopped writing frames (log line `DISK GUARD: stopping raw-capture
+  writes...`), memory gossip counter `raw_dropped_disk_guard` grows.
+  Frames are DROPPED while active; analysis/alerts continue.
+- Confirm: `df -h <RAW_CAPTURE_DIR>`; `cipherpost doctor` → `disk-capture`
+  FAIL/WARN; capture logs `disk guard` lines.
+- Fix: free space (the 6 h rolling purge helps once writes resume) or raise
+  the volume; the guard resumes writes automatically. Never disable the
+  guard to "fix" it — that trades dropped frames for a full disk.
+
+## Live-report flags (daily health)
+
+- Means: `scripts/live_report.py` emitted flags — `capture-stop-suspected`
+  (0 sessions vs busy previous period), `coverage-gap` (zero-session
+  hours), `dead-letter-spike`, `consumer-lag`, `capture-drops`,
+  `alert-delivery-failures`, or `sessions-drop` (≥ threshold % vs previous
+  period). Definitions: `docs/live-run/report-reference.md`.
+- Confirm: open the report JSON; cross-check against `/api/v1/live/status`
+  and the runbook sections above.
+- Fix: per flag — restore the capture (No-sessions), drain lag
+  (Consumer-lag), replay/discard DLQ entries (Dead-letter), fix channels
+  (Delivery-failures).
+
+## Doctor (installed-state checks)
+
+- `cipherpost doctor --backup-dir /backups/cipherpost` checks python/engine
+  imports, DB reachability+size, Redis+DLQ, clock/NTP sync, capture-disk
+  floor, MemAvailable, CipherPost's own TLS expiry
+  (`CIPHERPOST_OWN_TLS_CERT_PATH`), backup freshness, and data-dir growth.
+  Every FAIL maps to a runbook section or the ops checklist
+  (`docs/live-run/ops-checklist.md`).

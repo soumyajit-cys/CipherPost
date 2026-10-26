@@ -99,3 +99,7 @@ Last verified: 2026-10-09 — statuses re-derived from evidence files
 `kind-install.md`, `diff-tshark.md`); toolchain OpenSSL 3.6.1, tshark 4.6.4,
 Keycloak 26.8.0, Python 3.13. Interop claims in this file (JA4/JA4S, PQ
 groups, SSO) are scoped to those versions and that lab only.
+2026-10-26 addition: live-run/pilot tooling row added (PARTIAL, evidence
+`docs/evidence/{live-run-lab,ops-safety,label-hygiene,pilot-preflight}.md`,
+baseline `docs/evidence/baseline-live-run-kit.md`); no status of any
+existing item changed.

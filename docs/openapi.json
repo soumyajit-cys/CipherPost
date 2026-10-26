@@ -1624,7 +1624,7 @@
     },
     "/api/v1/findings/{finding_id}/feedback": {
       "post": {
-        "description": "Analyst label on a finding. Stored only \u2014 never auto-retrains models.",
+        "description": "Analyst label on a finding. Stored only \u2014 never auto-retrains models.\n\nOptional body.triage_category links the label to docs/live-run/triage.md:\nbug | noise | expected-behavior | documented-limitation. Stored as a\nmachine-readable prefix in the comment (no schema change); export\nscripts parse it back out.",
         "operationId": "submit_feedback_api_v1_findings__finding_id__feedback_post",
         "parameters": [
           {

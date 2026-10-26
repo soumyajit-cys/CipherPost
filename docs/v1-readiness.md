@@ -85,6 +85,14 @@ JA4/JA4S, PQ interop, half of chaos) is evidenced above; everything else
 lists exactly what the owner must do. Do not tag v1.0
 until pilots plus a green kind run exist as artifacts, not plans.
 
+Tooling note (2026-10-26): the live-run kit, reports, triage/label tooling,
+and ops guards needed to RUN the 30-day experiment and onboard pilots now
+exist and are unit-verified (table row "Live-run + pilot tooling"). This
+changes nothing about the gate: tooling is not a result, and the run/pilot
+items above remain NOT-VERIFIED until executed. The 30-day run's pass/fail
+terms are defined in `docs/live-run/exit-criteria.md` (template — no
+results).
+
 Last verified: 2026-10-09 — statuses re-derived from evidence files
 (`docs/evidence/real-eval.md`, `chaos-run.md`, `sso-keycloak.md`,
 `ja4-verification.md`, `pq-interop.md`, `release-dryrun.md`,

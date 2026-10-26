@@ -184,9 +184,6 @@ def test_export_cli_roundtrip(engine, tmp_path, monkeypatch):
                         f"({', '.join(':' + c for c in cols)})"),
                     {c: row[c] for c in cols})
     out = tmp_path / "labels.json"
-    rc = el.main(["--out", str(out)])
-    # uses settings.DATABASE_URL_SYNC (not our file db) — expect no crash and
-    # either empty export (no local DB) or a valid file; force the file db:
     monkeypatch.setattr("app.core.config.settings.DATABASE_URL_SYNC",
                         f"sqlite:///{db_file}")
     rc = el.main(["--out", str(out)])

@@ -1512,27 +1512,41 @@ async def diagnostics_bundle(include_addresses: bool = Query(False),
 async def submit_feedback(finding_id: int, body: dict,
                           ctx: AuthContext = Depends(require_roles("analyst")),
                           db: AsyncSession = Depends(get_db)):
-    """Analyst label on a finding. Stored only — never auto-retrains models."""
+    """Analyst label on a finding. Stored only — never auto-retrains models.
+
+    Optional body.triage_category links the label to docs/live-run/triage.md:
+    bug | noise | expected-behavior | documented-limitation. Stored as a
+    machine-readable prefix in the comment (no schema change); export
+    scripts parse it back out.
+    """
     from datetime import datetime, timezone
     from app.models.entities import FindingFeedback
     verdict = (body.get("verdict") or "").strip()
     if verdict not in ("confirmed", "false_positive", "accepted_risk"):
         raise HTTPException(400, "verdict must be confirmed|false_positive|accepted_risk")
+    triage = (body.get("triage_category") or "").strip()
+    if triage and triage not in ("bug", "noise", "expected-behavior",
+                                 "documented-limitation"):
+        raise HTTPException(400, "triage_category must be bug|noise|"
+                                 "expected-behavior|documented-limitation")
     f = await db.get(Finding, finding_id)
     if f is None:
         raise HTTPException(404, "Finding not found")
     sess = await db.get(Session, f.session_id)
     if sess is None or sess.org_id != ctx.org_id:
         raise HTTPException(404, "Finding not found")
+    comment = str(body.get("comment", ""))[:2000]
+    stored_comment = f"[triage:{triage}] {comment}" if triage else comment
     fb = FindingFeedback(org_id=ctx.org_id, finding_id=f.id, rule_id=f.rule_id,
                          session_id=f.session_id, verdict=verdict,
-                         comment=str(body.get("comment", ""))[:2000],
+                         comment=stored_comment,
                          created_by=ctx.email, created_at=datetime.now(timezone.utc))
     db.add(fb)
     await db.commit()
     await log_audit(db, ctx.org_id, ctx.email, "finding.feedback", f.rule_id,
-                    {"verdict": verdict, "finding_id": f.id})
-    return {"id": fb.id, "verdict": verdict}
+                    {"verdict": verdict, "finding_id": f.id,
+                     "triage_category": triage or None})
+    return {"id": fb.id, "verdict": verdict, "triage_category": triage or None}
 
 
 @app.get("/api/v1/feedback")

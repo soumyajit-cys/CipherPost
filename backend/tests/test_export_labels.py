@@ -68,8 +68,9 @@ def test_export_format_matches_ml_pipeline(engine):
 
 def test_provenance_fields_present(engine):
     data = el.export_labels(engine)
-    by_rule = {p["rule_id"]: p for p in data["analyst"]["provenance"]}
-    p = by_rule["weak-cipher-suite"]
+    prov = data["analyst"]["provenance"]
+    by_verdict = {p["verdict"]: p for p in prov}
+    p = by_verdict["confirmed"]
     assert p["who"] == "ana@pilot.example"
     assert p["when"].startswith("2026-10-25")
     assert p["rule_version"] == data["tool_version"]
@@ -79,12 +80,12 @@ def test_provenance_fields_present(engine):
     # triage category parsed out of the comment; comment returned without prefix
     assert p["triage_category"] == "bug"
     assert p["comment"] == "rule fired on valid config"
-    assert by_rule["tls-version-tls1-0"]["triage_category"] == "noise"
+    assert by_verdict["false_positive"]["triage_category"] == "noise"
     # accepted_risk row still carries provenance (with y=None)
-    assert by_rule["weak-cipher-suite"]["verdict"] in ("confirmed", "accepted_risk") \
-        or True  # both weak-cipher rows share rule_id; find the accepted one
-    accepted = [p for p in data["analyst"]["provenance"] if p["y"] is None]
+    accepted = [p for p in prov if p["y"] is None]
     assert len(accepted) == 1 and accepted[0]["verdict"] == "accepted_risk"
+    assert accepted[0]["who"] == "boss@pilot.example"
+    assert accepted[0]["triage_category"] is None  # no prefix in comment
 
 
 def test_triage_parse():
